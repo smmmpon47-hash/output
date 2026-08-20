@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Production Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-5">
+    <h1 class="text-xl font-bold text-gray-800 text-center mb-1">📊 สรุปยอดผลิตประจำวัน</h1>
+    <p id="dateText" class="text-sm text-gray-500 text-center mb-4">-</p>
+
+    <!-- Progress Bar ภาพรวม -->
+    <div class="mb-6">
+      <div class="flex justify-between text-sm font-semibold mb-1">
+        <span>ความคืบหน้ารวม</span>
+        <span id="totalPct">0%</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+        <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
+      </div>
+      <div class="flex justify-between text-xs text-gray-500 mt-1">
+        <span id="totalActual">ผลิตจริง: 0</span>
+        <span id="totalTarget">เป้าหมาย: 0</span>
+      </div>
+    </div>
+
+    <!-- รายการแยกตาม Line -->
+    <h2 class="font-bold text-gray-700 mb-2">🏭 สถานะแยกตามไลน์</h2>
+    <div id="linesList" class="space-y-3">
+      <p class="text-center text-gray-400">กำลังโหลดข้อมูล...</p>
+    </div>
+  </div>
+
+  <script>
+    // 🔗 เปลี่ยนเป็น URL Web App (doGet) จาก Google Apps Script ของคุณ
+    const GAS_API_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL"; 
+
+    async function fetchDashboardData() {
+      try {
+        const res = await fetch(GAS_API_URL);
+        const data = await res.json();
+        
+        // อัปเดตข้อมูลภาพรวม
+        document.getElementById('dateText').innerText = `วันที่: ${data.date}`;
+        document.getElementById('totalPct').innerText = `${data.totals.pct}%`;
+        document.getElementById('progressBar').style.width = `${Math.min(data.totals.pct, 100)}%`;
+        document.getElementById('totalActual').innerText = `ผลิตจริง: ${data.totals.actual.toLocaleString()}`;
+        document.getElementById('totalTarget').innerText = `เป้าหมาย: ${data.totals.target.toLocaleString()}`;
+
+        // สร้างรายการแต่ละไลน์
+        const container = document.getElementById('linesList');
+        container.innerHTML = '';
+        
+        data.lines.forEach(l => {
+          const badgeColor = l.status === 'ok' ? 'bg-green-100 text-green-800' : 
+                            (l.status === 'behind' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800');
+          
+          container.innerHTML += `
+            <div class="border rounded-lg p-3 flex items-center justify-between">
+              <div>
+                <span class="font-bold text-lg">Line ${l.code}</span>
+                ${l.lot_number ? `<span class="text-xs text-gray-500 block">LOT: ${l.lot_number}</span>` : ''}
+              </div>
+              <div class="text-right">
+                <span class="text-sm font-semibold">${l.actual.toLocaleString()} / ${l.target.toLocaleString()}</span>
+                <span class="text-xs px-2 py-0.5 rounded-full block mt-0.5 ${badgeColor}">${l.pct}%</span>
+              </div>
+            </div>
+          `;
+        });
+      } catch (err) {
+        alert("ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่");
+      }
+    }
+
+    // เริ่มต้น LIFF และดึงข้อมูล
+    async function main() {
+      await liff.init({ liffId: "YOUR_LIFF_ID" }); // 👈 ใส่ LIFF ID จาก LINE Developers
+      if (!liff.isLoggedIn()) {
+        liff.login();
+      } else {
+        fetchDashboardData();
+      }
+    }
+    main();
+  </script>
+</body>
+</html>
