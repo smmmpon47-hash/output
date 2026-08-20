@@ -6,85 +6,275 @@
   <title>Production Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Kanit', sans-serif; background-color: #F8FAFC; }
+    .nav-btn.active { background-color: rgba(255, 255, 255, 0.25); border-left: 4px solid #06C755; }
+  </style>
 </head>
-<body class="bg-gray-100 p-4">
-  <div class="max-w-md mx-auto bg-white rounded-xl shadow-md p-5">
-    <h1 class="text-xl font-bold text-gray-800 text-center mb-1">📊 สรุปยอดผลิตประจำวัน</h1>
-    <p id="dateText" class="text-sm text-gray-500 text-center mb-4">-</p>
+<body class="flex h-screen overflow-hidden">
 
-    <!-- Progress Bar ภาพรวม -->
-    <div class="mb-6">
-      <div class="flex justify-between text-sm font-semibold mb-1">
-        <span>ความคืบหน้ารวม</span>
-        <span id="totalPct">0%</span>
-      </div>
-      <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-        <div id="progressBar" class="bg-blue-600 h-4 rounded-full transition-all duration-500" style="width: 0%"></div>
-      </div>
-      <div class="flex justify-between text-xs text-gray-500 mt-1">
-        <span id="totalActual">ผลิตจริง: 0</span>
-        <span id="totalTarget">เป้าหมาย: 0</span>
-      </div>
-    </div>
-
-    <!-- รายการแยกตาม Line -->
-    <h2 class="font-bold text-gray-700 mb-2">🏭 สถานะแยกตามไลน์</h2>
-    <div id="linesList" class="space-y-3">
-      <p class="text-center text-gray-400">กำลังโหลดข้อมูล...</p>
+  <!-- Sidebar ด้านข้าง -->
+  <div class="w-16 bg-slate-900 text-white flex flex-col items-center py-6 gap-8 shadow-xl z-20">
+    <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">📊</div>
+    
+    <div class="flex flex-col gap-4 w-full">
+      <button onclick="switchTab('tab1')" id="nav-tab1" class="nav-btn active p-3 w-full flex justify-center hover:bg-white/10 transition">
+        <span class="text-xl">📈</span>
+      </button>
+      <button onclick="switchTab('tab2')" id="nav-tab2" class="nav-btn p-3 w-full flex justify-center hover:bg-white/10 transition">
+        <span class="text-xl">🔍</span>
+      </button>
     </div>
   </div>
 
+  <!-- Content Area -->
+  <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
+    
+    <!-- Top Bar: Header & LINE User Profile -->
+    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+      <div>
+        <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมประจำวัน</h1>
+        <p class="text-xs text-slate-400">อัปเดตข้อมูล Real-time</p>
+      </div>
+      <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="displayName" class="text-xs font-semibold text-slate-700">กำลังเชื่อมต่อ LINE...</span>
+      </div>
+    </div>
+
+    <!-- PAGE 1: Dashboard ภาพรวม (Default) -->
+    <div id="tab1" class="space-y-6">
+      
+      <!-- Chart Card (B - G) -->
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="font-bold text-slate-700">เปรียบเทียบ Target vs Actual (Line B - G)</h2>
+          <span class="text-xs bg-indigo-50 text-indigo-600 font-semibold px-2.5 py-1 rounded-lg">Today</span>
+        </div>
+        <div class="h-64 relative">
+          <canvas id="factoryChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Summary Cards Grid (B - G) -->
+      <div>
+        <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์</h2>
+        <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Cards จะถูกเจ็นผ่าน JavaScript -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PAGE 2: ค้นหา LOT (Lot Search) -->
+    <div id="tab2" class="space-y-6 hidden">
+      
+      <!-- Search Input Card -->
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
+        <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาหมายเลข LOT</label>
+        <div class="flex gap-2">
+          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT เช่น LOT-2026-001..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+          <button onclick="searchLot()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition shadow-md shadow-indigo-100">
+            🔍 ค้นหา
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Result Display Card -->
+      <div id="searchResult" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+        <div class="flex justify-between items-start border-b border-slate-100 pb-4">
+          <div>
+            <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">ข้อมูล LOT</span>
+            <h3 id="resLotNo" class="text-xl font-extrabold text-slate-800 mt-1">กรุณากรอกรหัส LOT ด้านบน</h3>
+          </div>
+          <span id="resStatusBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-500">Standby</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div class="bg-slate-50 p-3 rounded-2xl">
+            <p class="text-xs text-slate-400">จำนวน LOT</p>
+            <p id="resQty" class="font-bold text-slate-700 mt-0.5">-</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-2xl">
+            <p class="text-xs text-slate-400">รุ่น (Series)</p>
+            <p id="resSeries" class="font-bold text-slate-700 mt-0.5">-</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-2xl">
+            <p class="text-xs text-slate-400">Model</p>
+            <p id="resModel" class="font-bold text-slate-700 mt-0.5">-</p>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-2xl">
+            <p class="text-xs text-slate-400">Shipment</p>
+            <p id="resShipment" class="font-bold text-slate-700 mt-0.5">-</p>
+          </div>
+        </div>
+
+        <!-- Real-time Status Area -->
+        <div class="mt-4 pt-4 border-t border-slate-100">
+          <p class="text-xs font-bold text-slate-500 mb-2">⚡ สถานะการผลิต Real-Time</p>
+          <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
+            <span class="text-xl">🏭</span>
+            <span id="resRealtimeStatus">พร้อมค้นหาข้อมูลล็อตการผลิต</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
   <script>
-    // 🔗 เปลี่ยนเป็น URL Web App (doGet) จาก Google Apps Script ของคุณ
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbwvfraTfoi0salPGQR3iy6QFtWssqF3jPeuOZfivSM_ypi20HqgRFWBFiS_ReMbUqLH/exec"; 
+    // Config ลิงก์ Apps Script ของคุณ
+    const GAS_API_URL = "https://script.google.com/macros/s/YOUR_WEB_APP_ID/exec";
+    const LIFF_ID = "2011181755-bLeCO8Hs";
 
-    async function fetchDashboardData() {
-      try {
-        const res = await fetch(GAS_API_URL);
-        const data = await res.json();
-        
-        // อัปเดตข้อมูลภาพรวม
-        document.getElementById('dateText').innerText = `วันที่: ${data.date}`;
-        document.getElementById('totalPct').innerText = `${data.totals.pct}%`;
-        document.getElementById('progressBar').style.width = `${Math.min(data.totals.pct, 100)}%`;
-        document.getElementById('totalActual').innerText = `ผลิตจริง: ${data.totals.actual.toLocaleString()}`;
-        document.getElementById('totalTarget').innerText = `เป้าหมาย: ${data.totals.target.toLocaleString()}`;
+    // ข้อมูลตัวอย่างสำหรับแสดงผล (Mock Data B-G)
+    const mockData = [
+      { line: "Line B", target: 1000, actual: 950 },
+      { line: "Line C", target: 1200, actual: 1250 },
+      { line: "Line D", target: 800, actual: 800 },
+      { line: "Line E", target: 1500, actual: 1300 },
+      { line: "Line F", target: 900, actual: 920 },
+      { line: "Line G", target: 1100, actual: 1050 }
+    ];
 
-        // สร้างรายการแต่ละไลน์
-        const container = document.getElementById('linesList');
-        container.innerHTML = '';
+    let chartInstance = null;
+
+    // ระบบสลับหน้า Tab
+    function switchTab(tabId) {
+      document.getElementById('tab1').classList.add('hidden');
+      document.getElementById('tab2').classList.add('hidden');
+      document.getElementById('nav-tab1').classList.remove('active');
+      document.getElementById('nav-tab2').classList.remove('active');
+
+      document.getElementById(tabId).classList.remove('hidden');
+      if(tabId === 'tab1') {
+        document.getElementById('nav-tab1').classList.add('active');
+        document.getElementById('pageTitle').innerText = "Dashboard ภาพรวมประจำวัน";
+      } else {
+        document.getElementById('nav-tab2').classList.add('active');
+        document.getElementById('pageTitle').innerText = "ค้นหาและติดตามสถานะ LOT";
+      }
+    }
+
+    // สร้างการ์ดสรุปย่อย Target, Actual, Diff, %
+    function renderCards(data) {
+      const container = document.getElementById('cardsContainer');
+      container.innerHTML = '';
+
+      data.forEach(item => {
+        const diff = item.actual - item.target;
+        const pct = Math.round((item.actual / item.target) * 100);
         
-        data.lines.forEach(l => {
-          const badgeColor = l.status === 'ok' ? 'bg-green-100 text-green-800' : 
-                            (l.status === 'behind' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800');
-          
-          container.innerHTML += `
-            <div class="border rounded-lg p-3 flex items-center justify-between">
+        const diffText = diff >= 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
+        const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
+        const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+
+        container.innerHTML += `
+          <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="font-extrabold text-slate-800">${item.line}</span>
+              <span class="text-xs font-bold px-2.5 py-1 rounded-lg ${diffColor}">${diffText}</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <span class="font-bold text-lg">Line ${l.code}</span>
-                ${l.lot_number ? `<span class="text-xs text-gray-500 block">LOT: ${l.lot_number}</span>` : ''}
+                <span class="text-slate-400">Target:</span>
+                <span class="font-bold text-slate-700 ml-1">${item.target.toLocaleString()}</span>
               </div>
-              <div class="text-right">
-                <span class="text-sm font-semibold">${l.actual.toLocaleString()} / ${l.target.toLocaleString()}</span>
-                <span class="text-xs px-2 py-0.5 rounded-full block mt-0.5 ${badgeColor}">${l.pct}%</span>
+              <div>
+                <span class="text-slate-400">Actual:</span>
+                <span class="font-bold text-slate-700 ml-1">${item.actual.toLocaleString()}</span>
               </div>
             </div>
-          `;
-        });
+
+            <div>
+              <div class="flex justify-between text-xs font-bold mb-1">
+                <span class="text-slate-400">Progress</span>
+                <span class="text-slate-700">${pct}%</span>
+              </div>
+              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div class="${progressColor} h-2 rounded-full" style="width: ${Math.min(pct, 100)}%"></div>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    // วาดกราฟแท่งคู่ B-G
+    function renderChart(data) {
+      const ctx = document.getElementById('factoryChart').getContext('2d');
+      
+      if(chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: data.map(d => d.line),
+          datasets: [
+            {
+              label: 'Target (เป้า)',
+              data: data.map(d => d.target),
+              backgroundColor: '#3B82F6',
+              borderRadius: 6
+            },
+            {
+              label: 'Actual (ทำได้จริง)',
+              data: data.map(d => d.actual),
+              backgroundColor: '#10B981',
+              borderRadius: 6
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'top' } },
+          scales: {
+            y: { beginAtZero: true, grid: { color: '#F1F5F9' } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    // ฟังก์ชันเสิร์ช LOT (Mockup)
+    function searchLot() {
+      const val = document.getElementById('lotInput').value.trim();
+      if(!val) return alert("กรุณากรอกรหัส LOT ก่อนครับ");
+
+      document.getElementById('resLotNo').innerText = val;
+      document.getElementById('resStatusBadge').innerText = "In Production";
+      document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-amber-100 text-amber-700";
+      
+      document.getElementById('resQty').innerText = "500 ชิ้น";
+      document.getElementById('resSeries').innerText = "Alpha-2026";
+      document.getElementById('resModel').innerText = "MD-900X";
+      document.getElementById('resShipment').innerText = "25 ส.ค. 2026";
+      document.getElementById('resRealtimeStatus').innerText = "กำลังประกอบชิ้นส่วน (Station 3) - อัปเดตล่าสุดสดๆ ร้อนๆ";
+    }
+
+    // Main Init Function
+    async function main() {
+      // โหลดการ์ดและกราฟ
+      renderCards(mockData);
+      renderChart(mockData);
+
+      // เชื่อมต่อ LIFF
+      try {
+        await liff.init({ liffId: LIFF_ID });
+        if (liff.isLoggedIn()) {
+          const profile = await liff.getProfile();
+          document.getElementById("displayName").innerText = profile.displayName;
+        }
       } catch (err) {
-        alert("ไม่สามารถดึงข้อมูลได้ กรุณาลองใหม่");
+        document.getElementById("displayName").innerText = "Guest User";
       }
     }
 
-    // เริ่มต้น LIFF และดึงข้อมูล
-    async function main() {
-      await liff.init({ liffId: "2011181755-bLeCO8Hs" }); // 👈 ใส่ LIFF ID จาก LINE Developers
-      if (!liff.isLoggedIn()) {
-        liff.login();
-      } else {
-        fetchDashboardData();
-      }
-    }
     main();
   </script>
 </body>
