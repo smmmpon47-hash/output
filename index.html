@@ -35,7 +35,7 @@
     <!-- Top Bar: Header & LINE User Profile -->
     <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
       <div>
-        <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมประจำวัน</h1>
+        <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
         <p class="text-xs text-slate-400">อัปเดตข้อมูล Real-time</p>
       </div>
       <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
@@ -47,12 +47,20 @@
     <!-- PAGE 1: Dashboard ภาพรวม (Default) -->
     <div id="tab1" class="space-y-6">
       
-      <!-- Chart Card (B - G) -->
+      <!-- Chart Card (B - G) + Date Selector -->
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <div class="flex justify-between items-center mb-4">
-          <h2 class="font-bold text-slate-700">เปรียบเทียบ Target vs Actual (Line B - G)</h2>
-          <span class="text-xs bg-indigo-50 text-indigo-600 font-semibold px-2.5 py-1 rounded-lg">Today</span>
+        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+          <div>
+            <h2 class="font-bold text-slate-700">เปรียบเทียบ Target vs Actual (Line B - G)</h2>
+            <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
+          </div>
+          <!-- ช่องเลือกวันที่ย้อนหลัง -->
+          <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
+            <span class="text-xs font-bold text-slate-500">📅 วันที่:</span>
+            <input type="date" id="datePicker" onchange="onDateChange()" class="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
+          </div>
         </div>
+
         <div class="h-64 relative">
           <canvas id="factoryChart"></canvas>
         </div>
@@ -75,7 +83,7 @@
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
         <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาหมายเลข LOT</label>
         <div class="flex gap-2">
-          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT เช่น LOT-2026-001..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT เช่น LOT25042026..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
           <button onclick="searchLot()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition shadow-md shadow-indigo-100">
             🔍 ค้นหา
           </button>
@@ -94,26 +102,26 @@
 
         <div class="grid grid-cols-2 gap-4 text-sm">
           <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">จำนวน LOT</p>
-            <p id="resQty" class="font-bold text-slate-700 mt-0.5">-</p>
+            <p class="text-xs text-slate-400">เป้า PO รวม</p>
+            <p id="resPoTarget" class="font-bold text-slate-700 mt-0.5">-</p>
           </div>
           <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">รุ่น (Series)</p>
-            <p id="resSeries" class="font-bold text-slate-700 mt-0.5">-</p>
+            <p class="text-xs text-slate-400">ผลิตสะสมแล้ว</p>
+            <p id="resCumulativeActual" class="font-bold text-slate-700 mt-0.5">-</p>
           </div>
           <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">Model</p>
+            <p class="text-xs text-slate-400">Model (รุ่น)</p>
             <p id="resModel" class="font-bold text-slate-700 mt-0.5">-</p>
           </div>
           <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">Shipment</p>
-            <p id="resShipment" class="font-bold text-slate-700 mt-0.5">-</p>
+            <p class="text-xs text-slate-400">กำหนดส่งมอบ</p>
+            <p id="resDeliveryDate" class="font-bold text-slate-700 mt-0.5">-</p>
           </div>
         </div>
 
         <!-- Real-time Status Area -->
         <div class="mt-4 pt-4 border-t border-slate-100">
-          <p class="text-xs font-bold text-slate-500 mb-2">⚡ สถานะการผลิต Real-Time</p>
+          <p class="text-xs font-bold text-slate-500 mb-2">⚡ ความคืบหน้าการผลิต</p>
           <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
             <span class="text-xl">🏭</span>
             <span id="resRealtimeStatus">พร้อมค้นหาข้อมูลล็อตการผลิต</span>
@@ -126,21 +134,19 @@
   </div>
 
   <script>
-    // Config ลิงก์ Apps Script ของคุณ
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzDaRH4kbo7lElXKBCQUbUn7uvYISayMM51fBT3KTY1q_MHqRis7DEDYRfqoTK7NwQg/exec";
     const LIFF_ID = "2011181755-bLeCO8Hs";
 
-    // ข้อมูลตัวอย่างสำหรับแสดงผล (Mock Data B-G)
-    const mockData = [
-      { line: "Line B", target: 1000, actual: 950 },
-      { line: "Line C", target: 1200, actual: 1250 },
-      { line: "Line D", target: 800, actual: 800 },
-      { line: "Line E", target: 1500, actual: 1300 },
-      { line: "Line F", target: 900, actual: 920 },
-      { line: "Line G", target: 1100, actual: 1050 }
-    ];
-
     let chartInstance = null;
+
+    // คืนค่าวันที่ปัจจุบันในรูปแบบ YYYY-MM-DD
+    function getTodayStr() {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    }
 
     // ระบบสลับหน้า Tab
     function switchTab(tabId) {
@@ -152,21 +158,57 @@
       document.getElementById(tabId).classList.remove('hidden');
       if(tabId === 'tab1') {
         document.getElementById('nav-tab1').classList.add('active');
-        document.getElementById('pageTitle').innerText = "Dashboard ภาพรวมประจำวัน";
+        document.getElementById('pageTitle').innerText = "Dashboard ภาพรวมการผลิต";
       } else {
         document.getElementById('nav-tab2').classList.add('active');
         document.getElementById('pageTitle').innerText = "ค้นหาและติดตามสถานะ LOT";
       }
     }
 
+    // ดึงข้อมูล Dashboard ตามวันที่ระบุ
+    async function fetchDashboardData(selectedDate) {
+      try {
+        document.getElementById('selectedDateText').innerText = `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
+        const res = await fetch(`${GAS_API_URL}?date=${selectedDate}`);
+        const data = await res.json();
+        
+        if (data.lines && data.lines.length > 0) {
+          renderCards(data.lines);
+          renderChart(data.lines);
+          document.getElementById('selectedDateText').innerText = `แสดงข้อมูลประจำวันที่: ${data.date}`;
+        } else {
+          showEmptyState();
+        }
+      } catch (err) {
+        console.error("Fetch Error:", err);
+        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูลวันที่ ${selectedDate}`;
+      }
+    }
+
+    // เมื่อผู้ใช้เลือกเปลี่ยนวันที่จาก Date Picker
+    function onDateChange() {
+      const selectedDate = document.getElementById('datePicker').value;
+      if (selectedDate) {
+        fetchDashboardData(selectedDate);
+      }
+    }
+
+    function showEmptyState() {
+      document.getElementById('cardsContainer').innerHTML = `
+        <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
+          🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก
+        </div>`;
+      if (chartInstance) chartInstance.destroy();
+    }
+
     // สร้างการ์ดสรุปย่อย Target, Actual, Diff, %
-    function renderCards(data) {
+    function renderCards(lines) {
       const container = document.getElementById('cardsContainer');
       container.innerHTML = '';
 
-      data.forEach(item => {
+      lines.forEach(item => {
         const diff = item.actual - item.target;
-        const pct = Math.round((item.actual / item.target) * 100);
+        const pct = item.target > 0 ? Math.round((item.actual / item.target) * 100) : 0;
         
         const diffText = diff >= 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
         const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
@@ -192,7 +234,7 @@
 
             <div>
               <div class="flex justify-between text-xs font-bold mb-1">
-                <span class="text-slate-400">Progress</span>
+                <span class="text-slate-400">Progress ${item.lot_number ? `[${item.lot_number}]` : ''}</span>
                 <span class="text-slate-700">${pct}%</span>
               </div>
               <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
@@ -205,25 +247,24 @@
     }
 
     // วาดกราฟแท่งคู่ B-G
-    function renderChart(data) {
+    function renderChart(lines) {
       const ctx = document.getElementById('factoryChart').getContext('2d');
-      
       if(chartInstance) chartInstance.destroy();
 
       chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: data.map(d => d.line),
+          labels: lines.map(d => d.line),
           datasets: [
             {
               label: 'Target (เป้า)',
-              data: data.map(d => d.target),
+              data: lines.map(d => d.target),
               backgroundColor: '#3B82F6',
               borderRadius: 6
             },
             {
               label: 'Actual (ทำได้จริง)',
-              data: data.map(d => d.actual),
+              data: lines.map(d => d.actual),
               backgroundColor: '#10B981',
               borderRadius: 6
             }
@@ -241,27 +282,54 @@
       });
     }
 
-    // ฟังก์ชันเสิร์ช LOT (Mockup)
-    function searchLot() {
+    // ฟังก์ชันเสิร์ช LOT จริงผ่าน API
+    async function searchLot() {
       const val = document.getElementById('lotInput').value.trim();
       if(!val) return alert("กรุณากรอกรหัส LOT ก่อนครับ");
 
-      document.getElementById('resLotNo').innerText = val;
-      document.getElementById('resStatusBadge').innerText = "In Production";
-      document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-amber-100 text-amber-700";
-      
-      document.getElementById('resQty').innerText = "500 ชิ้น";
-      document.getElementById('resSeries').innerText = "Alpha-2026";
-      document.getElementById('resModel').innerText = "MD-900X";
-      document.getElementById('resShipment').innerText = "25 ส.ค. 2026";
-      document.getElementById('resRealtimeStatus').innerText = "กำลังประกอบชิ้นส่วน (Station 3) - อัปเดตล่าสุดสดๆ ร้อนๆ";
+      document.getElementById('resRealtimeStatus').innerText = "กำลังค้นหาข้อมูล...";
+
+      try {
+        const res = await fetch(`${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`);
+        const data = await res.json();
+
+        if (data.error) {
+          document.getElementById('resLotNo').innerText = val;
+          document.getElementById('resStatusBadge').innerText = "Not Found";
+          document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-rose-100 text-rose-700";
+          document.getElementById('resPoTarget').innerText = "-";
+          document.getElementById('resCumulativeActual').innerText = "-";
+          document.getElementById('resModel').innerText = "-";
+          document.getElementById('resDeliveryDate').innerText = "-";
+          document.getElementById('resRealtimeStatus').innerText = "❌ ไม่พบข้อมูล LOT นี้ในระบบ Master_LOT";
+          return;
+        }
+
+        const pct = data.po_target > 0 ? ((data.cumulative_actual / data.po_target) * 100).toFixed(1) : 0;
+
+        document.getElementById('resLotNo').innerText = data.lot_number;
+        document.getElementById('resStatusBadge').innerText = `${pct}% Completed`;
+        document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700";
+        
+        document.getElementById('resPoTarget').innerText = `${data.po_target.toLocaleString()} ชิ้น`;
+        document.getElementById('resCumulativeActual').innerText = `${data.cumulative_actual.toLocaleString()} ชิ้น`;
+        document.getElementById('resModel').innerText = data.model || "-";
+        document.getElementById('resDeliveryDate').innerText = data.delivery_date || "-";
+        document.getElementById('resRealtimeStatus').innerText = `ผลิตสะสมได้ ${data.cumulative_actual.toLocaleString()} จากเป้า ${data.po_target.toLocaleString()} ชิ้น (${pct}%)`;
+
+      } catch (err) {
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+      }
     }
 
     // Main Init Function
     async function main() {
-      // โหลดการ์ดและกราฟ
-      renderCards(mockData);
-      renderChart(mockData);
+      // ตั้งค่า Date Picker เป็นวันปัจจุบัน
+      const todayStr = getTodayStr();
+      document.getElementById('datePicker').value = todayStr;
+
+      // โหลดข้อมูล Dashboard วันปัจจุบัน
+      fetchDashboardData(todayStr);
 
       // เชื่อมต่อ LIFF
       try {
