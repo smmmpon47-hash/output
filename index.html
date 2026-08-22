@@ -32,7 +32,7 @@
   <!-- Content Area -->
   <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
     
-    <!-- Top Bar: Header & LINE User Profile -->
+    <!-- Top Bar -->
     <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
       <div>
         <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
@@ -44,17 +44,16 @@
       </div>
     </div>
 
-    <!-- PAGE 1: Dashboard ภาพรวม (Default) -->
+    <!-- PAGE 1: Dashboard ภาพรวม -->
     <div id="tab1" class="space-y-6">
       
-      <!-- Chart Card (B - G) + Date Selector -->
+      <!-- Chart Card (Stacked Bar Chart ตามรูปวาด) -->
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
         <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
           <div>
-            <h2 class="font-bold text-slate-700">เปรียบเทียบ Target vs Actual (Line B - G)</h2>
+            <h2 class="font-bold text-slate-700">เปรียบเทียบ Target vs Actual (Stacked)</h2>
             <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
           </div>
-          <!-- ช่องเลือกวันที่ย้อนหลัง -->
           <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
             <span class="text-xs font-bold text-slate-500">📅 วันที่:</span>
             <input type="date" id="datePicker" onchange="onDateChange()" class="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
@@ -66,31 +65,28 @@
         </div>
       </div>
 
-      <!-- Summary Cards Grid (B - G) -->
+      <!-- Summary Cards Grid (แยก LOT 1 และ LOT 2 ตามรูปวาด) -->
       <div>
-        <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์</h2>
+        <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์ & LOT</h2>
         <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Cards จะถูกเจ็นผ่าน JavaScript -->
+          <!-- Cards เจ็นจาก JavaScript -->
         </div>
       </div>
 
     </div>
 
-    <!-- PAGE 2: ค้นหา LOT (Lot Search) -->
+    <!-- PAGE 2: ค้นหา LOT -->
     <div id="tab2" class="space-y-6 hidden">
-      
-      <!-- Search Input Card -->
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
         <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาหมายเลข LOT</label>
         <div class="flex gap-2">
-          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT เช่น LOT25042026..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
+          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
           <button onclick="searchLot()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition shadow-md shadow-indigo-100">
             🔍 ค้นหา
           </button>
         </div>
       </div>
 
-      <!-- Search Result Display Card -->
       <div id="searchResult" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
         <div class="flex justify-between items-start border-b border-slate-100 pb-4">
           <div>
@@ -119,7 +115,6 @@
           </div>
         </div>
 
-        <!-- Real-time Status Area -->
         <div class="mt-4 pt-4 border-t border-slate-100">
           <p class="text-xs font-bold text-slate-500 mb-2">⚡ ความคืบหน้าการผลิต</p>
           <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
@@ -128,7 +123,6 @@
           </div>
         </div>
       </div>
-
     </div>
 
   </div>
@@ -139,7 +133,6 @@
 
     let chartInstance = null;
 
-    // คืนค่าวันที่ปัจจุบันในรูปแบบ YYYY-MM-DD
     function getTodayStr() {
       const today = new Date();
       const yyyy = today.getFullYear();
@@ -148,7 +141,6 @@
       return `${yyyy}-${mm}-${dd}`;
     }
 
-    // ระบบสลับหน้า Tab
     function switchTab(tabId) {
       document.getElementById('tab1').classList.add('hidden');
       document.getElementById('tab2').classList.add('hidden');
@@ -165,7 +157,6 @@
       }
     }
 
-    // ดึงข้อมูล Dashboard ตามวันที่ระบุ
     async function fetchDashboardData(selectedDate) {
       try {
         document.getElementById('selectedDateText').innerText = `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
@@ -185,12 +176,9 @@
       }
     }
 
-    // เมื่อผู้ใช้เลือกเปลี่ยนวันที่จาก Date Picker
     function onDateChange() {
       const selectedDate = document.getElementById('datePicker').value;
-      if (selectedDate) {
-        fetchDashboardData(selectedDate);
-      }
+      if (selectedDate) fetchDashboardData(selectedDate);
     }
 
     function showEmptyState() {
@@ -201,88 +189,115 @@
       if (chartInstance) chartInstance.destroy();
     }
 
-    // สร้างการ์ดสรุปย่อย Target, Actual, Diff, %
+    // สร้างการ์ดแยก LOT 1 และ LOT 2 ตามภาพร่าง
     function renderCards(lines) {
       const container = document.getElementById('cardsContainer');
       container.innerHTML = '';
 
       lines.forEach(item => {
-        const diff = item.actual - item.target;
-        const pct = item.target > 0 ? Math.round((item.actual / item.target) * 100) : 0;
-        
-        const diffText = diff >= 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
-        const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
-        const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+        // การ์ด LOT 1
+        container.innerHTML += createCardHtml(item.line, 'LOT 1', item.lot_number || '-', item.target, item.actual);
 
-        container.innerHTML += `
-          <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
-            <div class="flex justify-between items-center">
-              <span class="font-extrabold text-slate-800">${item.line}</span>
-              <span class="text-xs font-bold px-2.5 py-1 rounded-lg ${diffColor}">${diffText}</span>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span class="text-slate-400">Target:</span>
-                <span class="font-bold text-slate-700 ml-1">${item.target.toLocaleString()}</span>
-              </div>
-              <div>
-                <span class="text-slate-400">Actual:</span>
-                <span class="font-bold text-slate-700 ml-1">${item.actual.toLocaleString()}</span>
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between text-xs font-bold mb-1">
-                <span class="text-slate-400">Progress ${item.lot_number ? `[${item.lot_number}]` : ''}</span>
-                <span class="text-slate-700">${pct}%</span>
-              </div>
-              <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-                <div class="${progressColor} h-2 rounded-full" style="width: ${Math.min(pct, 100)}%"></div>
-              </div>
-            </div>
-          </div>
-        `;
+        // การ์ด LOT 2 (แสดงเมื่อมีข้อมูล LOT 2)
+        if (item.lot_number2) {
+          container.innerHTML += createCardHtml(item.line, 'LOT 2', item.lot_number2, item.target2 || 0, item.actual2 || 0);
+        }
       });
     }
 
-    // วาดกราฟแท่งคู่ B-G
+    function createCardHtml(line, lotTag, lotName, target, actual) {
+      const diff = actual - target;
+      const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
+      const diffText = diff >= 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
+      const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
+      const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+
+      return `
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
+          <div class="flex justify-between items-center">
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-slate-800">LINE ${line}</span>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">${lotTag}</span>
+            </div>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg ${diffColor}">${diffText}</span>
+          </div>
+          
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <span class="text-slate-400">TG:</span>
+              <span class="font-bold text-slate-700 ml-1">${target.toLocaleString()}</span>
+            </div>
+            <div>
+              <span class="text-slate-400">AC:</span>
+              <span class="font-bold text-slate-700 ml-1">${actual.toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div>
+            <div class="flex justify-between text-xs font-bold mb-1">
+              <span class="text-slate-500">รุ่น/LOT: <span class="text-slate-800">${lotName}</span></span>
+              <span class="text-slate-700">${pct}%</span>
+            </div>
+            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+              <div class="${progressColor} h-2 rounded-full" style="width: ${Math.min(pct, 100)}%"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // วาด Stacked Bar Chart (ทำจริงอยู่ล่าง / ส่วนต่างอยู่บน)
     function renderChart(lines) {
       const ctx = document.getElementById('factoryChart').getContext('2d');
       if(chartInstance) chartInstance.destroy();
 
+      const labels = lines.map(d => `LINE ${d.line}`);
+      const actualData = lines.map(d => d.actual);
+      
+      // คำนวณส่วนต่าง (Diff) เพื่อซ้อนบน Actual ให้ความสูงรวมเท่ากับ Target
+      const remainingData = lines.map(d => Math.max(0, d.target - d.actual));
+
       chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: lines.map(d => d.line),
+          labels: labels,
           datasets: [
             {
-              label: 'Target (เป้า)',
-              data: lines.map(d => d.target),
-              backgroundColor: '#3B82F6',
-              borderRadius: 6
+              label: 'Actual (ทำได้จริง)',
+              data: actualData,
+              backgroundColor: '#10B981', // สีเขียว
+              borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 }
             },
             {
-              label: 'Actual (ทำได้จริง)',
-              data: lines.map(d => d.actual),
-              backgroundColor: '#10B981',
-              borderRadius: 6
+              label: 'ส่วนต่างขยับเข้าหา Target',
+              data: remainingData,
+              backgroundColor: '#EF4444', // สีแดง
+              borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
             }
           ]
         },
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: { legend: { position: 'top' } },
+          plugins: { 
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                footer: (tooltipItems) => {
+                  const index = tooltipItems[0].dataIndex;
+                  return `Target รวม: ${lines[index].target.toLocaleString()} ชิ้น`;
+                }
+              }
+            }
+          },
           scales: {
-            y: { beginAtZero: true, grid: { color: '#F1F5F9' } },
-            x: { grid: { display: false } }
+            x: { stacked: true, grid: { display: false } },
+            y: { stacked: true, beginAtZero: true, grid: { color: '#F1F5F9' } }
           }
         }
       });
     }
 
-    // ฟังก์ชันเสิร์ช LOT จริงผ่าน API
     async function searchLot() {
       const val = document.getElementById('lotInput').value.trim();
       if(!val) return alert("กรุณากรอกรหัส LOT ก่อนครับ");
@@ -322,16 +337,11 @@
       }
     }
 
-    // Main Init Function
     async function main() {
-      // ตั้งค่า Date Picker เป็นวันปัจจุบัน
       const todayStr = getTodayStr();
       document.getElementById('datePicker').value = todayStr;
-
-      // โหลดข้อมูล Dashboard วันปัจจุบัน
       fetchDashboardData(todayStr);
 
-      // เชื่อมต่อ LIFF
       try {
         await liff.init({ liffId: LIFF_ID });
         if (liff.isLoggedIn()) {
