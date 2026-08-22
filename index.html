@@ -92,7 +92,7 @@
         </div>
       </div>
 
-      <!-- 3. Summary Cards Grid (โชว์ Model และ LOT ถูกต้อง) -->
+      <!-- 3. Summary Cards Grid -->
       <div>
         <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์ & LOT</h2>
         <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -223,12 +223,13 @@
       if (hourlyChartInstance) hourlyChartInstance.destroy();
     }
 
-    // 1. กราฟ Daily Stacked Bar + Target Gap + Data Labels
+    // 1. กราฟ Daily Stacked Bar Chart
     function renderDailyChart(lines) {
       const ctx = document.getElementById('factoryChart').getContext('2d');
       if(chartInstance) chartInstance.destroy();
 
-      const labels = lines.map(d => `LINE ${d.line}`);
+      // ปรับไม่ให้แสดงคำว่า LINE ซ้ำ
+      const labels = lines.map(d => String(d.line).toUpperCase().includes('LINE') ? d.line : `LINE ${d.line}`);
       const actualData = lines.map(d => d.actual);
       const remainingData = lines.map(d => Math.max(0, d.target - d.actual));
 
@@ -287,7 +288,7 @@
       const timeSlots = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
       const hourlyTarget = 60;
 
-      const lineObj = globalLinesData.find(d => String(d.line).toUpperCase() === selectedLine) || {};
+      const lineObj = globalLinesData.find(d => String(d.line).toUpperCase().includes(selectedLine)) || {};
       const hourlyActuals = lineObj.hourly_data || [55, 62, 58, 45, 60, 65, 50, 40]; 
 
       hourlyChartInstance = new Chart(ctx, {
@@ -336,7 +337,7 @@
       });
     }
 
-    // 3. Render Cards โดยรับค่า Model และ LOT แสดงคู่กัน
+    // 3. Render Cards แสดงผล Line, Model และ LOT ถูกต้อง
     function renderCards(lines) {
       const container = document.getElementById('cardsContainer');
       container.innerHTML = '';
@@ -356,11 +357,18 @@
       const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
       const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
 
+      // เช็กป้องกันคำว่า LINE ซ้ำ
+      const lineDisplayName = String(line).toUpperCase().includes('LINE') ? line : `LINE ${line}`;
+
+      // ป้องกันการนำตัวเลขเป้ามาโชว์แทน LOT
+      const cleanLotName = (lotName && String(lotName).trim() !== '' && lotName !== '-') ? lotName : 'ไม่มี LOT';
+      const cleanModelName = (modelName && String(modelName).trim() !== '' && modelName !== '-') ? modelName : 'ไม่ระบุรุ่น';
+
       return `
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
           <div class="flex justify-between items-center">
             <div class="flex items-center gap-2">
-              <span class="font-extrabold text-slate-800">LINE ${line}</span>
+              <span class="font-extrabold text-slate-800">${lineDisplayName}</span>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">${lotTag}</span>
             </div>
             <span class="text-xs font-bold px-2.5 py-1 rounded-lg ${diffColor}">${diffText}</span>
@@ -379,7 +387,7 @@
 
           <div>
             <div class="flex justify-between text-xs font-bold mb-1">
-              <span class="text-slate-500">รุ่น: <span class="text-slate-800">${modelName || '-'}</span> <span class="text-slate-400">(${lotName || '-'})</span></span>
+              <span class="text-slate-500">รุ่น: <span class="text-slate-800">${cleanModelName}</span> <span class="text-slate-400">(${cleanLotName})</span></span>
               <span class="text-slate-700">${pct}%</span>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
