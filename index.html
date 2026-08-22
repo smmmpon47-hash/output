@@ -6,7 +6,7 @@
   <title>Production Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- Chart.js และ DataLabels Plugin -->
+  <!-- Chart.js และ Plugin แสดงตัวเลขบนกราฟ -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -74,7 +74,6 @@
             <p class="text-xs text-slate-400">เป้าหมายมาตรฐาน 60 ชิ้น / ชั่วโมง</p>
           </div>
           
-          <!-- Dropdown เลือก Line -->
           <div class="flex items-center gap-2">
             <span class="text-xs font-bold text-slate-500">เลือกลูกไลน์:</span>
             <select id="lineSelect" onchange="updateHourlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
@@ -88,17 +87,16 @@
           </div>
         </div>
 
-        <!-- กราฟรายชั่วโมง -->
         <div class="h-60 relative">
           <canvas id="hourlyChart"></canvas>
         </div>
       </div>
 
-      <!-- 3. Summary Cards Grid (แยก LOT 1 และ LOT 2) -->
+      <!-- 3. Summary Cards Grid (โชว์ Model และ LOT ถูกต้อง) -->
       <div>
         <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์ & LOT</h2>
         <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Cards เจ็นจาก JavaScript -->
+          <!-- Cards จะถูกเจ็นมาจาก JavaScript -->
         </div>
       </div>
 
@@ -157,7 +155,6 @@
   </div>
 
   <script>
-    // ลงทะเบียน Plugin แสดงตัวเลขบนแท่งกราฟ
     Chart.register(ChartDataLabels);
 
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbzDaRH4kbo7lElXKBCQUbUn7uvYISayMM51fBT3KTY1q_MHqRis7DEDYRfqoTK7NwQg/exec";
@@ -201,7 +198,7 @@
           globalLinesData = data.lines;
           renderCards(data.lines);
           renderDailyChart(data.lines);
-          updateHourlyChart(); // อัปเดตกราฟรายชั่วโมง
+          updateHourlyChart();
           document.getElementById('selectedDateText').innerText = `แสดงข้อมูลประจำวันที่: ${data.date}`;
         } else {
           showEmptyState();
@@ -226,7 +223,7 @@
       if (hourlyChartInstance) hourlyChartInstance.destroy();
     }
 
-    // 1. กราฟภาพรวมรายวัน (Daily Stacked Bar Chart + DataLabels + Target Gap)
+    // 1. กราฟ Daily Stacked Bar + Target Gap + Data Labels
     function renderDailyChart(lines) {
       const ctx = document.getElementById('factoryChart').getContext('2d');
       if(chartInstance) chartInstance.destroy();
@@ -243,13 +240,13 @@
             {
               label: 'Actual (ทำได้จริง)',
               data: actualData,
-              backgroundColor: '#10B981', // เขียว
+              backgroundColor: '#10B981',
               borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 }
             },
             {
-              label: 'Target Gap', // เปลี่ยนชื่อเป็น Target Gap ตามสั่งครับ
+              label: 'Target Gap',
               data: remainingData,
-              backgroundColor: '#EF4444', // แดง
+              backgroundColor: '#EF4444',
               borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
             }
           ]
@@ -259,7 +256,6 @@
           maintainAspectRatio: false,
           plugins: { 
             legend: { position: 'top' },
-            // ตั้งค่าตัวเลขบนแท่งกราฟ (Data Labels)
             datalabels: {
               color: '#ffffff',
               font: { weight: 'bold', size: 11, family: 'Kanit' },
@@ -282,17 +278,15 @@
       });
     }
 
-    // 2. กราฟเจาะลึกรายชั่วโมง (Hourly Tracking Chart)
+    // 2. กราฟ Hourly Tracking
     function updateHourlyChart() {
       const selectedLine = document.getElementById('lineSelect').value;
       const ctx = document.getElementById('hourlyChart').getContext('2d');
       if(hourlyChartInstance) hourlyChartInstance.destroy();
 
-      // รอบเวลา 8 ชั่วโมงทำงาน
       const timeSlots = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
-      const hourlyTarget = 60; // เป้าหมายต่อชั่วโมง
+      const hourlyTarget = 60;
 
-      // ดึงข้อมูลรายชั่วโมงของไลน์ที่เลือก (ถ้าไม่มีข้อมูลให้ Mock เป็นตัวอย่าง)
       const lineObj = globalLinesData.find(d => String(d.line).toUpperCase() === selectedLine) || {};
       const hourlyActuals = lineObj.hourly_data || [55, 62, 58, 45, 60, 65, 50, 40]; 
 
@@ -305,18 +299,18 @@
               type: 'line',
               label: 'Target / ชม. (60 ชิ้น)',
               data: Array(8).fill(hourlyTarget),
-              borderColor: '#6366F1', // เส้นสีม่วงเป้าหมาย
+              borderColor: '#6366F1',
               borderWidth: 2,
               borderDash: [5, 5],
               fill: false,
               pointRadius: 0,
-              datalabels: { display: false } // ไม่โชว์ตัวเลขบนเส้นเป้าหมาย
+              datalabels: { display: false }
             },
             {
               type: 'bar',
               label: 'Actual รายชั่วโมง',
               data: hourlyActuals,
-              backgroundColor: hourlyActuals.map(val => val >= hourlyTarget ? '#10B981' : '#F59E0B'), // เขียวถ้ารอด / ส้มถ้าหลุดเป้า
+              backgroundColor: hourlyActuals.map(val => val >= hourlyTarget ? '#10B981' : '#F59E0B'),
               borderRadius: 6
             }
           ]
@@ -342,20 +336,20 @@
       });
     }
 
-    // 3. Render การ์ดแยก LOT 1 และ LOT 2
+    // 3. Render Cards โดยรับค่า Model และ LOT แสดงคู่กัน
     function renderCards(lines) {
       const container = document.getElementById('cardsContainer');
       container.innerHTML = '';
 
       lines.forEach(item => {
-        container.innerHTML += createCardHtml(item.line, 'LOT 1', item.lot_number || '-', item.target, item.actual);
+        container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target, item.actual);
         if (item.lot_number2) {
-          container.innerHTML += createCardHtml(item.line, 'LOT 2', item.lot_number2, item.target2 || 0, item.actual2 || 0);
+          container.innerHTML += createCardHtml(item.line, 'LOT 2', item.model2, item.lot_number2, item.target2 || 0, item.actual2 || 0);
         }
       });
     }
 
-    function createCardHtml(line, lotTag, lotName, target, actual) {
+    function createCardHtml(line, lotTag, modelName, lotName, target, actual) {
       const diff = actual - target;
       const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
       const diffText = diff >= 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
@@ -385,7 +379,7 @@
 
           <div>
             <div class="flex justify-between text-xs font-bold mb-1">
-              <span class="text-slate-500">รุ่น/LOT: <span class="text-slate-800">${lotName}</span></span>
+              <span class="text-slate-500">รุ่น: <span class="text-slate-800">${modelName || '-'}</span> <span class="text-slate-400">(${lotName || '-'})</span></span>
               <span class="text-slate-700">${pct}%</span>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
