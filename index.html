@@ -365,7 +365,10 @@
     function createCardHtml(line, lotTag, modelName, lotName, target, actual) {
       const diff = actual - target;
       const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
-      const diffText = diff >= 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
+      const pctDiff = target > 0 ? Math.round((diff / target) * 100) : 0;
+      const diffText = diff >= 0
+        ? `+${diff.toLocaleString()} (+${pctDiff}%)`
+        : `${diff.toLocaleString()} (${pctDiff}%)`;
       const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
       const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
 
@@ -376,7 +379,7 @@
               <span class="font-extrabold text-slate-800">LINE ${line}</span>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">${lotTag}</span>
             </div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-lg ${diffColor}">${diffText}</span>
+            <span class="text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap ${diffColor}">${diffText}</span>
           </div>
           
           <div class="grid grid-cols-2 gap-2 text-xs">
