@@ -16,7 +16,7 @@
       color: #2b3674;
     }
 
-    /* 1. Sidebar ด้านซ้าย */
+    /* Sidebar ซ้ายมือ */
     .sidebar {
       width: 70px;
       background-color: #0b1437;
@@ -43,11 +43,8 @@
       background-color: #10b981;
       color: #ffffff;
     }
-    .sidebar-icon:hover:not(.active) {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
 
-    /* 2. Main Content พื้นที่ทำงานขวา */
+    /* Main Content */
     .main-wrapper {
       flex: 1;
       display: flex;
@@ -57,7 +54,6 @@
       gap: 20px;
     }
 
-    /* Top Banner / Header */
     .top-header {
       background: #ffffff;
       border-radius: 16px;
@@ -67,34 +63,13 @@
       align-items: center;
       box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
-    .header-title h1 {
-      font-size: 1.4rem;
-      font-weight: 700;
-      color: #1b2559;
-    }
-    .header-title p {
-      font-size: 0.85rem;
-      color: #a3edd3;
-      margin-top: 2px;
-      font-weight: 500;
-    }
+    .header-title h1 { font-size: 1.4rem; font-weight: 700; color: #1b2559; }
+    .header-title p { font-size: 0.85rem; color: #10b981; margin-top: 2px; font-weight: 500; }
     .status-badge {
-      background: #e6f4ea;
-      color: #137333;
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
+      background: #e6f4ea; color: #137333; padding: 6px 14px; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 8px;
     }
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      background-color: #34a853;
-      border-radius: 50%;
-    }
+    .status-dot { width: 8px; height: 8px; background-color: #34a853; border-radius: 50%; }
 
     /* Cards */
     .card {
@@ -104,14 +79,56 @@
       box-shadow: 0 4px 12px rgba(0,0,0,0.03);
     }
     .card-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 16px; flex-wrap: wrap; gap: 12px;
+    }
+    .card-title-group h2 { font-size: 1.1rem; font-weight: 700; color: #1b2559; }
+    .card-title-group p { font-size: 0.8rem; color: #4318ff; margin-top: 2px; }
+
+    .filter-box {
+      display: flex; align-items: center; gap: 8px; background: #f4f7fe;
+      padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; color: #2b3674;
+    }
+    .filter-box input, .filter-box select {
+      border: 1px solid #d0d7de; border-radius: 6px; padding: 3px 8px; background: #fff; outline: none; font-weight: 600;
+    }
+
+    .chart-container { position: relative; height: 300px; width: 100%; }
+
+    /* Section รายละเอียดแยกตามไลน์ & LOT */
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #1b2559;
+      margin-top: 10px;
+    }
+    .line-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    @media (max-width: 1024px) {
+      .line-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .line-grid { grid-template-columns: 1fr; }
+    }
+
+    .line-card {
+      background: #ffffff;
+      border-radius: 14px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .line-card-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 12px;
     }
-    .card-title-group h2 {
+    .line-name {
       font-size: 1.1rem;
       font-weight: 700;
       color: #1b2559;
@@ -119,52 +136,53 @@
       align-items: center;
       gap: 8px;
     }
-    .card-title-group p {
-      font-size: 0.8rem;
+    .lot-badge {
+      background: #e0e7ff;
       color: #4318ff;
-      margin-top: 2px;
-    }
-
-    .filter-box {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      background: #f4f7fe;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: 0.85rem;
+      font-size: 0.75rem;
       font-weight: 600;
-      color: #2b3674;
-    }
-    .filter-box input, .filter-box select {
-      border: 1px solid #d0d7de;
+      padding: 2px 8px;
       border-radius: 6px;
-      padding: 3px 8px;
-      background: #fff;
-      outline: none;
+    }
+    .diff-badge {
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+    .diff-plus { background: #e6f4ea; color: #10b981; }
+    .diff-minus { background: #fde8e8; color: #ef4444; }
+
+    .line-metrics {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: #2b3674;
       font-weight: 600;
     }
-
-    .chart-container {
-      position: relative;
-      height: 320px;
-      width: 100%;
+    .line-model {
+      font-size: 0.8rem;
+      color: #a3aed0;
+      font-weight: 500;
+    }
+    .line-progress-val {
+      text-align: right;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #1b2559;
     }
   </style>
 </head>
 <body>
 
-  <!-- Sidebar ซ้ายมือ -->
   <div class="sidebar">
-    <div class="sidebar-icon active" title="ภาพรวมประจำวัน">📊</div>
-    <div class="sidebar-icon" title="ติดตามรายชั่วโมง">📈</div>
-    <div class="sidebar-icon" title="ค้นหาข้อมูล">🔍</div>
+    <div class="sidebar-icon active">📊</div>
+    <div class="sidebar-icon">📈</div>
+    <div class="sidebar-icon">🔍</div>
   </div>
 
-  <!-- พื้นที่หลัก -->
   <div class="main-wrapper">
     
-    <!-- Top Header -->
     <div class="top-header">
       <div class="header-title">
         <h1>Dashboard ภาพรวมการผลิต</h1>
@@ -198,7 +216,7 @@
       <div class="card-header">
         <div class="card-title-group">
           <h2>⏱️ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h2>
-          <p id="targetPerHourSub">เป้าหมายมาตรฐาน -- ชิ้น / ชั่วโมง</p>
+          <p id="targetPerHourSub">เป้าหมายมาตรฐาน: -- ชิ้น / ชั่วโมง</p>
         </div>
         <div class="filter-box">
           <label for="lineFilter">เลือกลูกไลน์:</label>
@@ -217,6 +235,12 @@
       </div>
     </div>
 
+    <!-- Card Group 3: รายละเอียดแยกตามไลน์ & LOT -->
+    <h3 class="section-title">รายละเอียดแยกตามไลน์ & LOT</h3>
+    <div class="line-grid" id="lineCardGrid">
+      <!-- การ์ด Line B - G แสดงผลผ่าน JS -->
+    </div>
+
   </div>
 
 <script>
@@ -225,13 +249,13 @@
   let dailyChart = null;
   let hourlyChart = null;
 
-  const DEFAULT_SLOTS = [
-    "08.30-09.30", "09.30-10.30", "10.30-11.30", "11.30-12.30",
-    "12.30-13.30", "13.30-14.30", "14.30-15.30", "15.30-16.30",
-    "16.30-17.30", "17.30-18.30", "18.30-19.30"
+  // ปรับรอบเวลาเริ่ม 08:30 น. รันต่อเนื่องตามปกติและรองรับ OT
+  const HOURLY_SLOTS = [
+    "08:30", "09:30", "10:30", "11:30", "12:30", 
+    "13:30", "14:30", "15:30", "16:30", "17:30", 
+    "18:30", "19:30"
   ];
 
-  // Set default date
   document.getElementById('dateFilter').valueAsDate = new Date();
 
   window.addEventListener('DOMContentLoaded', () => {
@@ -245,7 +269,7 @@
     ]);
   }
 
-  // 1. Daily Summary Chart
+  // 1. โหลดข้อมูล Daily Summary & การ์ด 6 ไลน์
   async function loadDailySummaryData() {
     const selectedDate = document.getElementById('dateFilter').value;
     document.getElementById('dailyDateSub').innerText = `แสดงข้อมูลประจำวันที่: ${selectedDate}`;
@@ -260,6 +284,7 @@
       const gapData = dataList.map(item => item.gap);
 
       renderDailyChart(labels, actualData, gapData);
+      renderLineCards(dataList);
     } catch (err) {
       console.error("Error loading daily summary:", err);
     }
@@ -290,7 +315,44 @@
     });
   }
 
-  // 2. Hourly Tracking Chart
+  function renderLineCards(dataList) {
+    const grid = document.getElementById('lineCardGrid');
+    grid.innerHTML = '';
+
+    const defaultLines = ['LINE B', 'LINE C', 'LINE D', 'LINE E', 'LINE F', 'LINE G'];
+
+    defaultLines.forEach(lineName => {
+      const found = dataList.find(item => item.line.toUpperCase() === lineName) || { target: 0, actual: 0 };
+      const tg = found.target || 0;
+      const ac = found.actual || 0;
+      const diff = ac - tg;
+      const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
+      const diffClass = diff >= 0 ? 'diff-plus' : 'diff-minus';
+      const pct = tg > 0 ? Math.round((ac / tg) * 100) : 0;
+
+      const cardHtml = `
+        <div class="line-card">
+          <div class="line-card-header">
+            <div class="line-name">
+              ${lineName} <span class="lot-badge">LOT 1</span>
+            </div>
+            <div class="diff-badge ${diffClass}">${diffStr}</div>
+          </div>
+          <div class="line-metrics">
+            <span>TG: ${tg}</span>
+            <span>AC: ${ac}</span>
+          </div>
+          <div class="line-metrics">
+            <span class="line-model">รุ่น: ไม่ระบุ (ไม่มี LOT)</span>
+            <span class="line-progress-val">${pct}%</span>
+          </div>
+        </div>
+      `;
+      grid.innerHTML += cardHtml;
+    });
+  }
+
+  // 2. โหลดข้อมูล Hourly Tracking
   async function loadHourlyChartData() {
     const selectedDate = document.getElementById('dateFilter').value;
     const selectedLine = document.getElementById('lineFilter').value;
@@ -304,10 +366,14 @@
 
       document.getElementById('targetPerHourSub').innerText = `เป้าหมายมาตรฐาน ${targetPerHour} ชิ้น / ชั่วโมง`;
 
-      const actualValues = DEFAULT_SLOTS.map(slot => hourlyMap[slot] || 0);
-      const targetLineData = DEFAULT_SLOTS.map(() => targetPerHour);
+      const actualValues = HOURLY_SLOTS.map(slot => {
+        const matchedKey = Object.keys(hourlyMap).find(k => k.includes(slot) || k.startsWith(slot));
+        return matchedKey ? hourlyMap[matchedKey] : (hourlyMap[slot] || 0);
+      });
 
-      renderHourlyChart(DEFAULT_SLOTS, actualValues, targetLineData, targetPerHour);
+      const targetLineData = HOURLY_SLOTS.map(() => targetPerHour);
+
+      renderHourlyChart(HOURLY_SLOTS, actualValues, targetLineData, targetPerHour);
     } catch (err) {
       console.error("Error loading hourly tracking:", err);
     }
