@@ -71,7 +71,7 @@
         <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
           <div>
             <h2 class="font-bold text-slate-700 text-base">⏱️ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h2>
-            <p class="text-xs text-slate-400">เป้าหมายมาตรฐาน 60 ชิ้น / ชั่วโมง</p>
+            <p id="hourlyTargetSubtitle" class="text-xs text-slate-400">เลือกไลน์เพื่อดูเป้าหมายเฉลี่ยต่อชั่วโมง</p>
           </div>
           
           <div class="flex items-center gap-2">
@@ -191,7 +191,7 @@
     async function fetchDashboardData(selectedDate) {
       try {
         document.getElementById('selectedDateText').innerText = `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
-        const res = await fetch(`${GAS_API_URL}?date=${selectedDate}`);
+        const res = await fetch(`${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`);
         const data = await res.json();
         
         if (data.lines && data.lines.length > 0) {
@@ -257,6 +257,8 @@
           plugins: { 
             legend: { position: 'top' },
             datalabels: {
+              anchor: 'center',
+              align: 'center',
               color: '#ffffff',
               font: { weight: 'bold', size: 11, family: 'Kanit' },
               formatter: (value) => value > 0 ? value.toLocaleString() : ''
@@ -284,11 +286,22 @@
       const ctx = document.getElementById('hourlyChart').getContext('2d');
       if(hourlyChartInstance) hourlyChartInstance.destroy();
 
-      const timeSlots = ['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'];
-      const hourlyTarget = 60;
-
       const lineObj = globalLinesData.find(d => String(d.line).toUpperCase() === selectedLine) || {};
-      const hourlyActuals = lineObj.hourly_data || [55, 62, 58, 45, 60, 65, 50, 40]; 
+      const hourlyDataObj = lineObj.hourly_data || {};
+      const timeSlots = Object.keys(hourlyDataObj);
+      const hourlyActuals = Object.values(hourlyDataObj);
+
+      // คำนวณเป้าต่อชั่วโมงจริงของไลน์นี้ (เป้ารวม / ชม.ทำงานรวม) แทนค่าคงที่ 60
+      const target = Number(lineObj.target) || 0;
+      const totalHours = Number(lineObj.total_working_hours) || 8;
+      const hourlyTarget = totalHours > 0 ? Math.round(target / totalHours) : 0;
+
+      document.getElementById('hourlyTargetSubtitle').innerText = `เป้าหมายเฉลี่ย ${hourlyTarget.toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
+
+      if (timeSlots.length === 0) {
+        ctx.canvas.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-slate-300 text-sm font-bold">ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้ในวันที่เลือก</div>';
+        return;
+      }
 
       hourlyChartInstance = new Chart(ctx, {
         type: 'bar',
@@ -297,8 +310,8 @@
           datasets: [
             {
               type: 'line',
-              label: 'Target / ชม. (60 ชิ้น)',
-              data: Array(8).fill(hourlyTarget),
+              label: `Target / ชม. (${hourlyTarget.toLocaleString()} ชิ้น)`,
+              data: Array(timeSlots.length).fill(hourlyTarget),
               borderColor: '#6366F1',
               borderWidth: 2,
               borderDash: [5, 5],
@@ -321,16 +334,16 @@
           plugins: {
             legend: { position: 'top' },
             datalabels: {
-              anchor: 'end',
-              align: 'start',
+              anchor: 'center',
+              align: 'center',
               color: '#ffffff',
               font: { weight: 'bold', size: 10, family: 'Kanit' },
-              formatter: (val) => val
+              formatter: (val) => val > 0 ? val : ''
             }
           },
           scales: {
             x: { grid: { display: false } },
-            y: { beginAtZero: true, max: 100, grid: { color: '#F1F5F9' } }
+            y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
           }
         }
       });
