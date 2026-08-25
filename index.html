@@ -3,465 +3,160 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Production Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- Chart.js และ Plugin แสดงตัวเลขบนกราฟ -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <title>Production Daily Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Kanit', sans-serif; background-color: #F8FAFC; }
-    .nav-btn.active { background-color: rgba(255, 255, 255, 0.25); border-left: 4px solid #06C755; }
+    body { font-family: 'Kanit', sans-serif; background-color: #f4f6f9; padding: 20px; }
+    .card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); margin-bottom: 20px; border: none; }
+    .table-custom th { background-color: #1e293b; color: #ffffff; text-align: center; vertical-align: middle; font-size: 0.9rem; }
+    .table-custom td { text-align: center; vertical-align: middle; font-size: 0.85rem; }
+    .bg-line { background-color: #0f172a; color: #fff; font-weight: bold; }
+    .text-gap { color: #dc2626; font-weight: bold; }
+    .text-actual { color: #16a34a; font-weight: bold; }
+    .loading-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; justify-content:center; align-items:center; }
   </style>
 </head>
-<body class="flex h-screen overflow-hidden">
+<body>
 
-  <!-- Sidebar ด้านข้าง -->
-  <div class="w-16 bg-slate-900 text-white flex flex-col items-center py-6 gap-8 shadow-xl z-20">
-    <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">📊</div>
-    <div class="flex flex-col gap-4 w-full">
-      <button onclick="switchTab('tab1')" id="nav-tab1" class="nav-btn active p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">📈</span>
-      </button>
-      <button onclick="switchTab('tab2')" id="nav-tab2" class="nav-btn p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">🔍</span>
-      </button>
+<div class="loading-overlay" id="loading">
+  <div class="spinner-border text-primary" role="status">
+    <span class="visually-hidden">Loading...</span>
+  </div>
+</div>
+
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="fw-bold text-dark">📊 Production Daily Dashboard</h3>
+    <div class="d-flex align-items-center gap-2">
+      <label class="fw-bold">เลือกวันที่:</label>
+      <input type="date" id="selectedDate" class="form-control" style="width: 180px;">
+      <button class="btn btn-primary" onclick="loadDashboardData()">ดึงข้อมูล</button>
     </div>
   </div>
 
-  <!-- Content Area -->
-  <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-    
-    <!-- Top Bar -->
-    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-      <div>
-        <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
-        <p class="text-xs text-slate-400">อัปเดตข้อมูล Real-time</p>
-      </div>
-      <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="displayName" class="text-xs font-semibold text-slate-700">กำลังเชื่อมต่อ LINE...</span>
-      </div>
+  <div class="card p-3">
+    <div class="table-responsive">
+      <table class="table table-bordered table-hover table-custom" id="dashboardTable">
+        <thead>
+          <tr>
+            <th rowspan="2">Line</th>
+            <th rowspan="2">Target Total</th>
+            <th rowspan="2">Actual Total</th>
+            <th rowspan="2">Gap</th>
+            <th colspan="4" class="bg-secondary">LOT 1</th>
+            <th colspan="4" class="bg-dark">LOT 2</th>
+            <th colspan="11">Hourly Output (ยอดผลิตรายชั่วโมง)</th>
+          </tr>
+          <tr>
+            <!-- LOT 1 -->
+            <th>Model</th>
+            <th>LOT No.</th>
+            <th>Target</th>
+            <th>Actual</th>
+            <!-- LOT 2 -->
+            <th>Model</th>
+            <th>LOT No.</th>
+            <th>Target</th>
+            <th>Actual</th>
+            <!-- Hourly Slots -->
+            <th>08.30</th>
+            <th>09.30</th>
+            <th>10.30</th>
+            <th>11.30</th>
+            <th>12.30</th>
+            <th>13.30</th>
+            <th>14.30</th>
+            <th>15.30</th>
+            <th>16.30</th>
+            <th>17.30</th>
+            <th>18.30</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="23" class="text-center text-muted">กรุณากดเลือกวันที่เพื่อแสดงข้อมูล</td></tr>
+        </tbody>
+      </table>
     </div>
-
-    <!-- PAGE 1: Dashboard ภาพรวม -->
-    <div id="tab1" class="space-y-6">
-      
-      <!-- 1. ภาพรวมรายวัน (Daily Overview - Stacked Bar Chart) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
-          <div>
-            <h2 class="font-bold text-slate-700 text-base">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
-            <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
-          </div>
-          <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-            <span class="text-xs font-bold text-slate-500">📅 วันที่:</span>
-            <input type="date" id="datePicker" onchange="onDateChange()" class="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
-          </div>
-        </div>
-
-        <div class="h-64 relative">
-          <canvas id="factoryChart"></canvas>
-        </div>
-      </div>
-
-      <!-- 2. เจาะลึกรายชั่วโมง (Hourly Tracking Section) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h2 class="font-bold text-slate-700 text-base">⏱️ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h2>
-            <p id="hourlyTargetSubtitle" class="text-xs text-slate-400">เลือกไลน์เพื่อดูเป้าหมายเฉลี่ยต่อชั่วโมง</p>
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-500">เลือกลูกไลน์:</span>
-            <select id="lineSelect" onchange="updateHourlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
-              <option value="B">LINE B</option>
-              <option value="C">LINE C</option>
-              <option value="D">LINE D</option>
-              <option value="E">LINE E</option>
-              <option value="F">LINE F</option>
-              <option value="G">LINE G</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="h-60 relative">
-          <canvas id="hourlyChart"></canvas>
-        </div>
-      </div>
-
-      <!-- 3. Summary Cards Grid (โชว์ Model และ LOT ถูกต้อง) -->
-      <div>
-        <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์ & LOT</h2>
-        <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Cards จะถูกเจ็นมาจาก JavaScript -->
-        </div>
-      </div>
-
-    </div>
-
-    <!-- PAGE 2: ค้นหา LOT -->
-    <div id="tab2" class="space-y-6 hidden">
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาหมายเลข LOT</label>
-        <div class="flex gap-2">
-          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
-          <button onclick="searchLot()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition shadow-md shadow-indigo-100">
-            🔍 ค้นหา
-          </button>
-        </div>
-      </div>
-
-      <div id="searchResult" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex justify-between items-start border-b border-slate-100 pb-4">
-          <div>
-            <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">ข้อมูล LOT</span>
-            <h3 id="resLotNo" class="text-xl font-extrabold text-slate-800 mt-1">กรุณากรอกรหัส LOT ด้านบน</h3>
-          </div>
-          <span id="resStatusBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-500">Standby</span>
-        </div>
-
-        <div class="grid grid-cols-2 gap-4 text-sm">
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">เป้า PO รวม</p>
-            <p id="resPoTarget" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">ผลิตสะสมแล้ว</p>
-            <p id="resCumulativeActual" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">Model (รุ่น)</p>
-            <p id="resModel" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">กำหนดส่งมอบ</p>
-            <p id="resDeliveryDate" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-        </div>
-
-        <div class="mt-4 pt-4 border-t border-slate-100">
-          <p class="text-xs font-bold text-slate-500 mb-2">⚡ ความคืบหน้าการผลิต</p>
-          <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
-            <span class="text-xl">🏭</span>
-            <span id="resRealtimeStatus">พร้อมค้นหาข้อมูลล็อตการผลิต</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
   </div>
+</div>
 
-  <script>
-    Chart.register(ChartDataLabels);
+<script>
+  // ** เอา URL Web App จาก Apps Script มาวางตรงนี้ **
+  const WEB_APP_URL = "https://script.google.com/macros/s/YOUR_SCRIPT_ID_HERE/exec";
 
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxUK2_MCCjW8TrCTjNHJj3AxvJQ2-w1tjHX5Cw6guNxallTCyvUKWqTB2dPtvzZtYbD/exec";
-    const LIFF_ID = "2011181755-bLeCO8Hs";
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("selectedDate").valueAsDate = new Date();
+    loadDashboardData();
+  });
 
-    let chartInstance = null;
-    let hourlyChartInstance = null;
-    let globalLinesData = [];
+  function loadDashboardData() {
+    const dateVal = document.getElementById("selectedDate").value;
+    if (!dateVal) return alert("กรุณาเลือกวันที่");
 
-    function getTodayStr() {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    }
+    document.getElementById("loading").style.display = "flex";
 
-    function switchTab(tabId) {
-      document.getElementById('tab1').classList.add('hidden');
-      document.getElementById('tab2').classList.add('hidden');
-      document.getElementById('nav-tab1').classList.remove('active');
-      document.getElementById('nav-tab2').classList.remove('active');
-
-      document.getElementById(tabId).classList.remove('hidden');
-      if(tabId === 'tab1') {
-        document.getElementById('nav-tab1').classList.add('active');
-        document.getElementById('pageTitle').innerText = "Dashboard ภาพรวมการผลิต";
-      } else {
-        document.getElementById('nav-tab2').classList.add('active');
-        document.getElementById('pageTitle').innerText = "ค้นหาและติดตามสถานะ LOT";
-      }
-    }
-
-    async function fetchDashboardData(selectedDate) {
-      try {
-        document.getElementById('selectedDateText').innerText = `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
-        const res = await fetch(`${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`);
-        const data = await res.json();
-        
-        if (data.lines && data.lines.length > 0) {
-          globalLinesData = data.lines;
-          renderCards(data.lines);
-          renderDailyChart(data.lines);
-          updateHourlyChart();
-          document.getElementById('selectedDateText').innerText = `แสดงข้อมูลประจำวันที่: ${data.date}`;
-        } else {
-          showEmptyState();
-        }
-      } catch (err) {
-        console.error("Fetch Error:", err);
-        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูลวันที่ ${selectedDate}`;
-      }
-    }
-
-    function onDateChange() {
-      const selectedDate = document.getElementById('datePicker').value;
-      if (selectedDate) fetchDashboardData(selectedDate);
-    }
-
-    function showEmptyState() {
-      document.getElementById('cardsContainer').innerHTML = `
-        <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
-          🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก
-        </div>`;
-      if (chartInstance) chartInstance.destroy();
-      if (hourlyChartInstance) hourlyChartInstance.destroy();
-    }
-
-    // 1. กราฟ Daily Stacked Bar + Target Gap + Data Labels
-    function renderDailyChart(lines) {
-      const ctx = document.getElementById('factoryChart').getContext('2d');
-      if(chartInstance) chartInstance.destroy();
-
-      const labels = lines.map(d => `LINE ${d.line}`);
-      const actualData = lines.map(d => d.actual);
-      const remainingData = lines.map(d => Math.max(0, d.target - d.actual));
-
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Actual (ทำได้จริง)',
-              data: actualData,
-              backgroundColor: '#10B981',
-              borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 }
-            },
-            {
-              label: 'Target Gap',
-              data: remainingData,
-              backgroundColor: '#EF4444',
-              borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { 
-            legend: { position: 'top' },
-            datalabels: {
-              anchor: 'center',
-              align: 'center',
-              color: '#ffffff',
-              font: { weight: 'bold', size: 11, family: 'Kanit' },
-              formatter: (value) => value > 0 ? value.toLocaleString() : ''
-            },
-            tooltip: {
-              callbacks: {
-                footer: (tooltipItems) => {
-                  const index = tooltipItems[0].dataIndex;
-                  return `Target รวม: ${lines[index].target.toLocaleString()} ชิ้น`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: { stacked: true, grid: { display: false } },
-            y: { stacked: true, beginAtZero: true, grid: { color: '#F1F5F9' } }
-          }
-        }
+    fetch(`${WEB_APP_URL}?action=getDailySummary&date=${dateVal}`)
+      .then(res => res.json())
+      .then(data => {
+        renderTable(data.lines || []);
+      })
+      .catch(err => {
+        console.error(err);
+        alert("เกิดข้อผิดพลาดในการดึงข้อมูล");
+      })
+      .finally(() => {
+        document.getElementById("loading").style.display = "none";
       });
+  }
+
+  function renderTable(lines) {
+    const tbody = document.getElementById("tableBody");
+    tbody.innerHTML = "";
+
+    if (lines.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="23" class="text-center text-muted">ไม่พบข้อมูลในวันที่เลือก</td></tr>`;
+      return;
     }
 
-    // 2. กราฟ Hourly Tracking
-    function updateHourlyChart() {
-      const selectedLine = document.getElementById('lineSelect').value;
-      const ctx = document.getElementById('hourlyChart').getContext('2d');
-      if(hourlyChartInstance) hourlyChartInstance.destroy();
+    const timeSlots = [
+      "08.30-09.30", "09.30-10.30", "10.30-11.30", "11.30-12.30", "12.30-13.30",
+      "13.30-14.30", "14.30-15.30", "15.30-16.30", "16.30-17.30", "17.30-18.30", "18.30-19.30"
+    ];
 
-      const lineObj = globalLinesData.find(d => String(d.line).toUpperCase() === selectedLine) || {};
-      const hourlyDataObj = lineObj.hourly_data || {};
-      const timeSlots = Object.keys(hourlyDataObj);
-      const hourlyActuals = Object.values(hourlyDataObj);
-
-      // คำนวณเป้าต่อชั่วโมงจริงของไลน์นี้ (เป้ารวม / ชม.ทำงานรวม) แทนค่าคงที่ 60
-      const target = Number(lineObj.target) || 0;
-      const totalHours = Number(lineObj.total_working_hours) || 8;
-      const hourlyTarget = totalHours > 0 ? Math.round(target / totalHours) : 0;
-
-      document.getElementById('hourlyTargetSubtitle').innerText = `เป้าหมายเฉลี่ย ${hourlyTarget.toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
-
-      if (timeSlots.length === 0) {
-        ctx.canvas.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-slate-300 text-sm font-bold">ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้ในวันที่เลือก</div>';
-        return;
-      }
-
-      hourlyChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: timeSlots,
-          datasets: [
-            {
-              type: 'line',
-              label: `Target / ชม. (${hourlyTarget.toLocaleString()} ชิ้น)`,
-              data: Array(timeSlots.length).fill(hourlyTarget),
-              borderColor: '#6366F1',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              fill: false,
-              pointRadius: 0,
-              datalabels: { display: false }
-            },
-            {
-              type: 'bar',
-              label: 'Actual รายชั่วโมง',
-              data: hourlyActuals,
-              backgroundColor: hourlyActuals.map(val => val >= hourlyTarget ? '#10B981' : '#F59E0B'),
-              borderRadius: 6
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'top' },
-            datalabels: {
-              anchor: 'center',
-              align: 'center',
-              color: '#ffffff',
-              font: { weight: 'bold', size: 10, family: 'Kanit' },
-              formatter: (val) => val > 0 ? val : ''
-            }
-          },
-          scales: {
-            x: { grid: { display: false } },
-            y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
-          }
-        }
+    lines.forEach(item => {
+      let hourlyCols = "";
+      timeSlots.forEach(slot => {
+        const qty = (item.hourly_data && item.hourly_data[slot]) ? item.hourly_data[slot] : 0;
+        hourlyCols += `<td>${qty || '-'}</td>`;
       });
-    }
 
-    // 3. Render Cards โดยรับค่า Model และ LOT แสดงคู่กัน
-    function renderCards(lines) {
-      const container = document.getElementById('cardsContainer');
-      container.innerHTML = '';
-
-      lines.forEach(item => {
-        container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target, item.actual);
-        if (item.lot_number2) {
-          container.innerHTML += createCardHtml(item.line, 'LOT 2', item.model2, item.lot_number2, item.target2 || 0, item.actual2 || 0);
-        }
-      });
-    }
-
-    function createCardHtml(line, lotTag, modelName, lotName, target, actual) {
-      const diff = actual - target;
-      const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
-      const pctDiff = target > 0 ? Math.round((diff / target) * 100) : 0;
-      const diffText = diff >= 0
-        ? `+${diff.toLocaleString()} (+${pctDiff}%)`
-        : `${diff.toLocaleString()} (${pctDiff}%)`;
-      const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
-      const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
-
-      return `
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-              <span class="font-extrabold text-slate-800">LINE ${line}</span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">${lotTag}</span>
-            </div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap ${diffColor}">${diffText}</span>
-          </div>
+      const row = `
+        <tr>
+          <td class="bg-line">Line ${item.line}</td>
+          <td class="fw-bold">${item.target.toLocaleString()}</td>
+          <td class="text-actual">${item.actual.toLocaleString()}</td>
+          <td class="text-gap">${item.gap.toLocaleString()}</td>
           
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span class="text-slate-400">TG:</span>
-              <span class="font-bold text-slate-700 ml-1">${target.toLocaleString()}</span>
-            </div>
-            <div>
-              <span class="text-slate-400">AC:</span>
-              <span class="font-bold text-slate-700 ml-1">${actual.toLocaleString()}</span>
-            </div>
-          </div>
+          <!-- LOT 1 -->
+          <td>${item.model1 || '-'}</td>
+          <td>${item.lot_number || '-'}</td>
+          <td>${item.target1 ? item.target1.toLocaleString() : '-'}</td>
+          <td class="text-actual">${item.actual1 ? item.actual1.toLocaleString() : '-'}</td>
 
-          <div>
-            <div class="flex justify-between text-xs font-bold mb-1">
-              <span class="text-slate-500">รุ่น: <span class="text-slate-800">${modelName || '-'}</span> <span class="text-slate-400">(${lotName || '-'})</span></span>
-              <span class="text-slate-700">${pct}%</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="${progressColor} h-2 rounded-full" style="width: ${Math.min(pct, 100)}%"></div>
-            </div>
-          </div>
-        </div>
+          <!-- LOT 2 -->
+          <td>${item.model2 || '-'}</td>
+          <td>${item.lot_number2 || '-'}</td>
+          <td>${item.target2 ? item.target2.toLocaleString() : '-'}</td>
+          <td class="text-actual">${item.actual2 ? item.actual2.toLocaleString() : '-'}</td>
+
+          <!-- Hourly -->
+          ${hourlyCols}
+        </tr>
       `;
-    }
-
-    async function searchLot() {
-      const val = document.getElementById('lotInput').value.trim();
-      if(!val) return alert("กรุณากรอกรหัส LOT ก่อนครับ");
-
-      document.getElementById('resRealtimeStatus').innerText = "กำลังค้นหาข้อมูล...";
-
-      try {
-        const res = await fetch(`${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`);
-        const data = await res.json();
-
-        if (data.error) {
-          document.getElementById('resLotNo').innerText = val;
-          document.getElementById('resStatusBadge').innerText = "Not Found";
-          document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-rose-100 text-rose-700";
-          document.getElementById('resPoTarget').innerText = "-";
-          document.getElementById('resCumulativeActual').innerText = "-";
-          document.getElementById('resModel').innerText = "-";
-          document.getElementById('resDeliveryDate').innerText = "-";
-          document.getElementById('resRealtimeStatus').innerText = "❌ ไม่พบข้อมูล LOT นี้ในระบบ Master_LOT";
-          return;
-        }
-
-        const pct = data.po_target > 0 ? ((data.cumulative_actual / data.po_target) * 100).toFixed(1) : 0;
-
-        document.getElementById('resLotNo').innerText = data.lot_number;
-        document.getElementById('resStatusBadge').innerText = `${pct}% Completed`;
-        document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700";
-        
-        document.getElementById('resPoTarget').innerText = `${data.po_target.toLocaleString()} ชิ้น`;
-        document.getElementById('resCumulativeActual').innerText = `${data.cumulative_actual.toLocaleString()} ชิ้น`;
-        document.getElementById('resModel').innerText = data.model || "-";
-        document.getElementById('resDeliveryDate').innerText = data.delivery_date || "-";
-        document.getElementById('resRealtimeStatus').innerText = `ผลิตสะสมได้ ${data.cumulative_actual.toLocaleString()} จากเป้า ${data.po_target.toLocaleString()} ชิ้น (${pct}%)`;
-
-      } catch (err) {
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
-      }
-    }
-
-    async function main() {
-      const todayStr = getTodayStr();
-      document.getElementById('datePicker').value = todayStr;
-      fetchDashboardData(todayStr);
-
-      try {
-        await liff.init({ liffId: LIFF_ID });
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          document.getElementById("displayName").innerText = profile.displayName;
-        }
-      } catch (err) {
-        document.getElementById("displayName").innerText = "Guest User";
-      }
-    }
-
-    main();
-  </script>
+      tbody.innerHTML += row;
+    });
+  }
+</script>
 </body>
 </html>
