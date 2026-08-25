@@ -55,9 +55,11 @@
             <h2 class="font-bold text-slate-700 text-base">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
             <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
           </div>
-          <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl">
-            <span class="text-xs font-bold text-slate-500">📅 วันที่:</span>
+          <div class="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-xl flex-wrap">
+            <span class="text-xs font-bold text-slate-500">📅 จาก:</span>
             <input type="date" id="datePicker" onchange="onDateChange()" class="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
+            <span class="text-xs font-bold text-slate-500">ถึง:</span>
+            <input type="date" id="datePickerTo" onchange="onDateChange()" class="bg-transparent text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer">
           </div>
         </div>
 
@@ -188,30 +190,40 @@
       }
     }
 
-    async function fetchDashboardData(selectedDate) {
+    async function fetchDashboardData(selectedDate, endDate) {
+      const isRange = endDate && endDate !== selectedDate;
       try {
-        document.getElementById('selectedDateText').innerText = `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
-        const res = await fetch(`${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`);
+        document.getElementById('selectedDateText').innerText = isRange
+          ? `กำลังโหลดข้อมูลช่วง ${selectedDate} ถึง ${endDate}...`
+          : `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
+
+        const url = isRange
+          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
+          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
+        const res = await fetch(url);
         const data = await res.json();
-        
+
         if (data.lines && data.lines.length > 0) {
           globalLinesData = data.lines;
-          renderCards(data.lines);
+          renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
           updateHourlyChart();
-          document.getElementById('selectedDateText').innerText = `แสดงข้อมูลประจำวันที่: ${data.date}`;
+          document.getElementById('selectedDateText').innerText = isRange
+            ? `แสดงข้อมูลสะสมช่วง: ${data.date} ถึง ${data.dateTo}`
+            : `แสดงข้อมูลประจำวันที่: ${data.date}`;
         } else {
           showEmptyState();
         }
       } catch (err) {
         console.error("Fetch Error:", err);
-        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูลวันที่ ${selectedDate}`;
+        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูล`;
       }
     }
 
     function onDateChange() {
       const selectedDate = document.getElementById('datePicker').value;
-      if (selectedDate) fetchDashboardData(selectedDate);
+      const endDate = document.getElementById('datePickerTo').value;
+      if (selectedDate) fetchDashboardData(selectedDate, endDate);
     }
 
     function showEmptyState() {
@@ -342,22 +354,30 @@
             }
           },
           scales: {
-            x: { grid: { display: false } },
+            x: {
+              grid: { display: false },
+              ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 9 } }
+            },
             y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
           }
         }
       });
     }
 
-    // 3. Render Cards โดยรับค่า Model และ LOT แสดงคู่กัน
-    function renderCards(lines) {
+    // 3. Render Cards โดยรับค่า Model และ LOT แสดงคู่กัน (หรือสรุปรวมช่วงวันที่ถ้าเลือก range)
+    function renderCards(lines, isRange) {
       const container = document.getElementById('cardsContainer');
       container.innerHTML = '';
 
       lines.forEach(item => {
-        container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target, item.actual);
-        if (item.lot_number2) {
-          container.innerHTML += createCardHtml(item.line, 'LOT 2', item.model2, item.lot_number2, item.target2 || 0, item.actual2 || 0);
+        if (isRange) {
+          // โหมดช่วงวันที่: ไม่แยกตาม LOT (เพราะแต่ละวันอาจใช้ LOT ไม่เหมือนกัน) โชว์ยอดรวมทั้งช่วงแทน
+          container.innerHTML += createCardHtml(item.line, 'รวมช่วงวันที่', '', '', item.target, item.actual);
+        } else {
+          container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target, item.actual);
+          if (item.lot_number2) {
+            container.innerHTML += createCardHtml(item.line, 'LOT 2', item.model2, item.lot_number2, item.target2 || 0, item.actual2 || 0);
+          }
         }
       });
     }
@@ -395,7 +415,7 @@
 
           <div>
             <div class="flex justify-between text-xs font-bold mb-1">
-              <span class="text-slate-500">รุ่น: <span class="text-slate-800">${modelName || '-'}</span> <span class="text-slate-400">(${lotName || '-'})</span></span>
+              <span class="text-slate-500">${(modelName || lotName) ? `รุ่น: <span class="text-slate-800">${modelName || '-'}</span> <span class="text-slate-400">(${lotName || '-'})</span>` : ''}</span>
               <span class="text-slate-700">${pct}%</span>
             </div>
             <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
