@@ -296,7 +296,7 @@
       });
     }
 
-    // 2. กราฟ Hourly Tracking (ปรับแก้ให้รองรับ Target ขั้นบันได)
+    // 2. กราฟ Hourly Tracking
     function updateHourlyChart() {
       const selectedLine = document.getElementById('lineSelect').value;
       const ctx = document.getElementById('hourlyChart').getContext('2d');
@@ -307,16 +307,12 @@
       const timeSlots = Object.keys(hourlyDataObj);
       const hourlyActuals = Object.values(hourlyDataObj);
 
-      // ดึงค่า Target รายชั่วโมงแบบขั้นบันได หากไม่มีข้อมูลจะเฉลี่ยจากเป้ารวม
+      // คำนวณเป้าต่อชั่วโมงจริงของไลน์นี้ (เป้ารวม / ชม.ทำงานรวม) แทนค่าคงที่ 60
       const target = Number(lineObj.target) || 0;
       const totalHours = Number(lineObj.total_working_hours) || 8;
-      const fallbackTarget = totalHours > 0 ? Math.round(target / totalHours) : 0;
-      
-      const hourlyTargets = lineObj.hourly_targets && lineObj.hourly_targets.length > 0
-        ? lineObj.hourly_targets
-        : Array(timeSlots.length).fill(fallbackTarget);
+      const hourlyTarget = totalHours > 0 ? Math.round(target / totalHours) : 0;
 
-      document.getElementById('hourlyTargetSubtitle').innerText = `เป้าหมายการผลิตรายชั่วโมง (LINE ${selectedLine})`;
+      document.getElementById('hourlyTargetSubtitle').innerText = `เป้าหมายเฉลี่ย ${hourlyTarget.toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
 
       if (timeSlots.length === 0) {
         ctx.canvas.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-slate-300 text-sm font-bold">ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้ในวันที่เลือก</div>';
@@ -330,21 +326,20 @@
           datasets: [
             {
               type: 'line',
-              label: `Target (เป้าหมาย/ชม.)`,
-              data: hourlyTargets,
+              label: `Target / ชม. (${hourlyTarget.toLocaleString()} ชิ้น)`,
+              data: Array(timeSlots.length).fill(hourlyTarget),
               borderColor: '#6366F1',
               borderWidth: 2,
               borderDash: [5, 5],
               fill: false,
-              stepped: 'before', // ทำให้เส้นหักเป็นขั้นบันไดตามช่วงเวลา LOT
-              pointRadius: 3,
+              pointRadius: 0,
               datalabels: { display: false }
             },
             {
               type: 'bar',
               label: 'Actual รายชั่วโมง',
               data: hourlyActuals,
-              backgroundColor: hourlyActuals.map((val, idx) => val >= (hourlyTargets[idx] || 0) ? '#10B981' : '#F59E0B'),
+              backgroundColor: hourlyActuals.map(val => val >= hourlyTarget ? '#10B981' : '#F59E0B'),
               borderRadius: 6
             }
           ]
@@ -373,13 +368,14 @@
       });
     }
 
-    // 3. Render Cards โดยรับค่า Model และ LOT แสดงคู่กัน
+    // 3. Render Cards โดยรับค่า Model และ LOT แสดงคู่กัน (หรือสรุปรวมช่วงวันที่ถ้าเลือก range)
     function renderCards(lines, isRange) {
       const container = document.getElementById('cardsContainer');
       container.innerHTML = '';
 
       lines.forEach(item => {
         if (isRange) {
+          // โหมดช่วงวันที่: ไม่แยกตาม LOT (เพราะแต่ละวันอาจใช้ LOT ไม่เหมือนกัน) โชว์ยอดรวมทั้งช่วงแทน
           container.innerHTML += createCardHtml(item.line, 'รวมช่วงวันที่', '', '', item.target, item.actual);
         } else {
           container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target, item.actual);
