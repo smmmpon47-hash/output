@@ -307,12 +307,30 @@
       const timeSlots = Object.keys(hourlyDataObj);
       const hourlyActuals = Object.values(hourlyDataObj);
 
-      // คำนวณเป้าต่อชั่วโมงจริงของไลน์นี้ (เป้ารวม / ชม.ทำงานรวม) แทนค่าคงที่ 60
+      // เป้าต่อชั่วโมงต้องแยกตาม LOT เพราะ LOT1/LOT2 มักมีเป้า+ชั่วโมงทำงานไม่เท่ากัน
+      // เช่น LOT1 ทำ 5 ชม. เป้า 400 ชิ้น (80 ชิ้น/ชม.) ส่วน LOT2 ทำ 3 ชม. เป้า 195 ชิ้น (65 ชิ้น/ชม.)
+      // เส้น Target จึงต้องเป็นแบบขั้นบันได ไม่ใช่เส้นตรงราบเดียวแบบเดิม
       const target = Number(lineObj.target) || 0;
       const totalHours = Number(lineObj.total_working_hours) || 8;
-      const hourlyTarget = totalHours > 0 ? Math.round(target / totalHours) : 0;
+      const overallRate = totalHours > 0 ? (target / totalHours) : 0;
 
-      document.getElementById('hourlyTargetSubtitle').innerText = `เป้าหมายเฉลี่ย ${hourlyTarget.toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
+      const hrs1 = Number(lineObj.hours1) || 0;
+      const hrs2 = Number(lineObj.hours2) || 0;
+      const target1 = Number(lineObj.target1) || 0;
+      const target2 = Number(lineObj.target2) || 0;
+      const rate1 = hrs1 > 0 ? (target1 / hrs1) : overallRate;
+      const rate2 = hrs2 > 0 ? (target2 / hrs2) : overallRate;
+
+      // แผนที่ชั่วโมงที่ idx (0-based ตามลำดับ TIME_SLOTS_ORDER) -> อัตราเป้าของ LOT ที่ครองช่วงนั้น
+      const targetLine = timeSlots.map((_, idx) => {
+        if (hrs1 > 0 && idx < hrs1) return Math.round(rate1);
+        if (hrs2 > 0 && idx < hrs1 + hrs2) return Math.round(rate2);
+        return Math.round(overallRate);
+      });
+
+      document.getElementById('hourlyTargetSubtitle').innerText = (hrs2 > 0)
+        ? `LOT1: ${Math.round(rate1).toLocaleString()} ชิ้น/ชม. (${hrs1} ชม.) | LOT2: ${Math.round(rate2).toLocaleString()} ชิ้น/ชม. (${hrs2} ชม.) — LINE ${selectedLine}`
+        : `เป้าหมายเฉลี่ย ${Math.round(overallRate).toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
 
       if (timeSlots.length === 0) {
         ctx.canvas.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-slate-300 text-sm font-bold">ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้ในวันที่เลือก</div>';
@@ -326,20 +344,21 @@
           datasets: [
             {
               type: 'line',
-              label: `Target / ชม. (${hourlyTarget.toLocaleString()} ชิ้น)`,
-              data: Array(timeSlots.length).fill(hourlyTarget),
+              label: hrs2 > 0 ? 'Target / ชม. (แยกตาม LOT)' : `Target / ชม. (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
+              data: targetLine,
               borderColor: '#6366F1',
               borderWidth: 2,
               borderDash: [5, 5],
               fill: false,
               pointRadius: 0,
+              stepped: true,
               datalabels: { display: false }
             },
             {
               type: 'bar',
               label: 'Actual รายชั่วโมง',
               data: hourlyActuals,
-              backgroundColor: hourlyActuals.map(val => val >= hourlyTarget ? '#10B981' : '#F59E0B'),
+              backgroundColor: hourlyActuals.map((val, idx) => val >= targetLine[idx] ? '#10B981' : '#F59E0B'),
               borderRadius: 6
             }
           ]
