@@ -307,12 +307,30 @@
       const timeSlots = Object.keys(hourlyDataObj);
       const hourlyActuals = Object.values(hourlyDataObj);
 
-      // คำนวณเป้าต่อชั่วโมงจริงของไลน์นี้ (เป้ารวม / ชม.ทำงานรวม) แทนค่าคงที่ 60
+      // เป้าต่อชั่วโมงต้องแยกตาม LOT เพราะ LOT1/LOT2 มักมีเป้า+ชั่วโมงทำงานไม่เท่ากัน
+      // เช่น LOT1 ทำ 5 ชม. เป้า 400 ชิ้น (80 ชิ้น/ชม.) ส่วน LOT2 ทำ 3 ชม. เป้า 195 ชิ้น (65 ชิ้น/ชม.)
+      // เส้น Target จึงต้องเป็นแบบขั้นบันได ไม่ใช่เส้นตรงราบเดียวแบบเดิม
       const target = Number(lineObj.target) || 0;
       const totalHours = Number(lineObj.total_working_hours) || 8;
-      const hourlyTarget = totalHours > 0 ? Math.round(target / totalHours) : 0;
+      const overallRate = totalHours > 0 ? (target / totalHours) : 0;
 
-      document.getElementById('hourlyTargetSubtitle').innerText = `เป้าหมายเฉลี่ย ${hourlyTarget.toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
+      const hrs1 = Number(lineObj.hours1) || 0;
+      const hrs2 = Number(lineObj.hours2) || 0;
+      const target1 = Number(lineObj.target1) || 0;
+      const target2 = Number(lineObj.target2) || 0;
+      const rate1 = hrs1 > 0 ? (target1 / hrs1) : overallRate;
+      const rate2 = hrs2 > 0 ? (target2 / hrs2) : overallRate;
+
+      // แผนที่ชั่วโมงที่ idx (0-based ตามลำดับ TIME_SLOTS_ORDER) -> อัตราเป้าของ LOT ที่ครองช่วงนั้น
+      const targetLine = timeSlots.map((_, idx) => {
+        if (hrs1 > 0 && idx < hrs1) return Math.round(rate1);
+        if (hrs2 > 0 && idx < hrs1 + hrs2) return Math.round(rate2);
+        return Math.round(overallRate);
+      });
+
+      document.getElementById('hourlyTargetSubtitle').innerText = (hrs2 > 0)
+        ? `LOT1: ${Math.round(rate1).toLocaleString()} ชิ้น/ชม. (${hrs1} ชม.) | LOT2: ${Math.round(rate2).toLocaleString()} ชิ้น/ชม. (${hrs2} ชม.) — LINE ${selectedLine}`
+        : `เป้าหมายเฉลี่ย ${Math.round(overallRate).toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
 
       if (timeSlots.length === 0) {
         ctx.canvas.parentElement.innerHTML = '<div class="h-full flex items-center justify-center text-slate-300 text-sm font-bold">ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้ในวันที่เลือก</div>';
@@ -326,20 +344,21 @@
           datasets: [
             {
               type: 'line',
-              label: `Target / ชม. (${hourlyTarget.toLocaleString()} ชิ้น)`,
-              data: Array(timeSlots.length).fill(hourlyTarget),
+              label: hrs2 > 0 ? 'Target / ชม. (แยกตาม LOT)' : `Target / ชม. (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
+              data: targetLine,
               borderColor: '#6366F1',
               borderWidth: 2,
               borderDash: [5, 5],
               fill: false,
               pointRadius: 0,
+              stepped: true,
               datalabels: { display: false }
             },
             {
               type: 'bar',
               label: 'Actual รายชั่วโมง',
               data: hourlyActuals,
-              backgroundColor: hourlyActuals.map(val => val >= hourlyTarget ? '#10B981' : '#F59E0B'),
+              backgroundColor: hourlyActuals.map((val, idx) => val >= targetLine[idx] ? '#10B981' : '#F59E0B'),
               borderRadius: 6
             }
           ]
@@ -376,25 +395,29 @@
       lines.forEach(item => {
         if (isRange) {
           // โหมดช่วงวันที่: ไม่แยกตาม LOT (เพราะแต่ละวันอาจใช้ LOT ไม่เหมือนกัน) โชว์ยอดรวมทั้งช่วงแทน
-          container.innerHTML += createCardHtml(item.line, 'รวมช่วงวันที่', '', '', item.target, item.actual);
+          container.innerHTML += createCardHtml(item.line, 'รวมช่วงวันที่', '', '', item.target, item.actual, item.remarks);
         } else {
-          container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target, item.actual);
+          // การ์ดแต่ละ LOT ใช้เป้า/ยอดจริงของ LOT นั้นโดยตรง (ไม่ใช่ยอดรวมทั้งไลน์อีกต่อไป)
+          container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target1 || 0, item.actual1 || 0, item.remarks);
           if (item.lot_number2) {
-            container.innerHTML += createCardHtml(item.line, 'LOT 2', item.model2, item.lot_number2, item.target2 || 0, item.actual2 || 0);
+            container.innerHTML += createCardHtml(item.line, 'LOT 2', item.model2, item.lot_number2, item.target2 || 0, item.actual2 || 0, item.remarks);
           }
         }
       });
     }
 
-    function createCardHtml(line, lotTag, modelName, lotName, target, actual) {
+    function createCardHtml(line, lotTag, modelName, lotName, target, actual, remarks) {
       const diff = actual - target;
-      const pct = target > 0 ? Math.round((actual / target) * 100) : 0;
-      const pctDiff = target > 0 ? Math.round((diff / target) * 100) : 0;
+      // กัน Division by Zero: ถ้า TG=0 แต่ AC>0 แปลว่าทำได้เกินคาด (ไม่มีเป้าแต่ก็ยังผลิตได้) ให้ถือเป็น 100%
+      // แทนที่จะโชว์ 0% ซึ่งดูเหมือนทำไม่ได้เลยทั้งที่จริงมียอดแล้ว
+      const pct = target > 0 ? Math.round((actual / target) * 100) : (actual > 0 ? 100 : 0);
+      const pctDiff = target > 0 ? Math.round((diff / target) * 100) : (actual > 0 ? 100 : 0);
       const diffText = diff >= 0
         ? `+${diff.toLocaleString()} (+${pctDiff}%)`
         : `${diff.toLocaleString()} (${pctDiff}%)`;
       const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
       const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+      const remarksList = remarks || [];
 
       return `
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
@@ -426,6 +449,10 @@
               <div class="${progressColor} h-2 rounded-full" style="width: ${Math.min(pct, 100)}%"></div>
             </div>
           </div>
+          ${remarksList.length > 0 ? `
+          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
+            📝 ${remarksList.map(r => r.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
+          </div>` : ''}
         </div>
       `;
     }
