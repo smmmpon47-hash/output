@@ -202,15 +202,15 @@
           ? `กำลังโหลดข้อมูลช่วง ${selectedDate} ถึง ${endDate}...`
           : `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
 
-        // รองรับ Parameter date / queryDate เพื่อให้ทำงานกับ Apps Script ได้เต็มรูปแบบ
         const url = isRange
           ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
           : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
         
-        const res = await fetch(url);
+        // เพิ่ม redirect: 'follow' ป้องกัน CORS Error จาก Google Redirect
+        const res = await fetch(url, { method: "GET", redirect: "follow" });
         const data = await res.json();
 
-        if (data.lines && data.lines.length > 0) {
+        if (data && data.lines && data.lines.length > 0) {
           globalLinesData = data.lines;
           renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
@@ -223,7 +223,7 @@
         }
       } catch (err) {
         console.error("Fetch Error:", err);
-        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูล`;
+        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูล (ตรวจสอบสิทธิ์การตั้งค่า Web App)`;
       }
     }
 
@@ -463,7 +463,8 @@
       document.getElementById('resRealtimeStatus').innerText = "กำลังค้นหาข้อมูล...";
 
       try {
-        const res = await fetch(`${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`);
+        const url = `${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`;
+        const res = await fetch(url, { method: "GET", redirect: "follow" });
         const data = await res.json();
 
         if (data.error) {
@@ -493,6 +494,7 @@
         document.getElementById('resRealtimeStatus').innerText = `ผลิตสะสมได้ ${cumActual.toLocaleString()} จากเป้า ${poTarget.toLocaleString()} ชิ้น (${pct}%)`;
 
       } catch (err) {
+        console.error("Search Lot Error:", err);
         alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
       }
     }
