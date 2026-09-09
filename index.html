@@ -195,32 +195,112 @@
     }
 
     async function fetchDashboardData(selectedDate, endDate) {
-      const isRange = endDate && endDate !== selectedDate;
+      const today = getTodayStr();
+
       try {
-        document.getElementById('selectedDateText').innerText = isRange
-          ? `กำลังโหลดข้อมูลช่วง ${selectedDate} ถึง ${endDate}...`
-          : `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
+        document.getElementById('selectedDateText').innerText =
+          `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
 
-        const url = isRange
-          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
-          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
-        const res = await fetch(url);
-        const data = await res.json();
+        // ใช้ API getTodayLine ที่มีอยู่แล้วใน Apps Script
+        // ไม่แตะ getDailySummary เพื่อไม่กระทบระบบอื่น
+        if (selectedDate !== today) {
+          document.getElementById('selectedDateText').innerText =
+            `⚠️ Dashboard เวอร์ชันนี้แสดงข้อมูลของวันนี้เท่านั้น`;
 
-        if (data.lines && data.lines.length > 0) {
-          globalLinesData = data.lines;
-          renderCards(data.lines, isRange);
-          renderDailyChart(data.lines);
-          updateHourlyChart();
-          document.getElementById('selectedDateText').innerText = isRange
-            ? `แสดงข้อมูลสะสมช่วง: ${data.date} ถึง ${data.dateTo}`
-            : `แสดงข้อมูลประจำวันที่: ${data.date}`;
-        } else {
           showEmptyState();
+          return;
         }
+
+        const lineCodes = ['B', 'C', 'D', 'E', 'F', 'G'];
+
+        const results = await Promise.all(
+          lineCodes.map(async (line) => {
+            const url =
+              `${GAS_API_URL}?action=getTodayLine&line=${encodeURIComponent(line)}`;
+
+            const res = await fetch(url);
+
+            if (!res.ok) {
+              throw new Error(`HTTP ${res.status} - LINE ${line}`);
+            }
+
+            return await res.json();
+          })
+        );
+
+        const lines = results.map((data, index) => ({
+          line: lineCodes[index],
+
+          target: Number(data.target) || 0,
+          actual: Number(data.actual) || 0,
+          gap: Math.max(
+            0,
+            (Number(data.target) || 0) - (Number(data.actual) || 0)
+          ),
+
+          model1:
+            data.models && data.models[0]
+              ? data.models[0]
+              : '',
+
+          lot_number: data.lotNumber || '',
+
+          target1: Number(data.target1) || 0,
+          actual1: 0,
+
+          model2:
+            data.models && data.models[1]
+              ? data.models[1]
+              : '',
+
+          lot_number2: data.lotNumber2 || '',
+
+          target2: Number(data.target2) || 0,
+          actual2: 0,
+
+          model3:
+            data.models && data.models[2]
+              ? data.models[2]
+              : '',
+
+          lot_number3: data.lotNumber3 || '',
+
+          target3: Number(data.target3) || 0,
+          actual3: 0,
+
+          total_working_hours:
+            Number(data.totalWorkingHours) || 8,
+
+          hours1:
+            Number(data.workingHours) || 0,
+
+          hours2:
+            Number(data.workingHours2) || 0,
+
+          hours3:
+            Number(data.workingHours3) || 0,
+
+          hourly_data: data.existingHourly || {},
+
+          remarks: []
+        }));
+
+        globalLinesData = lines;
+
+        renderCards(lines, false);
+        renderDailyChart(lines);
+        updateHourlyChart();
+
+        document.getElementById('selectedDateText').innerText =
+          `แสดงข้อมูลประจำวันที่: ${selectedDate}`;
+
       } catch (err) {
-        console.error("Fetch Error:", err);
-        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูล`;
+        console.error("Dashboard Fetch Error:", err);
+
+        document.getElementById('selectedDateText').innerText =
+          `เกิดข้อผิดพลาดในการดึงข้อมูล`;
+
+        showEmptyState();
       }
     }
 
@@ -393,15 +473,40 @@
       container.innerHTML = '';
 
       lines.forEach(item => {
-        if (isRange) {
-          // โหมดช่วงวันที่: ไม่แยกตาม LOT (เพราะแต่ละวันอาจใช้ LOT ไม่เหมือนกัน) โชว์ยอดรวมทั้งช่วงแทน
-          container.innerHTML += createCardHtml(item.line, 'รวมช่วงวันที่', '', '', item.target, item.actual, item.remarks);
-        } else {
-          // การ์ดแต่ละ LOT ใช้เป้า/ยอดจริงของ LOT นั้นโดยตรง (ไม่ใช่ยอดรวมทั้งไลน์อีกต่อไป)
-          container.innerHTML += createCardHtml(item.line, 'LOT 1', item.model1, item.lot_number, item.target1 || 0, item.actual1 || 0, item.remarks);
-          if (item.lot_number2) {
-            container.innerHTML += createCardHtml(item.line, 'LOT 2', item.model2, item.lot_number2, item.target2 || 0, item.actual2 || 0, item.remarks);
-          }
+
+        // Dashboard เวอร์ชันนี้ใช้ข้อมูลรายวัน
+        container.innerHTML += createCardHtml(
+          item.line,
+          'LOT 1',
+          item.model1,
+          item.lot_number,
+          item.target1 || 0,
+          item.actual1 || 0,
+          item.remarks
+        );
+
+        if (item.lot_number2) {
+          container.innerHTML += createCardHtml(
+            item.line,
+            'LOT 2',
+            item.model2,
+            item.lot_number2,
+            item.target2 || 0,
+            item.actual2 || 0,
+            item.remarks
+          );
+        }
+
+        if (item.lot_number3) {
+          container.innerHTML += createCardHtml(
+            item.line,
+            'LOT 3',
+            item.model3,
+            item.lot_number3,
+            item.target3 || 0,
+            item.actual3 || 0,
+            item.remarks
+          );
         }
       });
     }
