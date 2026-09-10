@@ -1,823 +1,2010 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Production Dashboard</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- Chart.js และ Plugin แสดงตัวเลขบนกราฟ -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Kanit', sans-serif; background-color: #F8FAFC; }
-    .nav-btn.active { background-color: rgba(255, 255, 255, 0.25); border-left: 4px solid #06C755; }
-  </style>
-</head>
-<body class="flex h-screen overflow-hidden">
+/************************ CONFIGURATION ************************/
+const LINE_ACCESS_TOKEN = 'n1IISNdTm+0MbdV5Ivl3RbBd0C+VE5tx22RYQ1M/0FchFGBbgU5rwDkojVI9yYkbmQcZT2OfLxhmY23zac8ZYdrgoz+iz1D2+hgJnZWO1tahCsQWwC1WTRbxX7Hxlz5KG8bH6OcESSZg/u0VU22kzQdB04t89/1O/w1cDnyilFU=';
+const GROUP_ID_FOLLOWUP = 'Cc4b2f0a6f56d0f0be406d8b0546fed29';
 
-  <!-- Sidebar ด้านข้าง -->
-  <div class="w-16 bg-slate-900 text-white flex flex-col items-center py-6 gap-8 shadow-xl z-20">
-    <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">📊</div>
-    <div class="flex flex-col gap-4 w-full">
-      <button onclick="switchTab('tab1')" id="nav-tab1" class="nav-btn active p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">📈</span>
-      </button>
-      <button onclick="switchTab('tab2')" id="nav-tab2" class="nav-btn p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">🔍</span>
-      </button>
-    </div>
-  </div>
 
-  <!-- Content Area -->
-  <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-    
-    <!-- Top Bar -->
-    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-      <div>
-        <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
-        <p class="text-xs text-slate-400">
-          <span class="font-semibold text-emerald-600">● LIVE</span>
-          • อัปเดตอัตโนมัติทุก 30 วิ
-          • <span id="lastUpdatedText">กำลังโหลด...</span>
-        </p>
-      </div>
-      <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="displayName" class="text-xs font-semibold text-slate-700">กำลังเชื่อมต่อ LINE...</span>
-      </div>
-    </div>
+const REPAIR_GROUP_IDS = {
+  "ชั้น 3": "C2835734997447d437f28af27845ae304",
+  "ชั้น3": "C2835734997447d437f28af27845ae304",
+  "ชั้น 4": "C53efd7d042bbde8ed851462239d11ac0",
+  "ชั้น4": "C53efd7d042bbde8ed851462239d11ac0"
+};
 
-    <!-- PAGE 1: Dashboard ภาพรวม -->
-    <div id="tab1" class="space-y-6">
+const SPREADSHEET_FOLLOWUP_ID = '10nQB_jlMEIKtR_e3ZmpcNLrUwI3NVaCyM3aPDtuxZkw';
+const SPREADSHEET_REPAIR_ID   = '1DF2zzMlYaxh2MX_bLk6hAyxSQV4eXiPkB1yBAvuyB9k';
+const REPAIR_IMAGE_FOLDER_ID = '1MMKpN5OLX1X8JcwmhsPTD0NJutKEglMx'; // โฟลเดอร์รูปงานซ่อม
+
+const LIFF_URL_TG          = 'https://liff.line.me/2011196323-6e8Sc2U8';
+const LIFF_URL_HOURLY      = 'https://liff.line.me/2011198724-JQ60DTBm';
+const LIFF_URL_ACCEPT_JOB  = 'https://liff.line.me/2011319319-1bUfgtSJ'; // LIFF Repair ตัวเดียวกับหน้า 3 แท็บ
+
+const LINE_CODES      = ['B', 'C', 'D', 'E', 'F', 'G'];
+const SHEET_SUMMARY   = 'Summary';
+const SHEET_HOURLY    = 'Hourly_Log';
+const SHEET_CONFIG    = 'Config';
+const SHEET_MASTER_LOT = 'Master_LOT';
+const SHEET_HOLIDAY   = 'Holidays';
+
+
+const COL_SUMMARY = {
+  DATE: 1,        // A: Date
+  LINE: 2,        // B: Line
+  STATUS: 3,      // C: Status
+  TARGET: 4,      // D: Target
+  ACTUAL: 5,      // E: Actual
+  DIFF: 6,        // F: Diff
+  LOT_1: 7,       // G: LOT_1
+  HOURS_1: 8,     // H: Hours_1
+  TARGET_1: 9,    // I: Target_1
+  LOT_2: 10,      // J: LOT_2
+  HOURS_2: 11,    // K: Hours_2
+  TARGET_2: 12,    // L: Target_2
+  LOT_3: 13,      // M: LOT_3
+  HOURS_3: 14,    // N: Hours_3
+  TARGET_3: 15,    // O: Target_3
+  UPDATED_BY: 16, // P: Updated_By
+  LAST_UPDATE: 17, // Q: LastUpdate
+  TG_ORIGINAL_1: 18, // R: TG Original LOT_1
+  TG_ORIGINAL_2: 19, // S: TG Original LOT_2
+  TG_ORIGINAL_3: 20, // T: TG Original LOT_3
+  LOT1_START: 21,    // U: เวลาเริ่ม LOT_1
+  LOT1_END: 22,      // V: เวลาจบ LOT_1 / เวลาสลับครั้งที่ 1
+  LOT2_START: 23,    // W: เวลาเริ่ม LOT_2
+  LOT2_END: 24,      // X: เวลาจบ LOT_2 / เวลาสลับครั้งที่ 2
+  LOT3_START: 25,    // Y: เวลาเริ่ม LOT_3
+  LOT3_END: 26       // Z: เวลาจบ LOT_3
+};
+
+const TIME_SLOTS_ORDER = [
+  "08.30-09.30", "09.30-10.30", "10.30-11.30", "11.30-12.30", "12.30-13.30",
+  "13.30-14.30", "14.30-15.30", "15.30-16.30", "16.30-17.30", "17.30-18.30", "18.30-19.30"
+];
+
+const LOCK_TIMEOUT_MS = 30000;
+
+function getSS_() { return SpreadsheetApp.openById(SPREADSHEET_FOLLOWUP_ID); }
+function getRepairSS_() { return SpreadsheetApp.openById(SPREADSHEET_REPAIR_ID); }
+
+/************************ SETUP & TRIGGERS ************************/
+
+function setupTriggers() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(trigger => ScriptApp.deleteTrigger(trigger));
+
+  
+  ScriptApp.newTrigger('autoCronReminder')
+    .timeBased()
+    .everyMinutes(5)
+    .create();
+
+  Logger.log('สร้าง Trigger ใหม่แบบตั้งเวลาห่าง 5 นาทีเรียบร้อยแล้ว!');
+}
+
+
+/************************ SETUP TG ORIGINAL ************************/
+
+function setupTGOriginal() {
+  const sheet = getSheet_(SHEET_SUMMARY);
+
+  if (!sheet) {
+    throw new Error('ไม่พบชีท Summary');
+  }
+
+  sheet.getRange(1, COL_SUMMARY.TG_ORIGINAL_1, 1, 3).setValues([[
+    'TG_ORIGINAL_1',
+    'TG_ORIGINAL_2',
+    'TG_ORIGINAL_3'
+  ]]);
+
+  Logger.log('สร้างคอลัมน์ TG ORIGINAL R:T เรียบร้อยแล้ว');
+}
+
+/************************ SETUP LOT TIMELINE ************************/
+
+function setupLotTimeline() {
+  const sheet = getSheet_(SHEET_SUMMARY);
+  if (!sheet) throw new Error('ไม่พบชีท Summary');
+  if (sheet.getMaxColumns() < 26) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 26 - sheet.getMaxColumns());
+  }
+
+  sheet.getRange(1, COL_SUMMARY.LOT1_START, 1, 6).setValues([[
+    'LOT1_START', 'LOT1_END', 'LOT2_START', 'LOT2_END', 'LOT3_START', 'LOT3_END'
+  ]]);
+
+  Logger.log('สร้างคอลัมน์ LOT TIMELINE U:Z เรียบร้อยแล้ว');
+}
+
+/************************ AUTOMATIC CRON REMINDER (ดักส่งซ้ำ) ************************/
+
+function autoCronReminder() {
+  if (isHoliday_()) return;
+
+  const now = new Date();
+  const today = todayStr_();
+  const timeStr = Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm');
+  const props = PropertiesService.getScriptProperties();
+
+  // 1. แจ้งเตือน Form TG ตอนเช้า (07:25 - 07:35 น.) -> ส่งแค่วันละ 1 ครั้ง!
+  if (timeStr >= '07:25' && timeStr <= '07:35') {
+    const tgSentKey = 'TG_SENT_' + today;
+    if (props.getProperty(tgSentKey) !== 'true') {
+      sendFlexCardTG_();
+      props.setProperty(tgSentKey, 'true'); // บันทึกว่าส่งไปแล้ววันนี้
+    }
+    return;
+  }
+
+  // 2. แจ้งเตือนรายชั่วโมง -> ส่งรอบละ 1 ครั้งเท่านั้น!
+  const hourlySlots = ['10:30', '12:30', '14:30', '16:30', '17:30'];
+  
+  for (let slot of hourlySlots) {
+    const [h, m] = slot.split(':').map(Number);
+    const currentH = now.getHours();
+    const currentM = now.getMinutes();
+
+    // เช็กกรอบเวลา +- 4 นาทีจากรอบลงยอด
+    if (currentH === h && Math.abs(currentM - m) <= 4) {
+      const slotSentKey = `HOURLY_SENT_${today}_${slot}`;
+      if (props.getProperty(slotSentKey) !== 'true') {
+        sendFlexCardHourly_(timeStr, false);
+        props.setProperty(slotSentKey, 'true'); // บันทึกว่าส่งรอบเวลานี้ไปแล้ว
+      }
+      return;
+    }
+  }
+
+  // 3. แจ้งเตือนยอด OT (18:30 น.) -> ส่งรอบเดียวเช่นกัน
+  const isOtSlot = now.getHours() === 18 && Math.abs(now.getMinutes() - 30) <= 4;
+  if (isOtSlot && hasOTToday_()) {
+    const otSentKey = 'OT_SENT_' + today;
+    if (props.getProperty(otSentKey) !== 'true') {
+      sendFlexCardHourly_(timeStr, true);
+      props.setProperty(otSentKey, 'true');
+    }
+  }
+}
+
+function hasOTToday_() {
+  const sheet = getSheet_(SHEET_SUMMARY);
+  if (!sheet) return false;
+  const data = sheet.getDataRange().getValues();
+  const today = todayStr_();
+
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    const rowDate = Utilities.formatDate(new Date(data[i][0]), 'Asia/Bangkok', 'yyyy-MM-dd');
+    if (rowDate !== today) continue;
+
+    const h1 = Number(data[i][COL_SUMMARY.HOURS_1 - 1]) || 0;
+    const h2 = Number(data[i][COL_SUMMARY.HOURS_2 - 1]) || 0;
+    const h3 = Number(data[i][COL_SUMMARY.HOURS_3 - 1]) || 0;
+    if ((h1 + h2 + h3) >= 9) return true;
+  }
+  return false;
+}
+
+/************************ FLEX MESSAGE TEMPLATES ************************/
+
+function sendFlexCardTG_() {
+  const flexPayload = {
+    type: "flex",
+    altText: "📝 ได้เวลาตั้งเป้าการผลิตประจำวัน (Form TG)",
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box", layout: "vertical", backgroundColor: "#27AE60",
+        contents: [{ type: "text", text: "📝 ตั้งเป้าการผลิตประจำวัน", weight: "bold", color: "#FFFFFF", size: "md" }]
+      },
+      body: {
+        type: "box", layout: "vertical",
+        contents: [{ type: "text", text: "กรุณากดปุ่มด้านล่างเพื่อสแกน LOT และกรอกยอดเป้าประจำวันครับ", wrap: true, color: "#666666", size: "sm" }]
+      },
+      footer: {
+        type: "box", layout: "vertical",
+        contents: [{ type: "button", action: { type: "uri", label: "📝 เปิดฟอร์มตั้งเป้า (Form TG)", uri: LIFF_URL_TG }, style: "primary", color: "#27AE60" }]
+      }
+    }
+  };
+  sendLinePayload_(flexPayload, GROUP_ID_FOLLOWUP);
+}
+
+function sendFlexCardHourly_(timeStr, isOT) {
+  const headerColor = isOT ? "#8E44AD" : "#2980B9";
+  const headerIcon = isOT ? "🌙" : "⏰";
+  const headerText = isOT ? `${headerIcon} บันทึกยอด OT (${timeStr} น.)` : `${headerIcon} บันทึกยอดผลิต (${timeStr} น.)`;
+  const bodyText = isOT
+    ? "วันนี้มีการทำ OT ครับ รบกวนบันทึกยอดผลิตช่วงเวลาที่เหลือด้วยครับ"
+    : "กรุณากดปุ่มด้านล่างเพื่อบันทึกยอดผลิตรายชั่วโมงของ Line ท่านครับ";
+
+  const flexPayload = {
+    type: "flex",
+    altText: `${headerIcon} ${isOT ? 'ได้เวลาลงยอด OT แล้วครับ' : 'ได้เวลาลงยอดผลิตรายชั่วโมงแล้วครับ'} (${timeStr} น.)`,
+    contents: {
+      type: "bubble",
+      header: {
+        type: "box", layout: "vertical", backgroundColor: headerColor,
+        contents: [{ type: "text", text: headerText, weight: "bold", color: "#FFFFFF", size: "md" }]
+      },
+      body: {
+        type: "box", layout: "vertical",
+        contents: [{ type: "text", text: bodyText, wrap: true, color: "#666666", size: "sm" }]
+      },
+      footer: {
+        type: "box", layout: "vertical",
+        contents: [{ type: "button", action: { type: "uri", label: "📊 เปิดฟอร์มลงยอดผลิต (Output)", uri: LIFF_URL_HOURLY }, style: "primary", color: headerColor }]
+      }
+    }
+  };
+  sendLinePayload_(flexPayload, GROUP_ID_FOLLOWUP);
+}
+
+/************************ GET API ************************/
+
+function doGet(e) {
+  const params = (e && e.parameter) || {};
+  const action = params.action;
+
+  // ================= DASHBOARD DATE PARAMS =================
+  // ใช้เฉพาะ GET ของ Dashboard / Production summary
+  // ไม่แตะ logic การลงยอด, LOT, Reminder หรือ Trigger
+  const queryDate = String(params.date || todayStr_()).trim();
+  const queryDateTo = String(params.dateTo || '').trim();
+  const isRange = Boolean(queryDateTo && queryDateTo !== queryDate);
+
+  // ================= REPAIR GET =================
+  if (action === 'getJobDetail') {
+    const jobId = String(params.jobId || '').trim();
+    return getRepairJobDetail_(jobId);
+  }
+  if (action === 'getMachineName') {
+    const code = String(params.code || '').trim().toUpperCase();
+    if (!code) return jsonResponse_({ name: '' });
+    const repairSS = getRepairSS_();
+    const sheet = repairSS.getSheetByName('MachineMaster');
+    if (!sheet) return jsonResponse_({ name: '' });
+    const finder = sheet.getRange('A:A').createTextFinder(code).matchEntireCell(true);
+    const cell = finder.findNext();
+    if (cell) return jsonResponse_({ name: String(sheet.getRange(cell.getRow(), 2).getValue() || '') });
+    return jsonResponse_({ name: '' });
+  }
+  if (action === 'getMyRepairJobs') {
+    return getMyRepairJobs_(String(params.userId || '').trim(), String(params.reporter || '').trim());
+  }
+  if (action === 'getMyTechnicianJobs') {
+    return getMyTechnicianJobs_(String(params.userId || '').trim());
+  }
+  if (action === 'checkTechnician') {
+    const info = getTechnicianInfo_(String(params.userId || '').trim());
+    return jsonResponse_({ isTechnician: !!info, technician: info || null });
+  }
+
+  // ================= PRODUCTION GET =================
+  if (action === 'getTodayLine') {
+    const lineParam = String(params.line || '').trim();
+    const row = findTodayRow_(lineParam);
+    const existingHourly = getExistingHourlyToday_(lineParam);
+
+    const masterSheet = getSheet_(SHEET_MASTER_LOT);
+    const masterData = masterSheet ? masterSheet.getDataRange().getValues() : [];
+    const masterMap = {};
+    for (let i = 1; i < masterData.length; i++) {
+      const lotNum = String(masterData[i][0] || '').trim().toUpperCase();
+      const modelName = String(masterData[i][1] || '').trim();
+      if (lotNum) masterMap[lotNum] = modelName;
+    }
+
+    if (row) {
+      const lotsList = [];
+      const modelsList = [];
+
+      const l1 = String(row.values[COL_SUMMARY.LOT_1 - 1] || '').trim().toUpperCase();
+      const l2 = String(row.values[COL_SUMMARY.LOT_2 - 1] || '').trim().toUpperCase();
+      const l3 = String(row.values[COL_SUMMARY.LOT_3 - 1] || '').trim().toUpperCase();
       
-      <!-- 1. ภาพรวมรายวัน (Daily Overview - Stacked Bar Chart) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
-          <div>
-            <h2 class="font-bold text-slate-700 text-base">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
-            <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
-          </div>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl w-full sm:w-auto">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">📅 จาก:</span>
-              <input type="date" id="datePicker" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">ถึง:</span>
-              <input type="date" id="datePickerTo" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
-            </div>
-          </div>
-        </div>
+      if (l1) { lotsList.push(l1); modelsList.push(masterMap[l1] || l1); }
+      if (l2) { lotsList.push(l2); modelsList.push(masterMap[l2] || l2); }
+      if (l3) { lotsList.push(l3); modelsList.push(masterMap[l3] || l3); }
 
-        <div class="h-64 relative">
-          <canvas id="factoryChart"></canvas>
-        </div>
-      </div>
+      const hrs1 = Number(row.values[COL_SUMMARY.HOURS_1 - 1]) || 8;
+      const hrs2 = Number(row.values[COL_SUMMARY.HOURS_2 - 1]) || 0;
+      const hrs3 = Number(row.values[COL_SUMMARY.HOURS_3 - 1]) || 0;
+      const tg1 = Number(row.values[COL_SUMMARY.TARGET_1 - 1]) || 0;
+      const tg2 = Number(row.values[COL_SUMMARY.TARGET_2 - 1]) || 0;
+      const tg3 = Number(row.values[COL_SUMMARY.TARGET_3 - 1]) || 0;
 
-      <!-- 2. เจาะลึกรายชั่วโมง (Hourly Tracking Section) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <h2 class="font-bold text-slate-700 text-base">⏱️ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h2>
-            <p id="hourlyTargetSubtitle" class="text-xs text-slate-400">เลือกไลน์เพื่อดูเป้าหมายเฉลี่ยต่อชั่วโมง</p>
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-500">เลือกลูกไลน์:</span>
-            <select id="lineSelect" onchange="updateHourlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
-              <option value="B">LINE B</option>
-              <option value="C">LINE C</option>
-              <option value="D">LINE D</option>
-              <option value="E">LINE E</option>
-              <option value="F">LINE F</option>
-            </select>
-          </div>
-        </div>
+      const data = {
+        target: Number(row.values[COL_SUMMARY.TARGET - 1]) || 0,
+        actual: Number(row.values[COL_SUMMARY.ACTUAL - 1]) || 0,
+        diff: Number(row.values[COL_SUMMARY.DIFF - 1]) || 0,
+        reported: row.values[COL_SUMMARY.STATUS - 1] === 'REPORTED',
+        lots: lotsList,
+        models: modelsList,
+        masterMap: masterMap,
+        totalWorkingHours: (hrs1 + hrs2 + hrs3),
+        lastUpdate: row.values[COL_SUMMARY.LAST_UPDATE - 1] ? Utilities.formatDate(new Date(row.values[COL_SUMMARY.LAST_UPDATE - 1]), 'Asia/Bangkok', 'HH:mm น.') : '',
+        lotNumber: l1, workingHours: hrs1, target1: tg1,
+        lotNumber2: l2, workingHours2: hrs2, target2: tg2,
+        lotNumber3: l3, workingHours3: hrs3, target3: tg3,
+        existingHourly: existingHourly
+      };
+      return jsonResponse_(data);
+    } else {
+      return jsonResponse_({
+        reported: false, lots: [], models: [], masterMap: masterMap, totalWorkingHours: 8, target: 0,
+        lotNumber: '', workingHours: 8, target1: 0,
+        lotNumber2: '', workingHours2: 0, target2: 0,
+        lotNumber3: '', workingHours3: 0, target3: 0,
+        existingHourly: existingHourly
+      });
+    }
+  }
 
-        <div class="h-60 relative">
-          <canvas id="hourlyChart"></canvas>
-        </div>
-      </div>
+  if (action === 'getDailySummary' && isRange) {
+    const sheet = getSheet_(SHEET_SUMMARY);
+    if (!sheet) return jsonResponse_({ date: queryDate, dateTo: queryDateTo, lines: [] });
 
-      <!-- 2.5 Production Pulse -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="font-bold text-slate-700 text-base">⚡ Production Pulse</h2>
-            </div>
-            <p id="pulseSubtitle" class="text-xs text-slate-400 mt-1">ประมาณการจากรอบที่มีข้อมูลของไลน์ที่เลือก</p>
-          </div>
-          <div id="pulseLineBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">LINE B</div>
-        </div>
+    const data = sheet.getDataRange().getValues();
+    const hourlySheet = getSheet_(SHEET_HOURLY);
+    const hourlyData = hourlySheet ? hourlySheet.getDataRange().getValues() : [];
+    const summaryList = [];
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Actual ตอนนี้</p>
-            <p id="pulseActual" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">ชิ้นสะสม</p>
-          </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Current Pace</p>
-            <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">ชิ้น / ชม.</p>
-          </div>
-          <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-indigo-500">Projected End-of-Day</p>
-            <p id="pulseProjected" class="text-2xl font-extrabold text-indigo-700 mt-1">-</p>
-            <p class="text-[10px] text-indigo-400 mt-1">คาดการณ์เมื่อจบเวลาทำงาน</p>
-          </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Projected vs Target</p>
-            <p id="pulseGap" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p id="pulseGapNote" class="text-[10px] text-slate-400 mt-1">เทียบกับ Target</p>
-          </div>
-        </div>
+    LINE_CODES.forEach(code => {
+      let target = 0, actual = 0;
+      for (let i = 1; i < data.length; i++) {
+        if (!data[i][0]) continue;
+        const rowDate = Utilities.formatDate(new Date(data[i][0]), 'Asia/Bangkok', 'yyyy-MM-dd');
+        const rowLineCode = String(data[i][1]).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+        if (rowLineCode !== code) continue;
+        if (rowDate < queryDate || rowDate > queryDateTo) continue;
+        target += Number(data[i][COL_SUMMARY.TARGET - 1]) || 0;
+        actual += Number(data[i][COL_SUMMARY.ACTUAL - 1]) || 0;
+      }
 
-        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-          <div class="flex justify-between items-center gap-2 mb-3">
-            <div>
-              <h3 class="text-sm font-bold text-slate-700">📈 Cumulative Target vs Actual</h3>
-              <p class="text-[11px] text-slate-400">เห็นว่าผลผลิตเริ่มห่างจากแผนตั้งแต่ช่วงไหน</p>
-            </div>
+      const hourlyMap = {};
+      for (let h = 1; h < hourlyData.length; h++) {
+        if (!hourlyData[h][1]) continue;
+        const logDate = Utilities.formatDate(new Date(hourlyData[h][1]), 'Asia/Bangkok', 'yyyy-MM-dd');
+        const logLineCode = String(hourlyData[h][2]).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+        if (logLineCode !== code) continue;
+        if (logDate < queryDate || logDate > queryDateTo) continue;
+        const timeSlot = String(hourlyData[h][3]).trim();
+        const qty = Number(hourlyData[h][5]) || 0;
+        hourlyMap[timeSlot] = (hourlyMap[timeSlot] || 0) + qty;
+      }
+      const hourlyOrdered = {};
+      TIME_SLOTS_ORDER.forEach(slot => { hourlyOrdered[slot] = hourlyMap[slot] || 0; });
 
-          </div>
-          <div class="h-64 relative">
-            <canvas id="cumulativeChart"></canvas>
-          </div>
-        </div>
-      </div>
+      summaryList.push({
+        line: code, target: target, actual: actual, gap: Math.max(0, target - actual),
+        model1: '', lot_number: '', target1: 0, actual1: 0,
+        model2: '', lot_number2: '', target2: 0, actual2: 0,
+        total_working_hours: 8, hourly_data: hourlyOrdered, remarks: []
+      });
+    });
 
-      <!-- 3. Summary Cards Grid -->
-      <div>
-        <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์ & LOT</h2>
-        <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Cards Dynamic Generation -->
-        </div>
-      </div>
+    return jsonResponse_({ date: queryDate, dateTo: queryDateTo, lines: summaryList });
+  }
 
-    </div>
+  if (action === 'getDailySummary') {
+    const sheet = getSheet_(SHEET_SUMMARY);
+    if (!sheet) return jsonResponse_({ date: queryDate, lines: [] });
 
-    <!-- PAGE 2: ค้นหา LOT -->
-    <div id="tab2" class="space-y-6 hidden">
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <label class="block text-sm font-bold text-slate-700 mb-2">ค้นหาหมายเลข LOT</label>
-        <div class="flex gap-2">
-          <input type="text" id="lotInput" placeholder="กรอกรหัส LOT..." class="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500">
-          <button onclick="searchLot()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition shadow-md shadow-indigo-100">
-            🔍 ค้นหา
-          </button>
-        </div>
-      </div>
+    const data = sheet.getDataRange().getValues();
+    const hourlySheet = getSheet_(SHEET_HOURLY);
+    const hourlyData = hourlySheet ? hourlySheet.getDataRange().getValues() : [];
+    const summaryList = [];
 
-      <div id="searchResult" class="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex justify-between items-start border-b border-slate-100 pb-4">
-          <div>
-            <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">ข้อมูล LOT</span>
-            <h3 id="resLotNo" class="text-xl font-extrabold text-slate-800 mt-1">กรุณากรอกรหัส LOT ด้านบน</h3>
-          </div>
-          <span id="resStatusBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-500">Standby</span>
-        </div>
+    LINE_CODES.forEach(code => {
+      let rowValues = null;
+      for (let i = 1; i < data.length; i++) {
+        if (!data[i][0]) continue;
+        const rowDate = Utilities.formatDate(new Date(data[i][0]), 'Asia/Bangkok', 'yyyy-MM-dd');
+        const rowLineCode = String(data[i][1]).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+        if (rowDate === queryDate && rowLineCode === code) { rowValues = data[i]; break; }
+      }
 
-        <div class="grid grid-cols-2 gap-4 text-sm">
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">PO QTY.</p>
-            <p id="resPoTarget" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">ผลิตสะสมแล้ว</p>
-            <p id="resCumulativeActual" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">Model (รุ่น)</p>
-            <p id="resModel" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-          <div class="bg-slate-50 p-3 rounded-2xl">
-            <p class="text-xs text-slate-400">กำหนดส่งมอบ</p>
-            <p id="resDeliveryDate" class="font-bold text-slate-700 mt-0.5">-</p>
-          </div>
-        </div>
+      const target = rowValues ? (Number(rowValues[COL_SUMMARY.TARGET - 1]) || 0) : 0;
+      const actual = rowValues ? (Number(rowValues[COL_SUMMARY.ACTUAL - 1]) || 0) : 0;
 
-        <div class="mt-4 pt-4 border-t border-slate-100">
-          <p class="text-xs font-bold text-slate-500 mb-2">⚡ ความคืบหน้าการผลิต</p>
-          <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
-            <span class="text-xl">🏭</span>
-            <span id="resRealtimeStatus">พร้อมค้นหาข้อมูลล็อตการผลิต</span>
-          </div>
-        </div>
-      </div>
-    </div>
+      const lot1 = rowValues ? String(rowValues[COL_SUMMARY.LOT_1 - 1] || '').trim() : '';
+      const lot2 = rowValues ? String(rowValues[COL_SUMMARY.LOT_2 - 1] || '').trim() : '';
+      const hrs1 = rowValues ? (Number(rowValues[COL_SUMMARY.HOURS_1 - 1]) || 0) : 0;
+      const hrs2 = rowValues ? (Number(rowValues[COL_SUMMARY.HOURS_2 - 1]) || 0) : 0;
+      const hrs3 = rowValues ? (Number(rowValues[COL_SUMMARY.HOURS_3 - 1]) || 0) : 0;
+      const totalHours = hrs1 + hrs2 + hrs3;
 
-  </div>
+      const target1 = rowValues ? (Number(rowValues[COL_SUMMARY.TARGET_1 - 1]) || 0) : 0;
+      const target2 = rowValues ? (Number(rowValues[COL_SUMMARY.TARGET_2 - 1]) || 0) : 0;
 
-  <script>
-    Chart.register(ChartDataLabels);
+      let actual1 = 0, actual2 = 0;
+      const hourlyMap = {};
+      const remarksSet = {};
+      for (let h = 1; h < hourlyData.length; h++) {
+        if (!hourlyData[h][1]) continue;
+        const logDate = Utilities.formatDate(new Date(hourlyData[h][1]), 'Asia/Bangkok', 'yyyy-MM-dd');
+        const logLineCode = String(hourlyData[h][2]).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+        if (logDate !== queryDate || logLineCode !== code) continue;
 
-    // วาง Web App URL ของ Apps Script ล่าสุดที่นี่
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
-    const LIFF_ID = "2011181755-bLeCO8Hs";
+        const logLot = String(hourlyData[h][4] || '').trim().toUpperCase();
+        const qty = Number(hourlyData[h][5]) || 0;
+        const timeSlot = String(hourlyData[h][3]).trim();
+        const note = String(hourlyData[h][6] || '').trim();
 
-    let chartInstance = null;
-    let hourlyChartInstance = null;
-    let cumulativeChartInstance = null;
-    let globalLinesData = [];
+        if (lot1 && logLot === lot1.toUpperCase()) actual1 += qty;
+        if (lot2 && logLot === lot2.toUpperCase()) actual2 += qty;
+        if (note) remarksSet[note] = true;
 
-    const AUTO_REFRESH_MS = 30000; // 30 วินาที
-    let autoRefreshTimer = null;
-    let dashboardFetchInProgress = false;
+        hourlyMap[timeSlot] = (hourlyMap[timeSlot] || 0) + qty;
+      }
 
-    function getTodayStr() {
-      const today = new Date();
-      const yyyy = today.getFullYear();
-      const mm = String(today.getMonth() + 1).padStart(2, '0');
-      const dd = String(today.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
+      const hourlyOrdered = {};
+      TIME_SLOTS_ORDER.forEach(slot => { hourlyOrdered[slot] = hourlyMap[slot] || 0; });
+      const remarks = Object.keys(remarksSet);
+
+      const lot1Info = lot1 ? getLotInfo_(lot1) : null;
+      const lot2Info = lot2 ? getLotInfo_(lot2) : null;
+
+      summaryList.push({
+        line: code, target: target, actual: actual, gap: Math.max(0, target - actual),
+        model1: lot1Info ? lot1Info.model : '', lot_number: lot1, target1: target1, actual1: actual1,
+        model2: lot2Info ? lot2Info.model : '', lot_number2: lot2, target2: target2, actual2: actual2,
+        total_working_hours: totalHours || 8, hours1: hrs1, hours2: hrs2, hours3: hrs3, hourly_data: hourlyOrdered,
+        remarks: remarks
+      });
+    });
+
+    return jsonResponse_({ date: queryDate, lines: summaryList });
+  }
+
+  if (action === 'getHourlyTracking') {
+    const lineParam = String(params.line || 'B').trim();
+    const cleanCode = lineParam.replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+
+    const summaryRow = findTodayRow_(cleanCode);
+    let targetPerHour = 0;
+    if (summaryRow) {
+      const tg = Number(summaryRow.values[COL_SUMMARY.TARGET - 1]) || 0;
+      const h1 = Number(summaryRow.values[COL_SUMMARY.HOURS_1 - 1]) || 8;
+      const h2 = Number(summaryRow.values[COL_SUMMARY.HOURS_2 - 1]) || 0;
+      const h3 = Number(summaryRow.values[COL_SUMMARY.HOURS_3 - 1]) || 0;
+      const totalHours = h1 + h2 + h3;
+      targetPerHour = totalHours > 0 ? Math.round(tg / totalHours) : 0;
     }
 
-    function switchTab(tabId) {
-      document.getElementById('tab1').classList.add('hidden');
-      document.getElementById('tab2').classList.add('hidden');
-      document.getElementById('nav-tab1').classList.remove('active');
-      document.getElementById('nav-tab2').classList.remove('active');
+    const sheetHourly = getSheet_(SHEET_HOURLY);
+    const hourlyData = sheetHourly ? sheetHourly.getDataRange().getValues() : [];
 
-      document.getElementById(tabId).classList.remove('hidden');
-      if(tabId === 'tab1') {
-        document.getElementById('nav-tab1').classList.add('active');
-        document.getElementById('pageTitle').innerText = "Dashboard ภาพรวมการผลิต";
-      } else {
-        document.getElementById('nav-tab2').classList.add('active');
-        document.getElementById('pageTitle').innerText = "ค้นหาและติดตามสถานะ LOT";
+    const hourlyMap = {};
+    for (let i = 1; i < hourlyData.length; i++) {
+      if (!hourlyData[i][1]) continue;
+      const logDate = Utilities.formatDate(new Date(hourlyData[i][1]), 'Asia/Bangkok', 'yyyy-MM-dd');
+      const logLineCode = String(hourlyData[i][2]).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+      if (logDate === queryDate && logLineCode === cleanCode) {
+        const timeSlot = String(hourlyData[i][3]).trim();
+        const qty = Number(hourlyData[i][5]) || 0;
+        hourlyMap[timeSlot] = (hourlyMap[timeSlot] || 0) + qty;
       }
     }
 
-    async function fetchDashboardData(selectedDate, endDate) {
-      // กัน request ซ้อนกัน ถ้ารอบก่อนยังโหลดไม่เสร็จ
-      if (dashboardFetchInProgress) return;
-      dashboardFetchInProgress = true;
+    const hourlyOrdered = {};
+    TIME_SLOTS_ORDER.forEach(slot => { hourlyOrdered[slot] = hourlyMap[slot] || 0; });
 
-      const isRange = endDate && endDate !== selectedDate;
+    return jsonResponse_({ line: lineParam, targetPerHour: targetPerHour, hourlyData: hourlyOrdered });
+  }
 
-      try {
-        document.getElementById('selectedDateText').innerText = isRange
-          ? `กำลังโหลดข้อมูลช่วง ${selectedDate} ถึง ${endDate}...`
-          : `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
+  if (params.searchLot) {
+    const lotNo = String(params.searchLot).trim().toUpperCase();
+    const info = getLotInfo_(lotNo);
+    if (!info) return jsonResponse_({ error: 'Not found' });
+    return jsonResponse_({
+      lot_number: lotNo, model: info.model, po_target: info.poTarget,
+      delivery_date: info.deliveryDate, cumulative_actual: sumActualForLot_(lotNo)
+    });
+  }
 
-        const url = isRange
-          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
-          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
+  return ContentService.createTextOutput('System API Active').setMimeType(ContentService.MimeType.TEXT);
+}
 
-        const res = await fetch(url, {
-          method: "GET",
-          redirect: "follow",
-          cache: "no-store"
+/************************ POST API ************************/
+
+function doPost(e) {
+  if (!e || !e.postData || !e.postData.contents) {
+    return jsonResponse_({ error: 'ไม่พบข้อมูล' });
+  }
+
+  const data = JSON.parse(e.postData.contents);
+
+  // ================= REPAIR ONLY =================
+  if (data.action === 'acceptJobViaLIFF') {
+    return handleAcceptJobViaLIFF_(data);
+  }
+
+  if (data.action === 'START_REPAIR_JOB') {
+    return handleStartRepairJob_(data);
+  }
+
+  if (data.action === 'FINISH_REPAIR_JOB') {
+    return handleFinishRepairJob_(data);
+  }
+
+  if (data.floor && (data.machineCode || data.machine)) {
+    return handleRepairFormSubmit_(data);
+  }
+
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(LOCK_TIMEOUT_MS); } catch (err) { return jsonResponse_({ error: 'ระบบยุ่งอยู่' }); }
+
+  try {
+    const action = data.action || data.formType;
+
+    if (action === 'HOURLY_OUTPUT' || action === 'saveHourlyOutput' || action === 'OUTPUT_FORM') {
+      if (data.isSwitchLot === true || data.isSwitchLot === 'true') {
+        return handleLotSwitch_(data);
+      }
+
+      const inputLine = String(data.line || '').trim();
+      if (!inputLine) return jsonResponse_({ error: 'กรุณาเลือก Line' });
+
+      const sheetHourly = getSheet_(SHEET_HOURLY);
+      const now = new Date();
+      const today = todayStr_();
+      let formattedLine = inputLine.toUpperCase();
+      if (!formattedLine.startsWith("LINE ")) formattedLine = "LINE " + formattedLine.replace("LINE", "").trim();
+
+      const details = data.hourlyDetails || data.hourlyData || [];
+      if (details.length > 0) {
+        const existingData = sheetHourly.getDataRange().getValues();
+        details.forEach(item => {
+          const slotLabel = String(item.timeSlot || item.timeLabel || '').trim();
+          let existingRowIndex = -1;
+
+          for (let i = 1; i < existingData.length; i++) {
+            const rowDate = existingData[i][1] instanceof Date ? Utilities.formatDate(existingData[i][1], 'Asia/Bangkok', 'yyyy-MM-dd') : String(existingData[i][1]);
+            const rowLine = String(existingData[i][2]).toUpperCase();
+            const rowSlot = String(existingData[i][3]).trim();
+            if (rowDate === today && rowLine === formattedLine && rowSlot === slotLabel) {
+              existingRowIndex = i + 1;
+              break;
+            }
+          }
+
+          const qtyVal = Number(item.qty || item.output) || 0;
+          const reporterVal = String(data.updatedBy || data.reportedBy || 'ไม่ระบุชื่อ').trim();
+
+          if (existingRowIndex > 0) {
+            sheetHourly.getRange(existingRowIndex, 1, 1, 8).setValues([[now, today, formattedLine, slotLabel, item.lot, qtyVal, data.remark || '', reporterVal]]);
+          } else {
+            sheetHourly.appendRow([now, today, formattedLine, slotLabel, item.lot, qtyVal, data.remark || '', reporterVal]);
+          }
         });
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        const rawText = await res.text();
-        let data;
-
-        try {
-          data = JSON.parse(rawText);
-        } catch (jsonErr) {
-          throw new Error("API ไม่ได้ส่งข้อมูล JSON กลับมา");
-        }
-
-        if (data && data.lines && data.lines.length > 0) {
-          globalLinesData = data.lines;
-          renderCards(data.lines, isRange);
-          renderDailyChart(data.lines);
-          updateHourlyChart();
-
-          document.getElementById('selectedDateText').innerText = isRange
-            ? `แสดงข้อมูลสะสมช่วง: ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
-            : `แสดงข้อมูลประจำวันที่: ${data.date || selectedDate}`;
-        } else {
-          globalLinesData = [];
-          showEmptyState();
-        }
-
-        updateLastUpdatedText(true);
-
-      } catch (err) {
-        console.error("Fetch Error:", err);
-        document.getElementById('selectedDateText').innerText =
-          `ดึงข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง`;
-        updateLastUpdatedText(false);
-
-      } finally {
-        dashboardFetchInProgress = false;
       }
+      return jsonResponse_({ status: 'success' });
     }
 
-    function updateLastUpdatedText(success) {
-      const el = document.getElementById('lastUpdatedText');
-      if (!el) return;
+    const inputLine = String(data.line || data.lineCode || '').trim();
+    if (!inputLine) return jsonResponse_({ error: 'กรุณาเลือก Line' });
+
+    const found = ensureTodayRow_(inputLine);
+    const sheet = found.sheet;
+    const row = found.row;
+
+    const target1Val = Number(data.target || 0);
+    const target2Val = Number(data.target2 || 0);
+    const target3Val = Number(data.target3 || 0);
+    const targetVal  = target1Val + target2Val + target3Val;
+
+    // B: เตรียม Timeline ของ LOT โดยไม่ขยับคอลัมน์เดิม A:T
+    ensureLotTimelineColumns_();
+
+    // บันทึกลงตามตำแหน่งคอลัมน์ใหม่
+    sheet.getRange(row, COL_SUMMARY.STATUS).setValue('REPORTED');
+    sheet.getRange(row, COL_SUMMARY.TARGET).setValue(targetVal);
+    sheet.getRange(row, COL_SUMMARY.LOT_1).setValue(String(data.lotNumber || '').trim().toUpperCase());
+    sheet.getRange(row, COL_SUMMARY.HOURS_1).setValue(Number(data.workingHours || 8));
+    sheet.getRange(row, COL_SUMMARY.TARGET_1).setValue(target1Val);
+    sheet.getRange(row, COL_SUMMARY.TG_ORIGINAL_1).setValue(target1Val);
+    
+    sheet.getRange(row, COL_SUMMARY.LOT_2).setValue(String(data.lotNumber2 || '').trim().toUpperCase());
+    sheet.getRange(row, COL_SUMMARY.HOURS_2).setValue(Number(data.workingHours2 || 0));
+    sheet.getRange(row, COL_SUMMARY.TARGET_2).setValue(target2Val);
+    sheet.getRange(row, COL_SUMMARY.TG_ORIGINAL_2).setValue(target2Val);
+    
+    sheet.getRange(row, COL_SUMMARY.LOT_3).setValue(String(data.lotNumber3 || '').trim().toUpperCase());
+    sheet.getRange(row, COL_SUMMARY.HOURS_3).setValue(Number(data.workingHours3 || 0));
+    sheet.getRange(row, COL_SUMMARY.TARGET_3).setValue(target3Val);
+    sheet.getRange(row, COL_SUMMARY.TG_ORIGINAL_3).setValue(target3Val);
+
+    // LOT1 เริ่มต้นที่เวลาที่ระบุใน initial TG (ถ้ามี) มิฉะนั้นใช้ 08:30
+    // เพื่อให้ Timeline อิงเวลาที่เริ่ม LOT จริง ไม่บังคับว่าต้องเริ่ม 08:30 เสมอ
+    const initialStartRaw = data.lot1Start ? new Date(data.lot1Start) : getShiftBoundary_(new Date(), 8, 30);
+    const lot1Start = isNaN(initialStartRaw.getTime())
+      ? getShiftBoundary_(new Date(), 8, 30)
+      : initialStartRaw;
+    sheet.getRange(row, COL_SUMMARY.LOT1_START).setValue(lot1Start);
+    sheet.getRange(row, COL_SUMMARY.LOT1_END).clearContent();
+    sheet.getRange(row, COL_SUMMARY.LOT2_START).clearContent();
+    sheet.getRange(row, COL_SUMMARY.LOT2_END).clearContent();
+    sheet.getRange(row, COL_SUMMARY.LOT3_START).clearContent();
+    sheet.getRange(row, COL_SUMMARY.LOT3_END).clearContent();
+
+    sheet.getRange(row, COL_SUMMARY.UPDATED_BY).setValue(String(data.updatedBy || 'Unknown'));
+    sheet.getRange(row, COL_SUMMARY.LAST_UPDATE).setValue(new Date());
+
+    return jsonResponse_({ status: 'success' });
+
+  } catch (err) {
+    return jsonResponse_({ error: err.message });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+/************************ LOT SWITCH / TIMELINE ************************/
+
+function ensureLotTimelineColumns_() {
+  const sheet = getSheet_(SHEET_SUMMARY);
+  if (!sheet) throw new Error('ไม่พบชีท Summary');
+  if (sheet.getMaxColumns() < 26) {
+    sheet.insertColumnsAfter(sheet.getMaxColumns(), 26 - sheet.getMaxColumns());
+  }
+
+  const headers = [
+    'LOT1_START', 'LOT1_END', 'LOT2_START',
+    'LOT2_END', 'LOT3_START', 'LOT3_END'
+  ];
+
+  const current = sheet.getRange(1, COL_SUMMARY.LOT1_START, 1, 6).getValues()[0];
+  let changed = false;
+  for (let i = 0; i < headers.length; i++) {
+    if (String(current[i] || '').trim() !== headers[i]) {
+      changed = true;
+      break;
+    }
+  }
+
+  if (changed) {
+    sheet.getRange(1, COL_SUMMARY.LOT1_START, 1, 6).setValues([headers]);
+  }
+}
+
+function getShiftBoundary_(dateObj, hour, minute) {
+  const dateStr = Utilities.formatDate(dateObj, 'Asia/Bangkok', 'yyyy-MM-dd');
+  return new Date(`${dateStr}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00+07:00`);
+}
+
+function clampDate_(value, minValue, maxValue) {
+  return new Date(Math.min(Math.max(value.getTime(), minValue.getTime()), maxValue.getTime()));
+}
+
+function hoursBetween_(startValue, endValue) {
+  if (!startValue || !endValue) return 0;
+  return Math.max(0, (endValue.getTime() - startValue.getTime()) / 3600000);
+}
+
+function round2_(value) {
+  return Math.round((Number(value) || 0) * 100) / 100;
+}
+
+function countHourlySlotsForLotToday_(lineCode, lotNumber) {
+  const sheet = getSheet_(SHEET_HOURLY);
+  if (!sheet || !lotNumber) return 0;
+
+  const data = sheet.getDataRange().getValues();
+  const today = todayStr_();
+  const cleanLine = String(lineCode || '')
+    .replace(/LINE/i, '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+  const cleanLot = String(lotNumber || '').trim().toUpperCase();
+  const uniqueSlots = new Set();
+
+  // ช่วงพักถูกบันทึกเป็น 0 ใน Hourly_Log เพื่อคง workflow เดิม
+  // แต่ต้องไม่ถูกนับเป็น "ชั่วโมงที่ LOT ผลิตจริง"
+  let breakSlot = '';
+  if (['B', 'C'].includes(cleanLine)) {
+    breakSlot = '12.30-13.30';
+  } else if (['D', 'E', 'F', 'G'].includes(cleanLine)) {
+    breakSlot = '11.30-12.30';
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][1]) continue;
+
+    const rowDate = data[i][1] instanceof Date
+      ? Utilities.formatDate(data[i][1], 'Asia/Bangkok', 'yyyy-MM-dd')
+      : String(data[i][1]);
+
+    const rowLine = String(data[i][2] || '')
+      .replace(/LINE/i, '')
+      .replace(/\s+/g, '')
+      .toUpperCase();
+
+    const rowLot = String(data[i][4] || '').trim().toUpperCase();
+    const rowSlot = String(data[i][3] || '').trim();
+
+    if (rowDate !== today) continue;
+    if (rowLine !== cleanLine) continue;
+    if (rowLot !== cleanLot) continue;
+    if (!rowSlot) continue;
+    if (rowSlot === breakSlot) continue;
+
+    uniqueSlots.add(rowSlot);
+  }
+
+  return uniqueSlots.size;
+}
+
+function getBreakSlotForLineCode_(lineCode) {
+  const cleanLine = String(lineCode || '')
+    .replace(/LINE/i, '')
+    .replace(/\s+/g, '')
+    .toUpperCase();
+
+  if (['B', 'C'].includes(cleanLine)) return '12.30-13.30';
+  if (['D', 'E', 'F', 'G'].includes(cleanLine)) return '11.30-12.30';
+  return '';
+}
+
+function getWorkingHoursFromSwitchSlot_(lineCode, switchAfterSlot, totalWorkingHours) {
+  const breakSlot = getBreakSlotForLineCode_(lineCode);
+
+  const workingSlots = TIME_SLOTS_ORDER
+    .filter(slot => slot !== breakSlot)
+    .slice(0, Math.max(1, Number(totalWorkingHours) || 9));
+
+  const index = workingSlots.indexOf(String(switchAfterSlot || '').trim());
+
+  if (index < 0) {
+    throw new Error('รอบสลับ LOT ไม่ถูกต้อง');
+  }
+
+  return index + 1;
+}
+
+function handleLotSwitch_(data) {
+  ensureLotTimelineColumns_();
+
+  const inputLine = String(data.line || '').trim();
+  if (!inputLine) {
+    return jsonResponse_({ status: 'error', error: 'กรุณาเลือก Line' });
+  }
+
+  const newLot = String(data.newLotNumber || '').trim().toUpperCase();
+  const newTG = Number(data.newLotTarget || 0);
+  const switchAfterSlot = String(data.switchAfterSlot || '').trim();
+
+  if (!newLot || newTG <= 0) {
+    return jsonResponse_({
+      status: 'error',
+      error: 'กรุณากรอก LOT ใหม่และ TG Original ให้ครบถ้วน'
+    });
+  }
+
+  if (!switchAfterSlot) {
+    return jsonResponse_({
+      status: 'error',
+      error: 'กรุณาระบุรอบที่ LOT เดิมจบ'
+    });
+  }
+
+  const found = ensureTodayRow_(inputLine);
+  const sheet = found.sheet;
+  const row = found.row;
+  const values = sheet
+    .getRange(row, 1, 1, COL_SUMMARY.LOT3_END)
+    .getValues()[0];
+
+  const lot1 = String(values[COL_SUMMARY.LOT_1 - 1] || '')
+    .trim().toUpperCase();
+  const lot2 = String(values[COL_SUMMARY.LOT_2 - 1] || '')
+    .trim().toUpperCase();
+  const lot3 = String(values[COL_SUMMARY.LOT_3 - 1] || '')
+    .trim().toUpperCase();
+
+  if (!lot1) {
+    return jsonResponse_({
+      status: 'error',
+      error: 'ยังไม่มี LOT แรกใน Summary'
+    });
+  }
+
+  if (newLot === lot1 || newLot === lot2 || newLot === lot3) {
+    return jsonResponse_({
+      status: 'error',
+      error: 'LOT นี้ถูกใช้งานในวันนี้แล้ว'
+    });
+  }
+
+  if (lot1 && lot2 && lot3) {
+    return jsonResponse_({
+      status: 'error',
+      error: 'รองรับสูงสุด 3 LOT ต่อ LINE ต่อวัน'
+    });
+  }
+
+  // ชั่วโมงรวมของวันต้องยึดค่าที่ตั้งไว้ก่อนสลับ
+  // Frontend ส่งมาด้วย และใช้ HOURS รวมเดิมเป็น fallback
+  const storedHoursTotal =
+    (Number(values[COL_SUMMARY.HOURS_1 - 1]) || 0) +
+    (Number(values[COL_SUMMARY.HOURS_2 - 1]) || 0) +
+    (Number(values[COL_SUMMARY.HOURS_3 - 1]) || 0);
+
+  const totalWorkingHours = Math.max(
+    1,
+    Math.floor(
+      Number(data.totalWorkingHours) ||
+      storedHoursTotal ||
+      Number(values[COL_SUMMARY.HOURS_1 - 1]) ||
+      9
+    )
+  );
+
+  // จุดสำคัญ:
+  // จำนวนชั่วโมงที่ผ่านไปมาจาก "รอบที่เลือก" ไม่ใช่ Hourly_Log
+  const completedTotalHours = getWorkingHoursFromSwitchSlot_(
+    inputLine,
+    switchAfterSlot,
+    totalWorkingHours
+  );
+
+  const switchAtRaw = data.switchAt ? new Date(data.switchAt) : new Date();
+  const switchAt = isNaN(switchAtRaw.getTime())
+    ? new Date()
+    : switchAtRaw;
+
+  const tg1 =
+    Number(values[COL_SUMMARY.TG_ORIGINAL_1 - 1]) ||
+    Number(values[COL_SUMMARY.TARGET_1 - 1]) ||
+    0;
+
+  // ==========================================================
+  // SWITCH 1: LOT1 -> LOT2
+  // ==========================================================
+  if (!lot2) {
+    const hours1 = completedTotalHours;
+    const hours2 = Math.max(0, totalWorkingHours - hours1);
+
+    const target1 = Math.round(
+      (tg1 / totalWorkingHours) * hours1
+    );
+    const target2 = Math.round(
+      (newTG / totalWorkingHours) * hours2
+    );
+    const totalTarget = target1 + target2;
+
+    sheet.getRange(row, COL_SUMMARY.LOT_2).setValue(newLot);
+    sheet.getRange(row, COL_SUMMARY.HOURS_1).setValue(hours1);
+    sheet.getRange(row, COL_SUMMARY.TARGET_1).setValue(target1);
+    sheet.getRange(row, COL_SUMMARY.TG_ORIGINAL_2).setValue(newTG);
+    sheet.getRange(row, COL_SUMMARY.HOURS_2).setValue(hours2);
+    sheet.getRange(row, COL_SUMMARY.TARGET_2).setValue(target2);
+    sheet.getRange(row, COL_SUMMARY.TARGET).setValue(totalTarget);
+
+    // Timeline เก็บเวลาที่กดจริง แต่จำนวนชั่วโมงใช้รอบที่เลือก
+    const storedLot1Start = values[COL_SUMMARY.LOT1_START - 1];
+    const lot1Start = storedLot1Start
+      ? new Date(storedLot1Start)
+      : new Date(
+          switchAt.getTime() - (hours1 * 3600000)
+        );
+
+    sheet.getRange(row, COL_SUMMARY.LOT1_START).setValue(lot1Start);
+    sheet.getRange(row, COL_SUMMARY.LOT1_END).setValue(switchAt);
+    sheet.getRange(row, COL_SUMMARY.LOT2_START).setValue(switchAt);
+    sheet.getRange(row, COL_SUMMARY.LOT2_END).clearContent();
+    sheet.getRange(row, COL_SUMMARY.LOT3_START).clearContent();
+    sheet.getRange(row, COL_SUMMARY.LOT3_END).clearContent();
+
+    sheet.getRange(row, COL_SUMMARY.UPDATED_BY)
+      .setValue(String(data.updatedBy || 'Unknown'));
+    sheet.getRange(row, COL_SUMMARY.LAST_UPDATE)
+      .setValue(new Date());
+
+    return jsonResponse_({
+      status: 'success',
+      switch: 1,
+      switchAfterSlot: switchAfterSlot,
+      totalWorkingHours: totalWorkingHours,
+      lot1: lot1,
+      lot2: newLot,
+      hours1: hours1,
+      hours2: hours2,
+      target1: target1,
+      target2: target2,
+      totalTarget: totalTarget
+    });
+  }
+
+  // ==========================================================
+  // SWITCH 2: LOT2 -> LOT3
+  // ==========================================================
+  const hours1 = Number(values[COL_SUMMARY.HOURS_1 - 1]) || 0;
+  const hours2 = Math.max(0, completedTotalHours - hours1);
+  const hours3 = Math.max(
+    0,
+    totalWorkingHours - hours1 - hours2
+  );
+
+  if (completedTotalHours <= hours1) {
+    return jsonResponse_({
+      status: 'error',
+      error: 'รอบสลับ LOT3 ต้องอยู่หลังจุดเริ่ม LOT2'
+    });
+  }
+
+  const tg2 =
+    Number(values[COL_SUMMARY.TG_ORIGINAL_2 - 1]) ||
+    Number(values[COL_SUMMARY.TARGET_2 - 1]) ||
+    0;
+
+  const target1 = Math.round(
+    (tg1 / totalWorkingHours) * hours1
+  );
+  const target2 = Math.round(
+    (tg2 / totalWorkingHours) * hours2
+  );
+  const target3 = Math.round(
+    (newTG / totalWorkingHours) * hours3
+  );
+  const totalTarget = target1 + target2 + target3;
+
+  sheet.getRange(row, COL_SUMMARY.LOT_3).setValue(newLot);
+  sheet.getRange(row, COL_SUMMARY.TARGET_1).setValue(target1);
+  sheet.getRange(row, COL_SUMMARY.HOURS_2).setValue(hours2);
+  sheet.getRange(row, COL_SUMMARY.TARGET_2).setValue(target2);
+  sheet.getRange(row, COL_SUMMARY.TG_ORIGINAL_3).setValue(newTG);
+  sheet.getRange(row, COL_SUMMARY.HOURS_3).setValue(hours3);
+  sheet.getRange(row, COL_SUMMARY.TARGET_3).setValue(target3);
+  sheet.getRange(row, COL_SUMMARY.TARGET).setValue(totalTarget);
+
+  sheet.getRange(row, COL_SUMMARY.LOT2_END).setValue(switchAt);
+  sheet.getRange(row, COL_SUMMARY.LOT3_START).setValue(switchAt);
+  sheet.getRange(row, COL_SUMMARY.LOT3_END).clearContent();
+
+  sheet.getRange(row, COL_SUMMARY.UPDATED_BY)
+    .setValue(String(data.updatedBy || 'Unknown'));
+  sheet.getRange(row, COL_SUMMARY.LAST_UPDATE)
+    .setValue(new Date());
+
+  return jsonResponse_({
+    status: 'success',
+    switch: 2,
+    switchAfterSlot: switchAfterSlot,
+    totalWorkingHours: totalWorkingHours,
+    lot1: lot1,
+    lot2: lot2,
+    lot3: newLot,
+    hours1: hours1,
+    hours2: hours2,
+    hours3: hours3,
+    target1: target1,
+    target2: target2,
+    target3: target3,
+    totalTarget: totalTarget
+  });
+}
+
+/************************ REPAIR LIFF FUNCTIONS ************************/
+
+// โครง Jobs ปัจจุบัน:
+// A Job ID
+// B วันที่แจ้ง
+// C เวลาแจ้ง
+// D ผู้แจ้ง
+// E ชั้น
+// F รหัสเครื่องจักร
+// G ชื่อเครื่องจักร
+// H อาการเสีย
+// I รูปภาพตอนแจ้ง
+// J สถานะ
+// K ช่างผู้รับ
+// L วันที่เริ่ม
+// M เวลาเริ่ม
+// N วันที่เสร็จ
+// O เวลาเสร็จ
+// P ผลการซ่อม        <-- เพิ่ม
+// Q รูปหลังซ่อม      <-- เพิ่ม
+// R LINE User ID ผู้แจ้ง <-- เพิ่ม
+//
+// เพิ่มเฉพาะ Repair เท่านั้น ไม่แตะ Summary / Hourly / Production
+
+const REPAIR_COL = {
+  JOB_ID: 1,
+  REPORT_DATE: 2,
+  REPORT_TIME: 3,
+  REPORTER: 4,
+  FLOOR: 5,
+  MACHINE_CODE: 6,
+  MACHINE_NAME: 7,
+  ISSUE: 8,
+  BEFORE_IMAGE: 9,
+  STATUS: 10,
+  TECH_NAME: 11,
+  START_DATE: 12,
+  START_TIME: 13,
+  FINISH_DATE: 14,
+  FINISH_TIME: 15,
+  RESULT: 16,
+  AFTER_IMAGE: 17,
+  REPORTER_USER_ID: 18,
+  REPAIR_TYPE: 19,     // S ประเภทการซ่อม: ซ่อม / ปรับ / เปลี่ยน
+  REPAIR_DETAIL: 20    // T รายละเอียดการซ่อม
+};
+
+function ensureRepairColumns_() {
+  const ss = getRepairSS_();
+  const sheet = ss.getSheetByName("Jobs") || ss.getSheets()[0];
+
+  // เติมหัวตาราง P/Q เฉพาะถ้ายังว่าง
+  if (!sheet.getRange(1, REPAIR_COL.RESULT).getValue()) {
+    sheet.getRange(1, REPAIR_COL.RESULT).setValue("ผลการซ่อม");
+  }
+
+  if (!sheet.getRange(1, REPAIR_COL.AFTER_IMAGE).getValue()) {
+    sheet.getRange(1, REPAIR_COL.AFTER_IMAGE).setValue("รูปหลังซ่อม");
+  }
+
+  if (!sheet.getRange(1, REPAIR_COL.REPORTER_USER_ID).getValue()) {
+    sheet.getRange(1, REPAIR_COL.REPORTER_USER_ID).setValue("LINE User ID ผู้แจ้ง");
+  }
+
+  if (!sheet.getRange(1, REPAIR_COL.REPAIR_TYPE).getValue()) {
+    sheet.getRange(1, REPAIR_COL.REPAIR_TYPE).setValue("ประเภทการซ่อม");
+  }
+
+  if (!sheet.getRange(1, REPAIR_COL.REPAIR_DETAIL).getValue()) {
+    sheet.getRange(1, REPAIR_COL.REPAIR_DETAIL).setValue("รายละเอียดการซ่อม");
+  }
+
+  return sheet;
+}
+
+function ensureTechnicianSheet_() {
+  const ss = getRepairSS_();
+  let sheet = ss.getSheetByName("Technicians");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("Technicians");
+    sheet.getRange(1, 1, 1, 3).setValues([[
+      "LINE User ID",
+      "ชื่อช่าง",
+      "ชั้น"
+    ]]);
+  }
+
+  return sheet;
+}
+
+// รันฟังก์ชันนี้ครั้งเดียวหลังวางโค้ด
+// เพื่อสร้างหัวคอลัมน์ P/Q และชีท Technicians
+function setupRepairSystem_() {
+  ensureRepairColumns_();
+  ensureTechnicianSheet_();
+  Logger.log("Repair setup completed.");
+}
+
+function getTechnicianInfo_(userId) {
+  if (!userId) return null;
+
+  const sheet = ensureTechnicianSheet_();
+  const lastRow = sheet.getLastRow();
+
+  if (lastRow < 2) return null;
+
+  const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+
+  for (let i = 0; i < data.length; i++) {
+    const rowUserId = String(data[i][0] || '').trim();
+
+    if (rowUserId && rowUserId === userId) {
+      return {
+        userId: rowUserId,
+        name: String(data[i][1] || '').trim(),
+        floor: String(data[i][2] || '').trim()
+      };
+    }
+  }
+
+  return null;
+}
+
+function handleRepairFormSubmit_(data) {
+  try {
+    const sheet = ensureRepairColumns_();
+
+    const lastRow = sheet.getLastRow();
+    const jobId = "JOB-" + Utilities.formatString("%04d", Math.max(1, lastRow));
+
+    const mCode = String(data.machineCode || data.machine || "").trim();
+    const mName = String(data.machineName || "").trim();
+
+    let imageUrl = "";
+    if (data.image && data.image !== "") {
+      imageUrl = saveImageToDrive_(data.image, mCode || "machine_before");
+    }
+
+    const reporterName =
+      String(data.reporter || data.updatedBy || "ไม่ระบุชื่อ").trim();
+
+    const selectedFloor = String(data.floor || "").trim();
+
+    const now = new Date();
+    const currentDateStr =
+      Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd');
+    const currentTimeStr =
+      Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss');
+
+    sheet.appendRow([
+      jobId,
+      currentDateStr,
+      currentTimeStr,
+      reporterName,
+      selectedFloor,
+      mCode,
+      mName,
+      data.issue || "",
+      imageUrl,
+      "รอดำเนินการ",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      String(data.userId || "")
+    ]);
+
+    const targetGroupId =
+      REPAIR_GROUP_IDS[selectedFloor] || GROUP_ID_FOLLOWUP;
+
+    const displayMachine =
+      mName ? `${mCode} (${mName})` : mCode;
+
+    sendRepairFlexCard_(
+      targetGroupId,
+      jobId,
+      selectedFloor,
+      data.line || "",
+      reporterName,
+      displayMachine,
+      data.issue || "",
+      imageUrl
+    );
+
+    return jsonResponse_({
+      success: true,
+      status: "success",
+      jobId: jobId,
+      imageUrl: imageUrl
+    });
+
+  } catch (err) {
+    return jsonResponse_({
+      success: false,
+      status: "error",
+      message: err.message || err.toString(),
+      error: err.toString()
+    });
+  }
+}
+
+function sendRepairFlexCard_(groupId, jobId, floor, line, reporter, machine, issue, imageUrl) {
+
+  const acceptLiffUrl = `${LIFF_URL_ACCEPT_JOB}?jobId=${encodeURIComponent(jobId)}`;
+
+  const flexPayload = {
+    type: "flex",
+    altText: "🛠️ แจ้งซ่อมเครื่องจักรใหม่: " + machine,
+    contents: {
+      type: "bubble",
+
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#1DB954",
+        contents: [
+          {
+            type: "text",
+            text: "🛠️ แจ้งซ่อมเครื่องจักรใหม่",
+            weight: "bold",
+            color: "#FFFFFF",
+            size: "lg"
+          },
+          {
+            type: "text",
+            text: "รหัสงาน: " + jobId,
+            color: "#FFFFFF",
+            size: "xs",
+            margin: "xs"
+          }
+        ]
+      },
+
+      body: {
+        type: "box",
+        layout: "vertical",
+        contents: [
+          {
+            type: "text",
+            text: "📍 พท.: " + floor + (line ? " (" + line + ")" : ""),
+            weight: "bold",
+            size: "md"
+          },
+          {
+            type: "text",
+            text: "⚙️ เครื่องจักร: " + machine,
+            weight: "bold",
+            size: "md",
+            color: "#E53E3E",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: "👤 ผู้แจ้ง: " + (reporter || "ไม่ระบุชื่อ"),
+            size: "sm",
+            color: "#666666",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: "📝 อาการ: " + (issue || ""),
+            size: "sm",
+            color: "#4A5568",
+            wrap: true,
+            margin: "md"
+          }
+        ]
+      },
+
+      footer: {
+        type: "box",
+        layout: "vertical",
+        contents: [{
+          type: "button",
+          action: {
+            type: "uri",
+            label: "🛠️ กดรับงานซ่อมนี้",
+            uri: acceptLiffUrl
+          },
+          style: "primary",
+          color: "#06C755"
+        }]
+      }
+    }
+  };
+
+  if (imageUrl) {
+    flexPayload.contents.body.contents.push({
+      type: "image",
+      url: imageUrl,
+      size: "full",
+      aspectMode: "cover",
+      aspectRatio: "4:3",
+      margin: "md"
+    });
+  }
+
+  sendLinePayload_(flexPayload, groupId);
+}
+
+// กด "รับงาน" จาก Flex
+// สำคัญ: รับงานแล้ว != เริ่มงาน
+function handleAcceptJobViaLIFF_(data) {
+  const jobId = String(data.jobId || '').trim();
+  const userId = String(data.userId || '').trim();
+
+  const techInfo = getTechnicianInfo_(userId);
+
+  if (!techInfo) {
+    return jsonResponse_({
+      status: "error",
+      message: "LINE นี้ยังไม่ได้ลงทะเบียนเป็นช่าง"
+    });
+  }
+
+  const techName =
+    techInfo.name ||
+    String(data.techName || "ช่างซ่อม").trim();
+
+  const sheet = ensureRepairColumns_();
+  const rows = sheet.getDataRange().getValues();
+
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+
+    for (let i = 1; i < rows.length; i++) {
+
+      if (String(rows[i][REPAIR_COL.JOB_ID - 1]) !== jobId) continue;
+
+      const rowNumber = i + 1;
+      const currentStatus =
+        String(rows[i][REPAIR_COL.STATUS - 1] || "").trim();
+
+      if (currentStatus === "เสร็จสิ้น") {
+        return jsonResponse_({
+          status: "already_done",
+          message: "งานนี้เสร็จสิ้นแล้ว"
+        });
+      }
+
+      if (currentStatus === "กำลังดำเนินการ") {
+        return jsonResponse_({
+          status: "already_started",
+          techName: String(rows[i][REPAIR_COL.TECH_NAME - 1] || "")
+        });
+      }
+
+      if (
+        currentStatus === "รับงานแล้ว" &&
+        String(rows[i][REPAIR_COL.TECH_NAME - 1] || "") !== techName
+      ) {
+        return jsonResponse_({
+          status: "already_taken",
+          techName: String(rows[i][REPAIR_COL.TECH_NAME - 1] || "")
+        });
+      }
+
+      if (currentStatus !== "รอดำเนินการ" && currentStatus !== "") {
+        return jsonResponse_({
+          status: "error",
+          message: "สถานะงานปัจจุบันไม่สามารถรับงานได้: " + currentStatus
+        });
+      }
+
+      sheet.getRange(rowNumber, REPAIR_COL.STATUS).setValue("รับงานแล้ว");
+      sheet.getRange(rowNumber, REPAIR_COL.TECH_NAME).setValue(techName);
+
+      const selectedFloor =
+        String(rows[i][REPAIR_COL.FLOOR - 1] || "").trim();
+
+      const targetGroupId =
+        REPAIR_GROUP_IDS[selectedFloor] || GROUP_ID_FOLLOWUP;
+
+      const machineInfo =
+        String(rows[i][REPAIR_COL.MACHINE_CODE - 1] || "") +
+        (rows[i][REPAIR_COL.MACHINE_NAME - 1]
+          ? " (" + rows[i][REPAIR_COL.MACHINE_NAME - 1] + ")"
+          : "");
+
+      sendLinePayload_({
+        type: "text",
+        text:
+          `🟣 ${techName} รับงานซ่อม ${jobId} แล้ว\n` +
+          `⚙️ เครื่องจักร: ${machineInfo}\n` +
+          `⏳ สถานะ: รอเริ่มงาน`
+      }, targetGroupId);
+
+      return jsonResponse_({
+        status: "success",
+        jobId: jobId,
+        technician: techName,
+        jobStatus: "รับงานแล้ว"
+      });
+    }
+
+    return jsonResponse_({
+      status: "error",
+      message: "ไม่พบ jobId ในระบบ"
+    });
+
+  } catch (err) {
+
+    return jsonResponse_({
+      status: "error",
+      message: err.message
+    });
+
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+// กด "เริ่มงาน"
+function handleStartRepairJob_(data) {
+
+  const jobId = String(data.jobId || '').trim();
+  const userId = String(data.userId || '').trim();
+
+  const techInfo = getTechnicianInfo_(userId);
+
+  if (!techInfo) {
+    return jsonResponse_({
+      status: "error",
+      message: "LINE นี้ยังไม่ได้ลงทะเบียนเป็นช่าง"
+    });
+  }
+
+  const sheet = ensureRepairColumns_();
+  const rows = sheet.getDataRange().getValues();
+
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+
+    for (let i = 1; i < rows.length; i++) {
+
+      if (String(rows[i][REPAIR_COL.JOB_ID - 1]) !== jobId) continue;
+
+      const rowNumber = i + 1;
+
+      const status =
+        String(rows[i][REPAIR_COL.STATUS - 1] || "").trim();
+
+      const assignedTech =
+        String(rows[i][REPAIR_COL.TECH_NAME - 1] || "").trim();
+
+      const techName =
+        techInfo.name || String(data.technician || "").trim();
+
+      if (assignedTech !== techName) {
+        return jsonResponse_({
+          status: "error",
+          message: "งานนี้ไม่ได้มอบหมายให้ช่างคนนี้"
+        });
+      }
+
+      if (status === "กำลังดำเนินการ") {
+        return jsonResponse_({
+          status: "already_started"
+        });
+      }
+
+      if (status !== "รับงานแล้ว") {
+        return jsonResponse_({
+          status: "error",
+          message: "งานนี้ยังไม่อยู่ในสถานะรับงานแล้ว"
+        });
+      }
 
       const now = new Date();
-      const timeText = now.toLocaleTimeString('th-TH', {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        hour12: false
-      });
 
-      if (success) {
-        el.innerText = `ล่าสุด ${timeText}`;
-        el.className = "font-semibold text-slate-500";
-      } else {
-        el.innerText = `เชื่อมต่อไม่สำเร็จ ${timeText}`;
-        el.className = "font-semibold text-rose-500";
-      }
-    }
+      sheet.getRange(rowNumber, REPAIR_COL.STATUS)
+        .setValue("กำลังดำเนินการ");
 
-    function shouldAutoRefresh() {
-      const selectedDate = document.getElementById('datePicker').value;
-      const endDate = document.getElementById('datePickerTo').value;
-      const today = getTodayStr();
+      sheet.getRange(rowNumber, REPAIR_COL.START_DATE)
+        .setValue(
+          Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd')
+        );
 
-      // วันนี้ หรือช่วงวันที่ที่สิ้นสุดวันนี้ = live
-      const latestDate = endDate || selectedDate;
-      return latestDate === today;
-    }
+      sheet.getRange(rowNumber, REPAIR_COL.START_TIME)
+        .setValue(
+          Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss')
+        );
 
-    function refreshDashboardNow() {
-      const selectedDate = document.getElementById('datePicker').value;
-      const endDate = document.getElementById('datePickerTo').value;
-
-      if (!selectedDate || !shouldAutoRefresh()) return;
-      fetchDashboardData(selectedDate, endDate);
-    }
-
-    function startAutoRefresh() {
-      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
-
-      autoRefreshTimer = setInterval(() => {
-        if (document.visibilityState === 'visible') {
-          refreshDashboardNow();
-        }
-      }, AUTO_REFRESH_MS);
-    }
-
-    function onDateChange() {
-      const selectedDate = document.getElementById('datePicker').value;
-      const endDate = document.getElementById('datePickerTo').value;
-
-      if (selectedDate) {
-        fetchDashboardData(selectedDate, endDate);
-
-        if (!shouldAutoRefresh()) {
-          const el = document.getElementById('lastUpdatedText');
-          if (el) {
-            el.innerText = 'ข้อมูลย้อนหลัง • Auto Refresh พักไว้';
-            el.className = "font-semibold text-slate-400";
-          }
-        }
-      }
-    }
-
-    function showEmptyState() {
-      document.getElementById('cardsContainer').innerHTML = `
-        <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
-          🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก
-        </div>`;
-      if (chartInstance) chartInstance.destroy();
-      if (hourlyChartInstance) hourlyChartInstance.destroy();
-    }
-
-    // 1. กราฟ Daily Stacked Bar + Target Gap + Data Labels
-    function renderDailyChart(lines) {
-      const ctx = document.getElementById('factoryChart').getContext('2d');
-      if(chartInstance) chartInstance.destroy();
-
-      const labels = lines.map(d => `LINE ${d.line || d.lineName || ''}`);
-      const actualData = lines.map(d => Number(d.actual) || ((d.actual1 || 0) + (d.actual2 || 0)));
-      const targetData = lines.map(d => Number(d.target) || ((d.target1 || 0) + (d.target2 || 0)));
-      const remainingData = targetData.map((tg, idx) => Math.max(0, tg - actualData[idx]));
-
-      chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: 'Actual',
-              data: actualData,
-              backgroundColor: '#10B981',
-              borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 }
-            },
-            {
-              label: 'Target Gap',
-              data: remainingData,
-              backgroundColor: '#EF4444',
-              borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 }
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { 
-            legend: { position: 'top' },
-            datalabels: {
-              anchor: 'center',
-              align: 'center',
-              color: '#ffffff',
-              font: { weight: 'bold', size: 11, family: 'Kanit' },
-              formatter: (value) => value > 0 ? value.toLocaleString() : ''
-            },
-            tooltip: {
-              callbacks: {
-                footer: (tooltipItems) => {
-                  const index = tooltipItems[0].dataIndex;
-                  return `Target รวม: ${targetData[index].toLocaleString()} ชิ้น`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: { stacked: true, grid: { display: false } },
-            y: { stacked: true, beginAtZero: true, grid: { color: '#F1F5F9' } }
-          }
-        }
+      return jsonResponse_({
+        status: "success",
+        jobId: jobId,
+        jobStatus: "กำลังดำเนินการ"
       });
     }
 
-    // 2. กราฟ Hourly Tracking
-    function updateHourlyChart() {
-      const selectedLine = document.getElementById('lineSelect').value;
-      const hourlyCanvas = document.getElementById('hourlyChart');
+    return jsonResponse_({
+      status: "error",
+      message: "ไม่พบ jobId ในระบบ"
+    });
 
-      if (!hourlyCanvas) {
-        console.warn("hourlyChart canvas not found");
-        return;
-      }
+  } catch (err) {
 
-      const ctx = hourlyCanvas.getContext('2d');
-      if(hourlyChartInstance) hourlyChartInstance.destroy();
+    return jsonResponse_({
+      status: "error",
+      message: err.message
+    });
 
-      const lineObj = globalLinesData.find(d => String(d.line || d.lineName || '').toUpperCase().includes(selectedLine)) || {};
-      const hourlyDataObj = lineObj.hourly_data || {};
-      const timeSlots = Object.keys(hourlyDataObj);
-      const hourlyActuals = Object.values(hourlyDataObj);
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
 
-      const target = Number(lineObj.target) || ((lineObj.target1 || 0) + (lineObj.target2 || 0));
-      const totalHours = Number(lineObj.total_working_hours) || 8;
-      const overallRate = totalHours > 0 ? (target / totalHours) : 0;
+// กด "ปิดงาน" + บังคับแนบรูปหลังซ่อม
+function handleFinishRepairJob_(data) {
 
-      const hrs1 = Number(lineObj.hours1) || 0;
-      const hrs2 = Number(lineObj.hours2) || 0;
-      const target1 = Number(lineObj.target1) || 0;
-      const target2 = Number(lineObj.target2) || 0;
-      const rate1 = hrs1 > 0 ? (target1 / hrs1) : overallRate;
-      const rate2 = hrs2 > 0 ? (target2 / hrs2) : overallRate;
+  const jobId = String(data.jobId || '').trim();
+  const userId = String(data.userId || '').trim();
+  const result = String(data.result || '').trim();
+  const afterImage = String(data.afterImage || '').trim();
 
-      const targetLine = timeSlots.map((_, idx) => {
-        if (hrs1 > 0 && idx < hrs1) return Math.round(rate1);
-        if (hrs2 > 0 && idx < hrs1 + hrs2) return Math.round(rate2);
-        return Math.round(overallRate);
-      });
+  const allowedResults = [
+    "ซ่อมเสร็จ ใช้งานได้",
+    "ซ่อมชั่วคราว",
+    "รออะไหล่",
+    "ซ่อมไม่ได้",
+    "ส่งต่อช่างอื่น"
+  ];
 
-      document.getElementById('hourlyTargetSubtitle').innerText = (hrs2 > 0)
-        ? `LOT1: ${Math.round(rate1).toLocaleString()} ชิ้น/ชม. (${hrs1} ชม.) | LOT2: ${Math.round(rate2).toLocaleString()} ชิ้น/ชม. (${hrs2} ชม.) — LINE ${selectedLine}`
-        : `เป้าหมายเฉลี่ย ${Math.round(overallRate).toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
+  if (!allowedResults.includes(result)) {
+    return jsonResponse_({
+      status: "error",
+      message: "ผลการซ่อมไม่ถูกต้อง"
+    });
+  }
 
-      if (timeSlots.length === 0) {
-        // ห้าม replace parentElement.innerHTML เพราะจะลบ canvas ทิ้ง
-        // ถ้าลบ canvas รอบ auto-refresh ถัดไปจะหา hourlyChart ไม่เจอและ error
-        if (hourlyChartInstance) {
-          hourlyChartInstance.destroy();
-          hourlyChartInstance = null;
-        }
+  // บังคับรูปหลังซ่อม
+  if (!afterImage) {
+    return jsonResponse_({
+      status: "error",
+      message: "กรุณาแนบรูปหลังซ่อมก่อนปิดงาน"
+    });
+  }
 
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  const techInfo = getTechnicianInfo_(userId);
 
-        const pulseIds = ['pulseActual', 'pulsePace', 'pulseProjected', 'pulseGap'];
-        pulseIds.forEach(id => {
-          const el = document.getElementById(id);
-          if (el) el.innerText = '-';
+  if (!techInfo) {
+    return jsonResponse_({
+      status: "error",
+      message: "LINE นี้ยังไม่ได้ลงทะเบียนเป็นช่าง"
+    });
+  }
+
+    const repairType = String(data.repairType || "").trim();
+  const repairDetail = String(data.repairDetail || "").trim();
+
+const sheet = ensureRepairColumns_();
+  const rows = sheet.getDataRange().getValues();
+
+  const lock = LockService.getScriptLock();
+
+  try {
+    lock.waitLock(LOCK_TIMEOUT_MS);
+
+    for (let i = 1; i < rows.length; i++) {
+
+      if (String(rows[i][REPAIR_COL.JOB_ID - 1]) !== jobId) continue;
+
+      const rowNumber = i + 1;
+
+      const status =
+        String(rows[i][REPAIR_COL.STATUS - 1] || "").trim();
+
+      const assignedTech =
+        String(rows[i][REPAIR_COL.TECH_NAME - 1] || "").trim();
+
+      const techName =
+        techInfo.name || String(data.technician || "").trim();
+
+      if (assignedTech !== techName) {
+        return jsonResponse_({
+          status: "error",
+          message: "งานนี้ไม่ได้มอบหมายให้ช่างคนนี้"
         });
-
-        const subtitle = document.getElementById('pulseSubtitle');
-        if (subtitle) subtitle.innerText = 'ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้';
-
-        if (cumulativeChartInstance) {
-          cumulativeChartInstance.destroy();
-          cumulativeChartInstance = null;
-        }
-        return;
       }
 
-      updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine);
-
-      hourlyChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: timeSlots,
-          datasets: [
-            {
-              type: 'line',
-              label: hrs2 > 0 ? 'Target / ชม. (แยกตาม LOT)' : `Target / ชม. (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
-              data: targetLine,
-              borderColor: '#6366F1',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              fill: false,
-              pointRadius: 0,
-              stepped: true,
-              datalabels: { display: false }
-            },
-            {
-              type: 'bar',
-              label: 'Actual รายชั่วโมง',
-              data: hourlyActuals,
-              backgroundColor: hourlyActuals.map((val, idx) => val >= targetLine[idx] ? '#10B981' : '#F59E0B'),
-              borderRadius: 6
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'top' },
-            datalabels: {
-              anchor: 'center',
-              align: 'center',
-              color: '#ffffff',
-              font: { weight: 'bold', size: 10, family: 'Kanit' },
-              formatter: (val) => val > 0 ? val : ''
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 9 } }
-            },
-            y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
-          }
-        }
-      });
-    }
-
-
-    // 2.5 Production Pulse + Cumulative
-    function getObservedHourlyValues(hourlyActuals) {
-      let lastObserved = -1;
-      hourlyActuals.forEach((v, idx) => {
-        if (Number(v) > 0) lastObserved = idx;
-      });
-      if (lastObserved < 0) return [];
-      return hourlyActuals.slice(0, lastObserved + 1).map(v => Number(v) || 0);
-    }
-
-    function updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine) {
-      const target = Number(lineObj.target) || ((lineObj.target1 || 0) + (lineObj.target2 || 0));
-      const totalHours = Number(lineObj.total_working_hours) || 8;
-
-      const observed = getObservedHourlyValues(hourlyActuals);
-      const actualSoFar = observed.reduce((sum, v) => sum + v, 0);
-      const observedHours = observed.length;
-      const currentPace = observedHours > 0 ? actualSoFar / observedHours : 0;
-      const projected = observedHours > 0 ? Math.round(currentPace * totalHours) : 0;
-      const projectedGap = projected - target;
-
-      document.getElementById('pulseLineBadge').innerText = `LINE ${selectedLine}`;
-      document.getElementById('pulseActual').innerText = actualSoFar.toLocaleString();
-      document.getElementById('pulsePace').innerText = observedHours ? Math.round(currentPace).toLocaleString() : '-';
-      document.getElementById('pulseProjected').innerText = observedHours ? projected.toLocaleString() : '-';
-
-      const gapEl = document.getElementById('pulseGap');
-      if (observedHours) {
-        gapEl.innerText = `${projectedGap >= 0 ? '+' : ''}${projectedGap.toLocaleString()}`;
-        gapEl.className = projectedGap >= 0
-          ? 'text-2xl font-extrabold text-emerald-600 mt-1'
-          : 'text-2xl font-extrabold text-rose-600 mt-1';
-        document.getElementById('pulseGapNote').innerText = `Target ${target.toLocaleString()} ชิ้น`;
-        document.getElementById('pulseSubtitle').innerText =
-          `คำนวณจาก ${observedHours} รอบล่าสุดที่มีข้อมูล • เวลาทำงานรวม ${totalHours} ชม.`;
-      } else {
-        gapEl.innerText = '-';
-        gapEl.className = 'text-2xl font-extrabold text-slate-800 mt-1';
-        document.getElementById('pulseGapNote').innerText = 'ยังไม่มีข้อมูลเพียงพอ';
-        document.getElementById('pulseSubtitle').innerText = 'ยังไม่มีข้อมูลเพียงพอสำหรับประมาณการ';
+      if (status !== "กำลังดำเนินการ") {
+        return jsonResponse_({
+          status: "error",
+          message: "งานนี้ยังไม่ได้เริ่มงาน"
+        });
       }
 
-      renderCumulativeChart(timeSlots, hourlyActuals, targetLine, target);
-    }
+      const afterImageUrl =
+        saveImageToDrive_(afterImage, jobId + "_after");
 
-    function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, target) {
-      const ctx = document.getElementById('cumulativeChart').getContext('2d');
-      if (cumulativeChartInstance) cumulativeChartInstance.destroy();
-
-      let ac = 0;
-      let tg = 0;
-      const cumulativeActual = hourlyActuals.map(v => (ac += Number(v) || 0));
-      const cumulativeTarget = targetLine.map(v => (tg += Number(v) || 0));
-
-      cumulativeChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: timeSlots,
-          datasets: [
-            {
-              label: 'Cumulative Target',
-              data: cumulativeTarget,
-              borderColor: '#6366F1',
-              borderWidth: 2,
-              borderDash: [6, 5],
-              pointRadius: 2,
-              tension: 0.25,
-              fill: false,
-              datalabels: { display: false }
-            },
-            {
-              label: 'Cumulative Actual',
-              data: cumulativeActual,
-              borderColor: '#10B981',
-              backgroundColor: 'rgba(16,185,129,0.08)',
-              borderWidth: 3,
-              pointRadius: 3,
-              tension: 0.25,
-              fill: true,
-              datalabels: { display: false }
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          interaction: { mode: 'index', intersect: false },
-          plugins: {
-            legend: { position: 'top' },
-            tooltip: {
-              callbacks: {
-                footer: (items) => {
-                  if (!items || !items.length) return '';
-                  const i = items[0].dataIndex;
-                  const gap = cumulativeActual[i] - cumulativeTarget[i];
-                  return `Gap ณ รอบนี้: ${gap >= 0 ? '+' : ''}${gap.toLocaleString()} ชิ้น`;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 9 } }
-            },
-            y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
-          }
-        }
-      });
-    }
-
-    // 3. Render Cards
-    function renderCards(lines, isRange) {
-      const container = document.getElementById('cardsContainer');
-      container.innerHTML = '';
-
-      lines.forEach(item => {
-        const lineName = item.line || item.lineName || '';
-        if (isRange) {
-          const totalTg = item.target || ((item.target1 || 0) + (item.target2 || 0));
-          const totalAc = item.actual || ((item.actual1 || 0) + (item.actual2 || 0));
-          container.innerHTML += createCardHtml(lineName, 'รวมช่วงวันที่', '', '', totalTg, totalAc, item.remarks);
-        } else {
-          container.innerHTML += createCardHtml(lineName, 'LOT 1', item.model1 || item.model, item.lot_number || item.lot1, item.target1 || item.target || 0, item.actual1 || item.actual || 0, item.remarks);
-          if (item.lot_number2 || item.lot2) {
-            container.innerHTML += createCardHtml(lineName, 'LOT 2', item.model2, item.lot_number2 || item.lot2, item.target2 || 0, item.actual2 || 0, item.remarks);
-          }
-        }
-      });
-    }
-
-    function createCardHtml(line, lotTag, modelName, lotName, target, actual, remarks) {
-      const diff = actual - target;
-      const pct = target > 0 ? Math.round((actual / target) * 100) : (actual > 0 ? 100 : 0);
-      const pctDiff = target > 0 ? Math.round((diff / target) * 100) : (actual > 0 ? 100 : 0);
-      const diffText = diff >= 0
-        ? `+${diff.toLocaleString()} (+${pctDiff}%)`
-        : `${diff.toLocaleString()} (${pctDiff}%)`;
-      const diffColor = diff >= 0 ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50';
-      const progressColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
-      const remarksList = remarks || [];
-
-      return `
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between space-y-3">
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-2">
-              <span class="font-extrabold text-slate-800">LINE ${line}</span>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-50 text-indigo-600">${lotTag}</span>
-            </div>
-            <span class="text-xs font-bold px-2.5 py-1 rounded-lg whitespace-nowrap ${diffColor}">${diffText}</span>
-          </div>
-          
-          <div class="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <span class="text-slate-400">TG:</span>
-              <span class="font-bold text-slate-700 ml-1">${target.toLocaleString()}</span>
-            </div>
-            <div>
-              <span class="text-slate-400">AC:</span>
-              <span class="font-bold text-slate-700 ml-1">${actual.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <div>
-            <div class="flex justify-between text-xs font-bold mb-1">
-              <span class="text-slate-500">${(modelName || lotName) ? `รุ่น: <span class="text-slate-800">${modelName || '-'}</span> <span class="text-slate-400">(${lotName || '-'})</span>` : ''}</span>
-              <span class="text-slate-700">${pct}%</span>
-            </div>
-            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="${progressColor} h-2 rounded-full" style="width: ${Math.min(pct, 100)}%"></div>
-            </div>
-          </div>
-          ${remarksList.length > 0 ? `
-          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
-            📝 ${remarksList.map(r => r.replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
-          </div>` : ''}
-        </div>
-      `;
-    }
-
-    async function searchLot() {
-      const val = document.getElementById('lotInput').value.trim();
-      if(!val) return alert("กรุณากรอกรหัส LOT ก่อนครับ");
-
-      document.getElementById('resRealtimeStatus').innerText = "กำลังค้นหาข้อมูล...";
-
-      try {
-        const url = `${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`;
-        const res = await fetch(url, { method: "GET", redirect: "follow" });
-        const data = await res.json();
-
-        if (data.error) {
-          document.getElementById('resLotNo').innerText = val;
-          document.getElementById('resStatusBadge').innerText = "Not Found";
-          document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-rose-100 text-rose-700";
-          document.getElementById('resPoTarget').innerText = "-";
-          document.getElementById('resCumulativeActual').innerText = "-";
-          document.getElementById('resModel').innerText = "-";
-          document.getElementById('resDeliveryDate').innerText = "-";
-          document.getElementById('resRealtimeStatus').innerText = "❌ ไม่พบข้อมูล LOT นี้ในระบบ Master_LOT";
-          return;
-        }
-
-        const poTarget = Number(data.po_target) || 0;
-        const cumActual = Number(data.cumulative_actual) || 0;
-        const pct = poTarget > 0 ? ((cumActual / poTarget) * 100).toFixed(1) : 0;
-
-        document.getElementById('resLotNo').innerText = data.lot_number || val;
-        document.getElementById('resStatusBadge').innerText = `${pct}% Completed`;
-        document.getElementById('resStatusBadge').className = "text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700";
-        
-        document.getElementById('resPoTarget').innerText = `${poTarget.toLocaleString()} ชิ้น`;
-        document.getElementById('resCumulativeActual').innerText = `${cumActual.toLocaleString()} ชิ้น`;
-        document.getElementById('resModel').innerText = data.model || "-";
-        document.getElementById('resDeliveryDate').innerText = data.delivery_date || "-";
-        document.getElementById('resRealtimeStatus').innerText = `ผลิตสะสมได้ ${cumActual.toLocaleString()} จากเป้า ${poTarget.toLocaleString()} ชิ้น (${pct}%)`;
-
-      } catch (err) {
-        console.error("Search Lot Error:", err);
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อกับเซิร์ฟเวอร์");
+      if (!afterImageUrl) {
+        return jsonResponse_({
+          status: "error",
+          message: "บันทึกรูปหลังซ่อมไม่สำเร็จ"
+        });
       }
-    }
 
-    async function main() {
-      const todayStr = getTodayStr();
-      document.getElementById('datePicker').value = todayStr;
+      const now = new Date();
 
-      // โหลดครั้งแรกทันที
-      await fetchDashboardData(todayStr);
+      // สถานะสุดท้าย
+      let finalStatus = "เสร็จสิ้น";
 
-      // จากนั้นโหลดใหม่เองทุก 30 วินาที ไม่ต้องกด F5
-      startAutoRefresh();
-
-      // ถ้าสลับออกจากแอป/ล็อกจอ แล้วกลับมา ให้ดึงข้อมูลล่าสุดทันที
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          refreshDashboardNow();
-        }
-      });
-
-      try {
-        await liff.init({ liffId: LIFF_ID });
-
-        if (liff.isLoggedIn()) {
-          const profile = await liff.getProfile();
-          document.getElementById("displayName").innerText = profile.displayName;
-        }
-      } catch (err) {
-        document.getElementById("displayName").innerText = "Guest User";
+      if (result === "รออะไหล่") {
+        finalStatus = "รออะไหล่";
+      } else if (result === "ซ่อมไม่ได้") {
+        finalStatus = "ซ่อมไม่ได้";
+      } else if (result === "ส่งต่อช่างอื่น") {
+        finalStatus = "ส่งต่อช่างอื่น";
       }
+
+      sheet.getRange(rowNumber, REPAIR_COL.STATUS)
+        .setValue(finalStatus);
+
+      sheet.getRange(rowNumber, REPAIR_COL.FINISH_DATE)
+        .setValue(
+          Utilities.formatDate(now, 'Asia/Bangkok', 'yyyy-MM-dd')
+        );
+
+      sheet.getRange(rowNumber, REPAIR_COL.FINISH_TIME)
+        .setValue(
+          Utilities.formatDate(now, 'Asia/Bangkok', 'HH:mm:ss')
+        );
+
+      sheet.getRange(rowNumber, REPAIR_COL.RESULT)
+        .setValue(result);
+
+      sheet.getRange(rowNumber, REPAIR_COL.AFTER_IMAGE)
+        .setValue(afterImageUrl);
+
+      // เก็บข้อมูลที่ช่างกรอกจริง ไม่ปล่อยให้ฟอร์มถามแล้วข้อมูลหาย
+      sheet.getRange(rowNumber, REPAIR_COL.REPAIR_TYPE)
+        .setValue(repairType);
+
+      sheet.getRange(rowNumber, REPAIR_COL.REPAIR_DETAIL)
+        .setValue(repairDetail);
+
+      return jsonResponse_({
+        status: "success",
+        jobId: jobId,
+        jobStatus: finalStatus,
+        result: result,
+        repairType: repairType,
+        repairDetail: repairDetail,
+        afterImage: afterImageUrl
+      });
     }
 
-    main();
-  </script>
-</body>
-</html>
+    return jsonResponse_({
+      status: "error",
+      message: "ไม่พบ jobId ในระบบ"
+    });
+
+  } catch (err) {
+
+    return jsonResponse_({
+      status: "error",
+      message: err.message
+    });
+
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+function getRepairJobDetail_(jobId) {
+
+  const sheet = ensureRepairColumns_();
+  const data = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+
+    if (String(data[i][REPAIR_COL.JOB_ID - 1]) === jobId) {
+
+      return jsonResponse_({
+        jobId: data[i][REPAIR_COL.JOB_ID - 1],
+        date: data[i][REPAIR_COL.REPORT_DATE - 1],
+        time: data[i][REPAIR_COL.REPORT_TIME - 1],
+        reporter: data[i][REPAIR_COL.REPORTER - 1],
+        floor: data[i][REPAIR_COL.FLOOR - 1],
+        machineCode: data[i][REPAIR_COL.MACHINE_CODE - 1],
+        machineName: data[i][REPAIR_COL.MACHINE_NAME - 1],
+        issue: data[i][REPAIR_COL.ISSUE - 1],
+        image: data[i][REPAIR_COL.BEFORE_IMAGE - 1],
+        status: data[i][REPAIR_COL.STATUS - 1],
+        techName: data[i][REPAIR_COL.TECH_NAME - 1],
+        startDate: data[i][REPAIR_COL.START_DATE - 1],
+        startTime: data[i][REPAIR_COL.START_TIME - 1],
+        finishDate: data[i][REPAIR_COL.FINISH_DATE - 1],
+        finishTime: data[i][REPAIR_COL.FINISH_TIME - 1],
+        result: data[i][REPAIR_COL.RESULT - 1],
+        afterImage: data[i][REPAIR_COL.AFTER_IMAGE - 1],
+        repairType: data[i][REPAIR_COL.REPAIR_TYPE - 1],
+        repairDetail: data[i][REPAIR_COL.REPAIR_DETAIL - 1]
+      });
+    }
+  }
+
+  return jsonResponse_({
+    error: 'ไม่พบข้อมูลงานซ่อมนี้'
+  });
+}
+
+function getMyRepairJobs_(userId, reporterName) {
+
+  const cleanUserId = String(userId || "").trim();
+
+  // ความเป็นส่วนตัว: หน้า "ดูสถานะงาน" แสดงเฉพาะงานของ LINE User ID ที่เปิด LIFF อยู่
+  // ไม่ fallback ด้วยชื่อผู้แจ้ง เพราะชื่อซ้ำกันได้
+  if (!cleanUserId) {
+    return jsonResponse_({
+      status: "error",
+      message: "ไม่พบ LINE User ID",
+      jobs: []
+    });
+  }
+
+  const sheet = ensureRepairColumns_();
+  const data = sheet.getDataRange().getValues();
+  const jobs = [];
+
+  for (let i = 1; i < data.length; i++) {
+
+    const rowUserId =
+      String(data[i][REPAIR_COL.REPORTER_USER_ID - 1] || "").trim();
+
+    if (rowUserId === cleanUserId) {
+      jobs.push(repairRowToObject_(data[i]));
+    }
+  }
+
+  jobs.reverse();
+
+  return jsonResponse_({
+    status: "success",
+    jobs: jobs
+  });
+}
+
+function getMyTechnicianJobs_(userId) {
+
+  const techInfo = getTechnicianInfo_(userId);
+
+  if (!techInfo) {
+    return jsonResponse_({
+      status: "error",
+      message: "LINE นี้ยังไม่ได้ลงทะเบียนเป็นช่าง",
+      jobs: []
+    });
+  }
+
+  const techName = techInfo.name;
+  const sheet = ensureRepairColumns_();
+  const data = sheet.getDataRange().getValues();
+  const jobs = [];
+
+  for (let i = 1; i < data.length; i++) {
+
+    const assignedTech =
+      String(data[i][REPAIR_COL.TECH_NAME - 1] || "").trim();
+
+    if (assignedTech === techName) {
+      jobs.push(repairRowToObject_(data[i]));
+    }
+  }
+
+  jobs.reverse();
+
+  return jsonResponse_({
+    status: "success",
+    technician: techInfo,
+    jobs: jobs
+  });
+}
+
+function formatRepairDate_(value) {
+  if (!value) return "";
+
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, 'Asia/Bangkok', 'yyyy-MM-dd');
+  }
+
+  return String(value).trim();
+}
+
+function formatRepairTime_(value) {
+  if (!value) return "";
+
+  // Google Sheets เก็บ "เวลาอย่างเดียว" เป็น Date วันที่ 30/12/1899
+  // ห้าม String(value) ตรง ๆ เพราะจะเห็น Sat Dec 30 1899 / เวลาอินโดจีน
+  if (value instanceof Date && !isNaN(value.getTime())) {
+    return Utilities.formatDate(value, 'Asia/Bangkok', 'HH:mm:ss');
+  }
+
+  return String(value).trim();
+}
+
+function repairRowToObject_(row) {
+
+  const date = formatRepairDate_(row[REPAIR_COL.REPORT_DATE - 1]);
+  const time = formatRepairTime_(row[REPAIR_COL.REPORT_TIME - 1]);
+
+  return {
+    jobId: String(row[REPAIR_COL.JOB_ID - 1] || ""),
+    reportDate: date,
+    reportTime: time,
+    dateTime: date + (time ? " " + time : ""),
+    reporter: String(row[REPAIR_COL.REPORTER - 1] || ""),
+    reporterUserId: String(row[REPAIR_COL.REPORTER_USER_ID - 1] || ""),
+    floor: String(row[REPAIR_COL.FLOOR - 1] || ""),
+    machineCode: String(row[REPAIR_COL.MACHINE_CODE - 1] || ""),
+    machineName: String(row[REPAIR_COL.MACHINE_NAME - 1] || ""),
+    issue: String(row[REPAIR_COL.ISSUE - 1] || ""),
+    beforeImage: String(row[REPAIR_COL.BEFORE_IMAGE - 1] || ""),
+    status: String(row[REPAIR_COL.STATUS - 1] || ""),
+    technician: String(row[REPAIR_COL.TECH_NAME - 1] || ""),
+    startDate: formatRepairDate_(row[REPAIR_COL.START_DATE - 1]),
+    startTime: formatRepairTime_(row[REPAIR_COL.START_TIME - 1]),
+    finishDate: formatRepairDate_(row[REPAIR_COL.FINISH_DATE - 1]),
+    finishTime: formatRepairTime_(row[REPAIR_COL.FINISH_TIME - 1]),
+    result: String(row[REPAIR_COL.RESULT - 1] || ""),
+    afterImage: String(row[REPAIR_COL.AFTER_IMAGE - 1] || ""),
+    repairType: String(row[REPAIR_COL.REPAIR_TYPE - 1] || ""),
+    repairDetail: String(row[REPAIR_COL.REPAIR_DETAIL - 1] || "")
+  };
+}
+
+/************************ UTILITIES ************************/
+
+function saveImageToDrive_(base64Data, machineName) {
+  try {
+    if (!base64Data || !REPAIR_IMAGE_FOLDER_ID) return "";
+
+    const splitData = String(base64Data).split(",");
+    if (splitData.length < 2) return "";
+
+    const contentType = splitData[0].split(";")[0].replace("data:", "");
+    const bytes = Utilities.base64Decode(splitData[1]);
+    const safeName = String(machineName || "repair").replace(/[\\/:*?"<>|]/g, "_");
+    const extension = contentType === "image/png" ? ".png" : ".jpg";
+    const blob = Utilities.newBlob(
+      bytes,
+      contentType || "image/jpeg",
+      "Repair_" + safeName + "_" + new Date().getTime() + extension
+    );
+
+    const folder = DriveApp.getFolderById(REPAIR_IMAGE_FOLDER_ID);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    return "https://lh3.googleusercontent.com/d/" + file.getId();
+  } catch (err) {
+    Logger.log("saveImageToDrive_ error: " + err.message);
+    return "";
+  }
+}
+function sendLinePayload_(messageObj, targetTo) {
+  const destination = targetTo || GROUP_ID_FOLLOWUP;
+  if (!LINE_ACCESS_TOKEN || !destination) return;
+  
+  const url = 'https://api.line.me/v2/bot/message/push';
+  const payload = { to: destination, messages: [messageObj] };
+
+  try {
+    UrlFetchApp.fetch(url, {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + LINE_ACCESS_TOKEN },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+  } catch (err) { Logger.log('Line Error: ' + err.message); }
+}
+
+function jsonResponse_(dataObj) {
+  return ContentService.createTextOutput(JSON.stringify(dataObj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function todayStr_() { return Utilities.formatDate(new Date(), 'Asia/Bangkok', 'yyyy-MM-dd'); }
+function getSheet_(name) { return getSS_().getSheetByName(name); }
+
+function isHoliday_() {
+  const today = todayStr_();
+  const props = PropertiesService.getScriptProperties();
+  if (props.getProperty('FORCE_WORKDAY_' + today) === 'true') return false;
+  if (props.getProperty('FORCE_HOLIDAY_' + today) === 'true') return true;
+
+  const dayName = Utilities.formatDate(new Date(), 'Asia/Bangkok', 'EEEE');
+  if (dayName === 'Sunday') return true;
+
+  const sheet = getSheet_(SHEET_HOLIDAY);
+  if (!sheet) return false;
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    const cell = data[i][0];
+    if (!cell) continue;
+    const rowDate = (cell instanceof Date) ? Utilities.formatDate(cell, 'Asia/Bangkok', 'yyyy-MM-dd') : String(cell).trim();
+    if (rowDate === today) return true;
+  }
+  return false;
+}
+
+function findTodayRow_(lineCode) {
+  const sheet = getSheet_(SHEET_SUMMARY);
+  if (!sheet) return null;
+  const data = sheet.getDataRange().getValues();
+  const today = todayStr_();
+  const cleanSearchCode = String(lineCode).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue;
+    const rowDate = Utilities.formatDate(new Date(data[i][0]), 'Asia/Bangkok', 'yyyy-MM-dd');
+    const rowLineCode = String(data[i][1]).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+    if (rowDate === today && rowLineCode === cleanSearchCode) return { sheet, row: i + 1, values: data[i] };
+  }
+  return null;
+}
+
+function ensureTodayRow_(lineCode) {
+  const found = findTodayRow_(lineCode);
+  if (found) return found;
+  const sheet = getSheet_(SHEET_SUMMARY);
+  const newRow = sheet.getLastRow() + 1;
+  let formattedLine = String(lineCode).trim().toUpperCase();
+  if (!formattedLine.startsWith("LINE ")) formattedLine = "LINE " + formattedLine.replace("LINE", "").trim();
+
+  // สร้างแถวใหม่โดยอิงตามลำดับคอลัมน์ A ถึง Q
+  sheet.appendRow([
+    todayStr_(),    // A: Date
+    formattedLine, // B: Line
+    'NOT_YET',     // C: Status
+    0,             // D: Target
+    0,             // E: Actual
+    0,             // F: Diff
+    '', 8, 0,      // G, H, I: LOT_1, Hours_1, Target_1
+    '', 0, 0,      // J, K, L: LOT_2, Hours_2, Target_2
+    '', 0, 0,      // M, N, O: LOT_3, Hours_3, Target_3
+    '',            // P: Updated_By
+    new Date()     // Q: LastUpdate
+  ]);
+
+  // สูตรดึง Actual จาก Hourly_Log มาลงคอลัมน์ E
+  sheet.getRange(newRow, COL_SUMMARY.ACTUAL).setFormula(`=SUMIFS(Hourly_Log!F:F, Hourly_Log!B:B, A${newRow}, Hourly_Log!C:C, B${newRow})`);
+  
+  // สูตรคำนวณ Diff ในคอลัมน์ F (Actual - Target -> E - D)
+  sheet.getRange(newRow, COL_SUMMARY.DIFF).setFormula(`=E${newRow}-D${newRow}`);
+
+  return findTodayRow_(lineCode);
+}
+
+
+
+
+/************************ PRODUCTION HELPER MERGED ************************/
+function getLotInfo_(lotNumber) {
+  const sheet = getSheet_(SHEET_MASTER_LOT);
+  if (!sheet) return null;
+  const data = sheet.getDataRange().getValues();
+  const target = String(lotNumber).trim().toUpperCase();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim().toUpperCase() === target) {
+      const deliveryRaw = data[i][3];
+      let deliveryText = '';
+      if (deliveryRaw) {
+        try { deliveryText = Utilities.formatDate(new Date(deliveryRaw), 'Asia/Bangkok', 'dd/MM/yyyy'); }
+        catch (err) { deliveryText = String(deliveryRaw); }
+      }
+      return { model: data[i][1], poTarget: Number(data[i][2]) || 0, deliveryDate: deliveryText };
+    }
+  }
+  return null;
+}
+
+/************************ PRODUCTION HELPER MERGED ************************/
+function sumActualForLot_(lotNumber) {
+  const sheet = getSheet_(SHEET_HOURLY);
+  if (!sheet) return 0;
+  const data = sheet.getDataRange().getValues();
+  const target = String(lotNumber).trim().toUpperCase();
+  let sum = 0;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][4] || '').trim().toUpperCase() === target) {
+      sum += Number(data[i][5]) || 0;
+    }
+  }
+  return sum;
+}
+
+/************************ PRODUCTION HELPER MERGED ************************/
+function getExistingHourlyToday_(lineCode) {
+  const sheet = getSheet_(SHEET_HOURLY);
+  const result = {};
+  if (!sheet) return result;
+
+  const data = sheet.getDataRange().getValues();
+  const today = todayStr_();
+  const cleanSearchCode = String(lineCode).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+
+  for (let i = 1; i < data.length; i++) {
+    if (!data[i][1]) continue;
+    const rowDate = Utilities.formatDate(new Date(data[i][1]), 'Asia/Bangkok', 'yyyy-MM-dd');
+    const rowLineCode = String(data[i][2]).replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+    if (rowDate !== today || rowLineCode !== cleanSearchCode) continue;
+
+    const timeSlot = String(data[i][3]).trim();
+    result[timeSlot] = {
+      output: Number(data[i][5]) || 0,
+      lot: data[i][4] || '',
+      reportedBy: data[i][7] || '',
+      time: data[i][0] ? Utilities.formatDate(new Date(data[i][0]), 'Asia/Bangkok', 'HH:mm น.') : ''
+    };
+  }
+  return result;
+}
