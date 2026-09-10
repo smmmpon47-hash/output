@@ -37,7 +37,11 @@
     <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
       <div>
         <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
-        <p class="text-xs text-slate-400">อัปเดตข้อมูล Real-time</p>
+        <p class="text-xs text-slate-400">
+          <span class="font-semibold text-emerald-600">● LIVE</span>
+          • อัปเดตอัตโนมัติทุก 30 วิ
+          • <span id="lastUpdatedText">กำลังโหลด...</span>
+        </p>
       </div>
       <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
         <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
@@ -94,6 +98,56 @@
 
         <div class="h-60 relative">
           <canvas id="hourlyChart"></canvas>
+        </div>
+      </div>
+
+      <!-- 2.5 Production Pulse -->
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
+        <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="font-bold text-slate-700 text-base">⚡ Production Pulse</h2>
+              <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-indigo-50 text-indigo-600">NEW</span>
+            </div>
+            <p id="pulseSubtitle" class="text-xs text-slate-400 mt-1">ประมาณการจากรอบที่มีข้อมูลของไลน์ที่เลือก</p>
+          </div>
+          <div id="pulseLineBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">LINE B</div>
+        </div>
+
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+            <p class="text-[11px] font-semibold text-slate-400">Actual ตอนนี้</p>
+            <p id="pulseActual" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
+            <p class="text-[10px] text-slate-400 mt-1">ชิ้นสะสม</p>
+          </div>
+          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+            <p class="text-[11px] font-semibold text-slate-400">Current Pace</p>
+            <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
+            <p class="text-[10px] text-slate-400 mt-1">ชิ้น / ชม.</p>
+          </div>
+          <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
+            <p class="text-[11px] font-semibold text-indigo-500">Projected End-of-Day</p>
+            <p id="pulseProjected" class="text-2xl font-extrabold text-indigo-700 mt-1">-</p>
+            <p class="text-[10px] text-indigo-400 mt-1">คาดการณ์เมื่อจบเวลาทำงาน</p>
+          </div>
+          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+            <p class="text-[11px] font-semibold text-slate-400">Projected vs Target</p>
+            <p id="pulseGap" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
+            <p id="pulseGapNote" class="text-[10px] text-slate-400 mt-1">เทียบกับ Target</p>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
+          <div class="flex justify-between items-center gap-2 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-700">📈 Cumulative Target vs Actual</h3>
+              <p class="text-[11px] text-slate-400">เห็นว่าผลผลิตเริ่มห่างจากแผนตั้งแต่ช่วงไหน</p>
+            </div>
+            <div id="cumGapBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-500">GAP -</div>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="cumulativeChart"></canvas>
+          </div>
         </div>
       </div>
 
@@ -168,7 +222,12 @@
 
     let chartInstance = null;
     let hourlyChartInstance = null;
+    let cumulativeChartInstance = null;
     let globalLinesData = [];
+
+    const AUTO_REFRESH_MS = 30000; // 30 วินาที
+    let autoRefreshTimer = null;
+    let dashboardFetchInProgress = false;
 
     function getTodayStr() {
       const today = new Date();
@@ -195,7 +254,12 @@
     }
 
     async function fetchDashboardData(selectedDate, endDate) {
+      // กัน request ซ้อนกัน ถ้ารอบก่อนยังโหลดไม่เสร็จ
+      if (dashboardFetchInProgress) return;
+      dashboardFetchInProgress = true;
+
       const isRange = endDate && endDate !== selectedDate;
+
       try {
         document.getElementById('selectedDateText').innerText = isRange
           ? `กำลังโหลดข้อมูลช่วง ${selectedDate} ถึง ${endDate}...`
@@ -204,9 +268,13 @@
         const url = isRange
           ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
           : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
-        
-        // เพิ่ม redirect: 'follow' ป้องกัน CORS Error จาก Google Redirect
-        const res = await fetch(url, { method: "GET", redirect: "follow" });
+
+        const res = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          cache: "no-store"
+        });
+
         const data = await res.json();
 
         if (data && data.lines && data.lines.length > 0) {
@@ -214,22 +282,92 @@
           renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
           updateHourlyChart();
+
           document.getElementById('selectedDateText').innerText = isRange
             ? `แสดงข้อมูลสะสมช่วง: ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
             : `แสดงข้อมูลประจำวันที่: ${data.date || selectedDate}`;
         } else {
+          globalLinesData = [];
           showEmptyState();
         }
+
+        updateLastUpdatedText(true);
+
       } catch (err) {
         console.error("Fetch Error:", err);
-        document.getElementById('selectedDateText').innerText = `เกิดข้อผิดพลาดในการดึงข้อมูล (ตรวจสอบสิทธิ์การตั้งค่า Web App)`;
+        document.getElementById('selectedDateText').innerText =
+          `เกิดข้อผิดพลาดในการดึงข้อมูล (ตรวจสอบสิทธิ์การตั้งค่า Web App)`;
+        updateLastUpdatedText(false);
+
+      } finally {
+        dashboardFetchInProgress = false;
       }
+    }
+
+    function updateLastUpdatedText(success) {
+      const el = document.getElementById('lastUpdatedText');
+      if (!el) return;
+
+      const now = new Date();
+      const timeText = now.toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      });
+
+      if (success) {
+        el.innerText = `ล่าสุด ${timeText}`;
+        el.className = "font-semibold text-slate-500";
+      } else {
+        el.innerText = `เชื่อมต่อไม่สำเร็จ ${timeText}`;
+        el.className = "font-semibold text-rose-500";
+      }
+    }
+
+    function shouldAutoRefresh() {
+      const selectedDate = document.getElementById('datePicker').value;
+      const endDate = document.getElementById('datePickerTo').value;
+      const today = getTodayStr();
+
+      // วันนี้ หรือช่วงวันที่ที่สิ้นสุดวันนี้ = live
+      const latestDate = endDate || selectedDate;
+      return latestDate === today;
+    }
+
+    function refreshDashboardNow() {
+      const selectedDate = document.getElementById('datePicker').value;
+      const endDate = document.getElementById('datePickerTo').value;
+
+      if (!selectedDate || !shouldAutoRefresh()) return;
+      fetchDashboardData(selectedDate, endDate);
+    }
+
+    function startAutoRefresh() {
+      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+
+      autoRefreshTimer = setInterval(() => {
+        if (document.visibilityState === 'visible') {
+          refreshDashboardNow();
+        }
+      }, AUTO_REFRESH_MS);
     }
 
     function onDateChange() {
       const selectedDate = document.getElementById('datePicker').value;
       const endDate = document.getElementById('datePickerTo').value;
-      if (selectedDate) fetchDashboardData(selectedDate, endDate);
+
+      if (selectedDate) {
+        fetchDashboardData(selectedDate, endDate);
+
+        if (!shouldAutoRefresh()) {
+          const el = document.getElementById('lastUpdatedText');
+          if (el) {
+            el.innerText = 'ข้อมูลย้อนหลัง • Auto Refresh พักไว้';
+            el.className = "font-semibold text-slate-400";
+          }
+        }
+      }
     }
 
     function showEmptyState() {
@@ -336,6 +474,8 @@
         return;
       }
 
+      updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine);
+
       hourlyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -373,6 +513,125 @@
               color: '#ffffff',
               font: { weight: 'bold', size: 10, family: 'Kanit' },
               formatter: (val) => val > 0 ? val : ''
+            }
+          },
+          scales: {
+            x: {
+              grid: { display: false },
+              ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 9 } }
+            },
+            y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
+          }
+        }
+      });
+    }
+
+
+    // 2.5 Production Pulse + Cumulative
+    function getObservedHourlyValues(hourlyActuals) {
+      let lastObserved = -1;
+      hourlyActuals.forEach((v, idx) => {
+        if (Number(v) > 0) lastObserved = idx;
+      });
+      if (lastObserved < 0) return [];
+      return hourlyActuals.slice(0, lastObserved + 1).map(v => Number(v) || 0);
+    }
+
+    function updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine) {
+      const target = Number(lineObj.target) || ((lineObj.target1 || 0) + (lineObj.target2 || 0));
+      const totalHours = Number(lineObj.total_working_hours) || 8;
+
+      const observed = getObservedHourlyValues(hourlyActuals);
+      const actualSoFar = observed.reduce((sum, v) => sum + v, 0);
+      const observedHours = observed.length;
+      const currentPace = observedHours > 0 ? actualSoFar / observedHours : 0;
+      const projected = observedHours > 0 ? Math.round(currentPace * totalHours) : 0;
+      const projectedGap = projected - target;
+
+      document.getElementById('pulseLineBadge').innerText = `LINE ${selectedLine}`;
+      document.getElementById('pulseActual').innerText = actualSoFar.toLocaleString();
+      document.getElementById('pulsePace').innerText = observedHours ? Math.round(currentPace).toLocaleString() : '-';
+      document.getElementById('pulseProjected').innerText = observedHours ? projected.toLocaleString() : '-';
+
+      const gapEl = document.getElementById('pulseGap');
+      if (observedHours) {
+        gapEl.innerText = `${projectedGap >= 0 ? '+' : ''}${projectedGap.toLocaleString()}`;
+        gapEl.className = projectedGap >= 0
+          ? 'text-2xl font-extrabold text-emerald-600 mt-1'
+          : 'text-2xl font-extrabold text-rose-600 mt-1';
+        document.getElementById('pulseGapNote').innerText = `Target ${target.toLocaleString()} ชิ้น`;
+        document.getElementById('pulseSubtitle').innerText =
+          `คำนวณจาก ${observedHours} รอบล่าสุดที่มีข้อมูล • เวลาทำงานรวม ${totalHours} ชม.`;
+      } else {
+        gapEl.innerText = '-';
+        gapEl.className = 'text-2xl font-extrabold text-slate-800 mt-1';
+        document.getElementById('pulseGapNote').innerText = 'ยังไม่มีข้อมูลเพียงพอ';
+        document.getElementById('pulseSubtitle').innerText = 'ยังไม่มีข้อมูลเพียงพอสำหรับประมาณการ';
+      }
+
+      renderCumulativeChart(timeSlots, hourlyActuals, targetLine, target);
+    }
+
+    function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, target) {
+      const ctx = document.getElementById('cumulativeChart').getContext('2d');
+      if (cumulativeChartInstance) cumulativeChartInstance.destroy();
+
+      let ac = 0;
+      let tg = 0;
+      const cumulativeActual = hourlyActuals.map(v => (ac += Number(v) || 0));
+      const cumulativeTarget = targetLine.map(v => (tg += Number(v) || 0));
+
+      const currentGap = ac - Math.min(tg, Number(target) || tg);
+      const badge = document.getElementById('cumGapBadge');
+      badge.innerText = `GAP ${currentGap >= 0 ? '+' : ''}${currentGap.toLocaleString()}`;
+      badge.className = currentGap >= 0
+        ? 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700'
+        : 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-rose-50 border border-rose-100 text-rose-700';
+
+      cumulativeChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: timeSlots,
+          datasets: [
+            {
+              label: 'Cumulative Target',
+              data: cumulativeTarget,
+              borderColor: '#6366F1',
+              borderWidth: 2,
+              borderDash: [6, 5],
+              pointRadius: 2,
+              tension: 0.25,
+              fill: false,
+              datalabels: { display: false }
+            },
+            {
+              label: 'Cumulative Actual',
+              data: cumulativeActual,
+              borderColor: '#10B981',
+              backgroundColor: 'rgba(16,185,129,0.08)',
+              borderWidth: 3,
+              pointRadius: 3,
+              tension: 0.25,
+              fill: true,
+              datalabels: { display: false }
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { position: 'top' },
+            tooltip: {
+              callbacks: {
+                footer: (items) => {
+                  if (!items || !items.length) return '';
+                  const i = items[0].dataIndex;
+                  const gap = cumulativeActual[i] - cumulativeTarget[i];
+                  return `Gap ณ รอบนี้: ${gap >= 0 ? '+' : ''}${gap.toLocaleString()} ชิ้น`;
+                }
+              }
             }
           },
           scales: {
@@ -501,10 +760,23 @@
     async function main() {
       const todayStr = getTodayStr();
       document.getElementById('datePicker').value = todayStr;
-      fetchDashboardData(todayStr);
+
+      // โหลดครั้งแรกทันที
+      await fetchDashboardData(todayStr);
+
+      // จากนั้นโหลดใหม่เองทุก 30 วินาที ไม่ต้องกด F5
+      startAutoRefresh();
+
+      // ถ้าสลับออกจากแอป/ล็อกจอ แล้วกลับมา ให้ดึงข้อมูลล่าสุดทันที
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          refreshDashboardNow();
+        }
+      });
 
       try {
         await liff.init({ liffId: LIFF_ID });
+
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           document.getElementById("displayName").innerText = profile.displayName;
