@@ -39,7 +39,7 @@
         <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
         <p class="text-xs text-slate-400">
           <span class="font-semibold text-emerald-600">● LIVE</span>
-          • อัปเดตอัตโนมัติทุก 30 วิ
+          • อัปเดตเมื่อข้อมูลเปลี่ยน
           • <span id="lastUpdatedText">กำลังโหลด...</span>
         </p>
       </div>
@@ -120,19 +120,19 @@
             <p class="text-[10px] text-slate-400 mt-1">ชิ้นสะสม</p>
           </div>
           <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Current Pace</p>
+            <p class="text-[11px] font-semibold text-slate-400">Current LOT Pace</p>
             <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">ชิ้น / ชม.</p>
+            <p class="text-[10px] text-slate-400 mt-1">เฉลี่ยชิ้น / ชม. ของ LOT ปัจจุบัน</p>
           </div>
           <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-indigo-500">Projected End-of-Day</p>
-            <p id="pulseProjected" class="text-2xl font-extrabold text-indigo-700 mt-1">-</p>
-            <p class="text-[10px] text-indigo-400 mt-1">คาดการณ์เมื่อจบเวลาทำงาน</p>
+            <p class="text-[11px] font-semibold text-indigo-500">Order Progress</p>
+            <p id="pulseProjected" class="text-xl font-extrabold text-indigo-700 mt-1">-</p>
+            <p id="pulseOrderMeta" class="text-[10px] text-indigo-400 mt-1">LOT ปัจจุบัน</p>
           </div>
           <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Projected vs Target</p>
-            <p id="pulseGap" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p id="pulseGapNote" class="text-[10px] text-slate-400 mt-1">เทียบกับ Target</p>
+            <p class="text-[11px] font-semibold text-slate-400">Forecast Completion</p>
+            <p id="pulseGap" class="text-xl font-extrabold text-slate-800 mt-1">-</p>
+            <p id="pulseGapNote" class="text-[10px] text-slate-400 mt-1">อิงกำลังผลิต LOT ปัจจุบัน</p>
           </div>
         </div>
 
@@ -224,9 +224,11 @@
     let cumulativeChartInstance = null;
     let globalLinesData = [];
 
-    const AUTO_REFRESH_MS = 30000; // 30 วินาที
-    let autoRefreshTimer = null;
+    const CHANGE_CHECK_MS = 5000; // ตรวจเงียบ ๆ ทุก 5 วิ แต่ไม่ redraw ถ้าข้อมูลไม่เปลี่ยน
+    let changeWatchTimer = null;
+    let lastDashboardVersion = "";
     let dashboardFetchInProgress = false;
+    let currentDashboardIsRange = false;
 
     function getTodayStr() {
       const today = new Date();
@@ -258,6 +260,7 @@
       dashboardFetchInProgress = true;
 
       const isRange = endDate && endDate !== selectedDate;
+      currentDashboardIsRange = Boolean(isRange);
 
       try {
         document.getElementById('selectedDateText').innerText = isRange
@@ -335,45 +338,88 @@
       }
     }
 
-    function shouldAutoRefresh() {
+    function shouldWatchLiveChanges() {
       const selectedDate = document.getElementById('datePicker').value;
       const endDate = document.getElementById('datePickerTo').value;
       const today = getTodayStr();
 
-      // วันนี้ หรือช่วงวันที่ที่สิ้นสุดวันนี้ = live
       const latestDate = endDate || selectedDate;
       return latestDate === today;
     }
 
-    function refreshDashboardNow() {
+    async function getDashboardVersion() {
+      try {
+        const url = `${GAS_API_URL}?action=getDashboardVersion&_=${Date.now()}`;
+        const res = await fetch(url, {
+          method: "GET",
+          redirect: "follow",
+          cache: "no-store"
+        });
+
+        if (!res.ok) return "";
+
+        const data = await res.json();
+        return String(data.version || "");
+
+      } catch (err) {
+        console.warn("Dashboard version check failed:", err);
+        return "";
+      }
+    }
+
+    async function syncDashboardVersionBaseline() {
+      if (!shouldWatchLiveChanges()) return;
+      const version = await getDashboardVersion();
+      if (version) lastDashboardVersion = version;
+    }
+
+    async function checkForDashboardChange() {
+      if (!shouldWatchLiveChanges()) return;
+      if (document.visibilityState !== 'visible') return;
+      if (dashboardFetchInProgress) return;
+
+      const version = await getDashboardVersion();
+      if (!version) return;
+
+      if (!lastDashboardVersion) {
+        lastDashboardVersion = version;
+        return;
+      }
+
+      if (version === lastDashboardVersion) {
+        // ไม่มีข้อมูลใหม่: ไม่ redraw, ไม่แตะกราฟ, ไม่เปลี่ยนเวลา
+        return;
+      }
+
+      lastDashboardVersion = version;
+
       const selectedDate = document.getElementById('datePicker').value;
       const endDate = document.getElementById('datePickerTo').value;
 
-      if (!selectedDate || !shouldAutoRefresh()) return;
-      fetchDashboardData(selectedDate, endDate);
+      await fetchDashboardData(selectedDate, endDate);
     }
 
-    function startAutoRefresh() {
-      if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    function startChangeWatch() {
+      if (changeWatchTimer) clearInterval(changeWatchTimer);
 
-      autoRefreshTimer = setInterval(() => {
-        if (document.visibilityState === 'visible') {
-          refreshDashboardNow();
-        }
-      }, AUTO_REFRESH_MS);
+      changeWatchTimer = setInterval(() => {
+        checkForDashboardChange();
+      }, CHANGE_CHECK_MS);
     }
 
-    function onDateChange() {
+    async function onDateChange() {
       const selectedDate = document.getElementById('datePicker').value;
       const endDate = document.getElementById('datePickerTo').value;
 
       if (selectedDate) {
-        fetchDashboardData(selectedDate, endDate);
+        await fetchDashboardData(selectedDate, endDate);
 
-        if (!shouldAutoRefresh()) {
+        if (shouldWatchLiveChanges()) {
+          await syncDashboardVersionBaseline();
+        } else {
           const el = document.getElementById('lastUpdatedText');
           if (el) {
-            el.innerText = 'ข้อมูลย้อนหลัง • Auto Refresh พักไว้';
+            el.innerText = 'ข้อมูลย้อนหลัง';
             el.className = "font-semibold text-slate-400";
           }
         }
@@ -448,6 +494,13 @@
     }
 
     // 2. กราฟ Hourly Tracking
+    function getBreakSlotForDashboardLine(lineCode) {
+      const clean = String(lineCode || '').replace(/LINE/i, '').replace(/\s+/g, '').toUpperCase();
+      if (['B', 'C'].includes(clean)) return '12.30-13.30';
+      if (['D', 'E', 'F', 'G'].includes(clean)) return '11.30-12.30';
+      return '';
+    }
+
     function updateHourlyChart() {
       const selectedLine = document.getElementById('lineSelect').value;
       const hourlyCanvas = document.getElementById('hourlyChart');
@@ -458,37 +511,96 @@
       }
 
       const ctx = hourlyCanvas.getContext('2d');
-      if(hourlyChartInstance) hourlyChartInstance.destroy();
+      if (hourlyChartInstance) hourlyChartInstance.destroy();
 
-      const lineObj = globalLinesData.find(d => String(d.line || d.lineName || '').toUpperCase().includes(selectedLine)) || {};
+      const lineObj = globalLinesData.find(
+        d => String(d.line || d.lineName || '').toUpperCase().includes(selectedLine)
+      ) || {};
+
       const hourlyDataObj = lineObj.hourly_data || {};
       const timeSlots = Object.keys(hourlyDataObj);
       const hourlyActuals = Object.values(hourlyDataObj);
 
-      const target = Number(lineObj.target) || ((lineObj.target1 || 0) + (lineObj.target2 || 0));
+      const target = Number(lineObj.target) ||
+        ((Number(lineObj.target1) || 0) +
+         (Number(lineObj.target2) || 0) +
+         (Number(lineObj.target3) || 0));
+
       const totalHours = Number(lineObj.total_working_hours) || 8;
-      const overallRate = totalHours > 0 ? (target / totalHours) : 0;
+      const overallRate = totalHours > 0 ? target / totalHours : 0;
 
       const hrs1 = Number(lineObj.hours1) || 0;
       const hrs2 = Number(lineObj.hours2) || 0;
+      const hrs3 = Number(lineObj.hours3) || 0;
+
       const target1 = Number(lineObj.target1) || 0;
       const target2 = Number(lineObj.target2) || 0;
-      const rate1 = hrs1 > 0 ? (target1 / hrs1) : overallRate;
-      const rate2 = hrs2 > 0 ? (target2 / hrs2) : overallRate;
+      const target3 = Number(lineObj.target3) || 0;
 
-      const targetLine = timeSlots.map((_, idx) => {
-        if (hrs1 > 0 && idx < hrs1) return Math.round(rate1);
-        if (hrs2 > 0 && idx < hrs1 + hrs2) return Math.round(rate2);
+      const rate1 = hrs1 > 0 ? target1 / hrs1 : 0;
+      const rate2 = hrs2 > 0 ? target2 / hrs2 : 0;
+      const rate3 = hrs3 > 0 ? target3 / hrs3 : 0;
+
+      const breakSlot = getBreakSlotForDashboardLine(selectedLine);
+
+      const workingSlots = timeSlots
+        .filter(slot => slot !== breakSlot)
+        .slice(0, Math.max(0, totalHours));
+
+      const workingIndex = {};
+      workingSlots.forEach((slot, idx) => {
+        workingIndex[slot] = idx;
+      });
+
+      // Target ต่อรอบต้องเดินตามชั่วโมงที่จัดสรรให้ LOT1 → LOT2 → LOT3
+      // ช่วงพัก Target = 0 และไม่ถูกนับเป็นชั่วโมงผลิต
+      const targetLine = timeSlots.map(slot => {
+        if (slot === breakSlot) return 0;
+        if (!(slot in workingIndex)) return 0;
+
+        const idx = workingIndex[slot];
+
+        if (hrs1 > 0 && idx < hrs1) {
+          return Math.round(rate1 || overallRate);
+        }
+
+        if (hrs2 > 0 && idx < hrs1 + hrs2) {
+          return Math.round(rate2 || overallRate);
+        }
+
+        if (hrs3 > 0 && idx < hrs1 + hrs2 + hrs3) {
+          return Math.round(rate3 || overallRate);
+        }
+
         return Math.round(overallRate);
       });
 
-      document.getElementById('hourlyTargetSubtitle').innerText = (hrs2 > 0)
-        ? `LOT1: ${Math.round(rate1).toLocaleString()} ชิ้น/ชม. (${hrs1} ชม.) | LOT2: ${Math.round(rate2).toLocaleString()} ชิ้น/ชม. (${hrs2} ชม.) — LINE ${selectedLine}`
-        : `เป้าหมายเฉลี่ย ${Math.round(overallRate).toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
+      const lotRateText = [];
+
+      if (hrs1 > 0) {
+        lotRateText.push(
+          `LOT1: ${Math.round(rate1 || overallRate).toLocaleString()} ชิ้น/ชม. (${hrs1} ชม.)`
+        );
+      }
+
+      if (hrs2 > 0) {
+        lotRateText.push(
+          `LOT2: ${Math.round(rate2 || overallRate).toLocaleString()} ชิ้น/ชม. (${hrs2} ชม.)`
+        );
+      }
+
+      if (hrs3 > 0) {
+        lotRateText.push(
+          `LOT3: ${Math.round(rate3 || overallRate).toLocaleString()} ชิ้น/ชม. (${hrs3} ชม.)`
+        );
+      }
+
+      document.getElementById('hourlyTargetSubtitle').innerText =
+        lotRateText.length > 1
+          ? `${lotRateText.join(' | ')} — LINE ${selectedLine}`
+          : `เป้าหมายเฉลี่ย ${Math.round(overallRate).toLocaleString()} ชิ้น / ชั่วโมง (LINE ${selectedLine})`;
 
       if (timeSlots.length === 0) {
-        // ห้าม replace parentElement.innerHTML เพราะจะลบ canvas ทิ้ง
-        // ถ้าลบ canvas รอบ auto-refresh ถัดไปจะหา hourlyChart ไม่เจอและ error
         if (hourlyChartInstance) {
           hourlyChartInstance.destroy();
           hourlyChartInstance = null;
@@ -496,8 +608,7 @@
 
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        const pulseIds = ['pulseActual', 'pulsePace', 'pulseProjected', 'pulseGap'];
-        pulseIds.forEach(id => {
+        ['pulseActual', 'pulsePace', 'pulseProjected', 'pulseGap'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.innerText = '-';
         });
@@ -512,7 +623,13 @@
         return;
       }
 
-      updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine);
+      updateProductionPulse(
+        lineObj,
+        timeSlots,
+        hourlyActuals,
+        targetLine,
+        selectedLine
+      );
 
       hourlyChartInstance = new Chart(ctx, {
         type: 'bar',
@@ -521,7 +638,9 @@
           datasets: [
             {
               type: 'line',
-              label: hrs2 > 0 ? 'Target / ชม. (แยกตาม LOT)' : `Target / ชม. (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
+              label: (hrs2 > 0 || hrs3 > 0)
+                ? 'Target / ชม. (แยกตาม LOT)'
+                : `Target / ชม. (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
               data: targetLine,
               borderColor: '#6366F1',
               borderWidth: 2,
@@ -535,7 +654,9 @@
               type: 'bar',
               label: 'Actual รายชั่วโมง',
               data: hourlyActuals,
-              backgroundColor: hourlyActuals.map((val, idx) => val >= targetLine[idx] ? '#10B981' : '#F59E0B'),
+              backgroundColor: hourlyActuals.map(
+                (val, idx) => val >= targetLine[idx] ? '#10B981' : '#F59E0B'
+              ),
               borderRadius: 6
             }
           ]
@@ -550,15 +671,23 @@
               align: 'center',
               color: '#ffffff',
               font: { weight: 'bold', size: 10, family: 'Kanit' },
-              formatter: (val) => val > 0 ? val : ''
+              formatter: val => val > 0 ? val : ''
             }
           },
           scales: {
             x: {
               grid: { display: false },
-              ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 9 } }
+              ticks: {
+                autoSkip: false,
+                maxRotation: 60,
+                minRotation: 45,
+                font: { size: 9 }
+              }
             },
-            y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
+            y: {
+              beginAtZero: true,
+              grid: { color: '#F1F5F9' }
+            }
           }
         }
       });
@@ -566,58 +695,168 @@
 
 
     // 2.5 Production Pulse + Cumulative
-    function getObservedHourlyValues(hourlyActuals) {
-      let lastObserved = -1;
-      hourlyActuals.forEach((v, idx) => {
-        if (Number(v) > 0) lastObserved = idx;
+    function getActiveLotPace(lineObj, selectedLine) {
+      const hourlyData = lineObj.hourly_data || {};
+      const hourlyReported = lineObj.hourly_reported || {};
+      const hourlyLot = lineObj.hourly_lot || {};
+      const activeLot = String(lineObj.active_lot || '').trim().toUpperCase();
+      const breakSlot = getBreakSlotForDashboardLine(selectedLine);
+
+      if (!activeLot) {
+        return { pace: 0, hours: 0, actual: 0 };
+      }
+
+      let actual = 0;
+      let hours = 0;
+
+      Object.keys(hourlyData).forEach(slot => {
+        if (slot === breakSlot) return;
+        if (hourlyReported[slot] !== true) return;
+
+        const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
+        if (slotLot !== activeLot) return;
+
+        actual += Number(hourlyData[slot]) || 0;
+        hours += 1;
       });
-      if (lastObserved < 0) return [];
-      return hourlyActuals.slice(0, lastObserved + 1).map(v => Number(v) || 0);
+
+      return {
+        pace: hours > 0 ? actual / hours : 0,
+        hours: hours,
+        actual: actual
+      };
     }
 
     function updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine) {
-      const target = Number(lineObj.target) || ((lineObj.target1 || 0) + (lineObj.target2 || 0));
-      const totalHours = Number(lineObj.total_working_hours) || 8;
-
-      const observed = getObservedHourlyValues(hourlyActuals);
-      const actualSoFar = observed.reduce((sum, v) => sum + v, 0);
-      const observedHours = observed.length;
-      const currentPace = observedHours > 0 ? actualSoFar / observedHours : 0;
-      const projected = observedHours > 0 ? Math.round(currentPace * totalHours) : 0;
-      const projectedGap = projected - target;
+      const totalActualToday = Number(lineObj.actual) ||
+        hourlyActuals.reduce((sum, v) => sum + (Number(v) || 0), 0);
 
       document.getElementById('pulseLineBadge').innerText = `LINE ${selectedLine}`;
-      document.getElementById('pulseActual').innerText = actualSoFar.toLocaleString();
-      document.getElementById('pulsePace').innerText = observedHours ? Math.round(currentPace).toLocaleString() : '-';
-      document.getElementById('pulseProjected').innerText = observedHours ? projected.toLocaleString() : '-';
+      document.getElementById('pulseActual').innerText = totalActualToday.toLocaleString();
 
-      const gapEl = document.getElementById('pulseGap');
-      if (observedHours) {
-        gapEl.innerText = `${projectedGap >= 0 ? '+' : ''}${projectedGap.toLocaleString()}`;
-        gapEl.className = projectedGap >= 0
-          ? 'text-2xl font-extrabold text-emerald-600 mt-1'
-          : 'text-2xl font-extrabold text-rose-600 mt-1';
-        document.getElementById('pulseGapNote').innerText = `Target ${target.toLocaleString()} ชิ้น`;
+      if (currentDashboardIsRange) {
+        document.getElementById('pulsePace').innerText = '-';
+        document.getElementById('pulseProjected').innerText = '-';
+        document.getElementById('pulseGap').innerText = '-';
+        document.getElementById('pulseOrderMeta').innerText = 'เลือกวันเดียวเพื่อดู Order';
+        document.getElementById('pulseGapNote').innerText = 'Forecast ใช้กับข้อมูลรายวัน';
         document.getElementById('pulseSubtitle').innerText =
-          `คำนวณจาก ${observedHours} รอบล่าสุดที่มีข้อมูล • เวลาทำงานรวม ${totalHours} ชม.`;
-      } else {
-        gapEl.innerText = '-';
-        gapEl.className = 'text-2xl font-extrabold text-slate-800 mt-1';
-        document.getElementById('pulseGapNote').innerText = 'ยังไม่มีข้อมูลเพียงพอ';
-        document.getElementById('pulseSubtitle').innerText = 'ยังไม่มีข้อมูลเพียงพอสำหรับประมาณการ';
+          'Production Pulse ใช้เมื่อเลือกข้อมูลวันเดียว';
+        renderCumulativeChart(timeSlots, hourlyActuals, targetLine);
+        return;
       }
 
-      renderCumulativeChart(timeSlots, hourlyActuals, targetLine, target);
+      const activeLot = String(lineObj.active_lot || '').trim();
+      const activeModel = String(lineObj.active_model || '').trim();
+      const poTarget = Number(lineObj.active_po_target) || 0;
+      const cumulativeActual = Number(lineObj.active_cumulative_actual) || 0;
+      const deliveryDate = String(lineObj.active_delivery_date || '').trim();
+      const totalHours = Number(lineObj.total_working_hours) || 8;
+
+      const paceInfo = getActiveLotPace(lineObj, selectedLine);
+      const currentLotPace = paceInfo.pace;
+
+      document.getElementById('pulsePace').innerText =
+        currentLotPace > 0
+          ? Math.round(currentLotPace).toLocaleString()
+          : '-';
+
+      const orderValue = document.getElementById('pulseProjected');
+      const orderMeta = document.getElementById('pulseOrderMeta');
+      const forecastValue = document.getElementById('pulseGap');
+      const forecastNote = document.getElementById('pulseGapNote');
+
+      if (!activeLot) {
+        orderValue.innerText = '-';
+        orderMeta.innerText = 'ยังไม่มี LOT ปัจจุบัน';
+        forecastValue.innerText = '-';
+        forecastNote.innerText = 'ยังไม่มีข้อมูลสำหรับ Forecast';
+        document.getElementById('pulseSubtitle').innerText =
+          `LINE ${selectedLine} • ยังไม่มี LOT ปัจจุบัน`;
+
+        renderCumulativeChart(timeSlots, hourlyActuals, targetLine);
+        return;
+      }
+
+      document.getElementById('pulseSubtitle').innerText =
+        `LINE ${selectedLine} • LOT ${activeLot}${activeModel ? ` • ${activeModel}` : ''}`;
+
+      if (poTarget > 0) {
+        const progressPct = Math.min(
+          100,
+          Math.max(0, (cumulativeActual / poTarget) * 100)
+        );
+
+        const remaining = Math.max(0, poTarget - cumulativeActual);
+
+        orderValue.innerText =
+          `${cumulativeActual.toLocaleString()} / ${poTarget.toLocaleString()}`;
+
+        orderMeta.innerText =
+          `${progressPct.toFixed(1)}% ของ Order • เหลือ ${remaining.toLocaleString()} ชิ้น`;
+
+        if (remaining <= 0) {
+          forecastValue.innerText = 'ครบ Order แล้ว';
+          forecastValue.className =
+            'text-xl font-extrabold text-emerald-600 mt-1';
+
+          forecastNote.innerText =
+            deliveryDate ? `Delivery ${deliveryDate}` : 'ผลิตครบตาม PO Target';
+
+        } else if (currentLotPace > 0 && totalHours > 0) {
+          const hoursRemaining = remaining / currentLotPace;
+          const productionDays = hoursRemaining / totalHours;
+
+          forecastValue.innerText = `≈ ${productionDays.toFixed(1)} วันผลิต`;
+          forecastValue.className =
+            'text-xl font-extrabold text-slate-800 mt-1';
+
+          forecastNote.innerText =
+            `เหลือประมาณ ${hoursRemaining.toFixed(1)} ชม.` +
+            (deliveryDate ? ` • Delivery ${deliveryDate}` : '');
+
+        } else {
+          forecastValue.innerText = '-';
+          forecastValue.className =
+            'text-xl font-extrabold text-slate-800 mt-1';
+
+          forecastNote.innerText =
+            deliveryDate
+              ? `ยังไม่มี Pace ของ LOT วันนี้ • Delivery ${deliveryDate}`
+              : 'ยังไม่มี Pace ของ LOT วันนี้';
+        }
+
+      } else {
+        orderValue.innerText = cumulativeActual.toLocaleString();
+        orderMeta.innerText = `LOT ${activeLot} • ไม่พบ PO Target`;
+        forecastValue.innerText = '-';
+        forecastValue.className =
+          'text-xl font-extrabold text-slate-800 mt-1';
+        forecastNote.innerText =
+          deliveryDate
+            ? `ไม่สามารถ Forecast ได้ • Delivery ${deliveryDate}`
+            : 'ไม่สามารถ Forecast ได้';
+      }
+
+      renderCumulativeChart(timeSlots, hourlyActuals, targetLine);
     }
 
-    function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, target) {
+    function renderCumulativeChart(timeSlots, hourlyActuals, targetLine) {
       const ctx = document.getElementById('cumulativeChart').getContext('2d');
       if (cumulativeChartInstance) cumulativeChartInstance.destroy();
 
       let ac = 0;
       let tg = 0;
-      const cumulativeActual = hourlyActuals.map(v => (ac += Number(v) || 0));
-      const cumulativeTarget = targetLine.map(v => (tg += Number(v) || 0));
+
+      const cumulativeActual = hourlyActuals.map(v => {
+        ac += Number(v) || 0;
+        return ac;
+      });
+
+      const cumulativeTarget = targetLine.map(v => {
+        tg += Number(v) || 0;
+        return tg;
+      });
 
       cumulativeChartInstance = new Chart(ctx, {
         type: 'line',
@@ -656,7 +895,7 @@
             legend: { position: 'top' },
             tooltip: {
               callbacks: {
-                footer: (items) => {
+                footer: items => {
                   if (!items || !items.length) return '';
                   const i = items[0].dataIndex;
                   const gap = cumulativeActual[i] - cumulativeTarget[i];
@@ -668,13 +907,22 @@
           scales: {
             x: {
               grid: { display: false },
-              ticks: { autoSkip: false, maxRotation: 60, minRotation: 45, font: { size: 9 } }
+              ticks: {
+                autoSkip: false,
+                maxRotation: 60,
+                minRotation: 45,
+                font: { size: 9 }
+              }
             },
-            y: { beginAtZero: true, grid: { color: '#F1F5F9' } }
+            y: {
+              beginAtZero: true,
+              grid: { color: '#F1F5F9' }
+            }
           }
         }
       });
     }
+
 
     // 3. Render Cards
     function renderCards(lines, isRange) {
@@ -689,8 +937,13 @@
           container.innerHTML += createCardHtml(lineName, 'รวมช่วงวันที่', '', '', totalTg, totalAc, item.remarks);
         } else {
           container.innerHTML += createCardHtml(lineName, 'LOT 1', item.model1 || item.model, item.lot_number || item.lot1, item.target1 || item.target || 0, item.actual1 || item.actual || 0, item.remarks);
+
           if (item.lot_number2 || item.lot2) {
             container.innerHTML += createCardHtml(lineName, 'LOT 2', item.model2, item.lot_number2 || item.lot2, item.target2 || 0, item.actual2 || 0, item.remarks);
+          }
+
+          if (item.lot_number3 || item.lot3) {
+            container.innerHTML += createCardHtml(lineName, 'LOT 3', item.model3, item.lot_number3 || item.lot3, item.target3 || 0, item.actual3 || 0, item.remarks);
           }
         }
       });
@@ -792,16 +1045,17 @@
       const todayStr = getTodayStr();
       document.getElementById('datePicker').value = todayStr;
 
-      // โหลดครั้งแรกทันที
+      // โหลดข้อมูลจริงครั้งแรก
       await fetchDashboardData(todayStr);
 
-      // จากนั้นโหลดใหม่เองทุก 30 วินาที ไม่ต้องกด F5
-      startAutoRefresh();
+      // จำ version ปัจจุบันไว้ แล้วตรวจแบบเงียบ ๆ
+      await syncDashboardVersionBaseline();
+      startChangeWatch();
 
-      // ถ้าสลับออกจากแอป/ล็อกจอ แล้วกลับมา ให้ดึงข้อมูลล่าสุดทันที
+      // กลับเข้าหน้าเมื่อไร เช็กว่าข้อมูลเปลี่ยนหรือยัง
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible') {
-          refreshDashboardNow();
+          checkForDashboardChange();
         }
       });
 
