@@ -501,6 +501,44 @@
       return '';
     }
 
+    const hourlyBreakBandPlugin = {
+      id: 'hourlyBreakBand',
+      beforeDatasetsDraw(chart, args, pluginOptions) {
+        const breakIndex = Number(pluginOptions && pluginOptions.breakIndex);
+        if (!Number.isInteger(breakIndex) || breakIndex < 0) return;
+
+        const x = chart.scales.x;
+        const area = chart.chartArea;
+        if (!x || !area) return;
+
+        const center = x.getPixelForValue(breakIndex);
+        const prev = breakIndex > 0 ? x.getPixelForValue(breakIndex - 1) : center;
+        const next = breakIndex < chart.data.labels.length - 1
+          ? x.getPixelForValue(breakIndex + 1)
+          : center;
+
+        const halfLeft = breakIndex > 0 ? (center - prev) / 2 : 18;
+        const halfRight = breakIndex < chart.data.labels.length - 1
+          ? (next - center) / 2
+          : 18;
+
+        const left = center - halfLeft;
+        const right = center + halfRight;
+
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.10)';
+        ctx.fillRect(left, area.top, right - left, area.bottom - area.top);
+
+        ctx.fillStyle = '#94A3B8';
+        ctx.font = '600 10px Kanit';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText('BREAK', center, area.top + 6);
+        ctx.restore();
+      }
+    };
+
     function updateHourlyChart() {
       const selectedLine = document.getElementById('lineSelect').value;
       const hourlyCanvas = document.getElementById('hourlyChart');
@@ -555,8 +593,8 @@
       // Target ต่อรอบต้องเดินตามชั่วโมงที่จัดสรรให้ LOT1 → LOT2 → LOT3
       // ช่วงพัก Target = 0 และไม่ถูกนับเป็นชั่วโมงผลิต
       const targetLine = timeSlots.map(slot => {
-        if (slot === breakSlot) return 0;
-        if (!(slot in workingIndex)) return 0;
+        if (slot === breakSlot) return null;
+        if (!(slot in workingIndex)) return null;
 
         const idx = workingIndex[slot];
 
@@ -633,6 +671,7 @@
 
       hourlyChartInstance = new Chart(ctx, {
         type: 'bar',
+        plugins: [hourlyBreakBandPlugin],
         data: {
           labels: timeSlots,
           datasets: [
@@ -648,15 +687,18 @@
               fill: false,
               pointRadius: 0,
               stepped: true,
+              spanGaps: false,
               datalabels: { display: false }
             },
             {
               type: 'bar',
               label: 'Actual รายชั่วโมง',
               data: hourlyActuals,
-              backgroundColor: hourlyActuals.map(
-                (val, idx) => val >= targetLine[idx] ? '#10B981' : '#F59E0B'
-              ),
+              backgroundColor: hourlyActuals.map((val, idx) => {
+                const tg = targetLine[idx];
+                if (tg === null || tg === undefined) return '#CBD5E1';
+                return val >= tg ? '#10B981' : '#F59E0B';
+              }),
               borderRadius: 6
             }
           ]
@@ -665,6 +707,9 @@
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
+            hourlyBreakBand: {
+              breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1
+            },
             legend: { position: 'top' },
             datalabels: {
               anchor: 'center',
@@ -854,7 +899,9 @@
       });
 
       const cumulativeTarget = targetLine.map(v => {
-        tg += Number(v) || 0;
+        if (v !== null && v !== undefined) {
+          tg += Number(v) || 0;
+        }
         return tg;
       });
 
