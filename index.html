@@ -224,7 +224,7 @@
     let cumulativeChartInstance = null;
     let globalLinesData = [];
 
-    const CHANGE_CHECK_MS = 5000; // ตรวจเงียบ ๆ ทุก 5 วิ แต่ไม่ redraw ถ้าข้อมูลไม่เปลี่ยน
+    const CHANGE_CHECK_MS = 30000; // ตรวจเงียบ ๆ ทุก 30 วิ ลด request ไป Apps Script
     let changeWatchTimer = null;
     let lastDashboardVersion = "";
     let dashboardFetchInProgress = false;
@@ -1088,34 +1088,41 @@
       }
     }
 
-    async function main() {
-      const todayStr = getTodayStr();
-      document.getElementById('datePicker').value = todayStr;
-
-      // โหลดข้อมูลจริงครั้งแรก
-      await fetchDashboardData(todayStr);
-
-      // จำ version ปัจจุบันไว้ แล้วตรวจแบบเงียบ ๆ
-      await syncDashboardVersionBaseline();
-      startChangeWatch();
-
-      // กลับเข้าหน้าเมื่อไร เช็กว่าข้อมูลเปลี่ยนหรือยัง
-      document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-          checkForDashboardChange();
-        }
-      });
-
+    async function initLiffProfile() {
       try {
         await liff.init({ liffId: LIFF_ID });
 
         if (liff.isLoggedIn()) {
           const profile = await liff.getProfile();
           document.getElementById("displayName").innerText = profile.displayName;
+        } else {
+          document.getElementById("displayName").innerText = "Guest User";
         }
       } catch (err) {
         document.getElementById("displayName").innerText = "Guest User";
       }
+    }
+
+    async function main() {
+      const todayStr = getTodayStr();
+      document.getElementById('datePicker').value = todayStr;
+
+      // LINE profile ทำงานแยก ไม่ขวางการโหลด Dashboard
+      initLiffProfile();
+
+      // โหลดข้อมูลหลักก่อน
+      await fetchDashboardData(todayStr);
+
+      // หน้าแสดงแล้ว ค่อยเช็ก version และเริ่ม watcher
+      syncDashboardVersionBaseline()
+        .catch(err => console.warn("Dashboard baseline failed:", err))
+        .finally(() => startChangeWatch());
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+          checkForDashboardChange();
+        }
+      });
     }
 
     main();
