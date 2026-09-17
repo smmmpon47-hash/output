@@ -1169,7 +1169,10 @@
       const dayGapClass = dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
 
       const targetNow = liveMetrics ? Number(liveMetrics.targetNow) || 0 : 0;
-      const nowGap = actual - targetNow;
+      // เป้าตอนนี้ต้องเทียบกับ Actual ที่เกิดขึ้นถึง checkpoint เดียวกัน
+      // ห้ามใช้ Actual ทั้งวัน/ทั้ง LOT เพราะจะทำให้ gap ของการ์ดไม่ตรงกับ Hourly/Cumulative
+      const actualNow = liveMetrics ? Number(liveMetrics.reportedActual) || 0 : actual;
+      const nowGap = actualNow - targetNow;
       const nowGapPct = targetNow > 0 ? Math.round((nowGap / targetNow) * 100) : 0;
       const nowGapText = `${nowGap >= 0 ? '+' : ''}${nowGap.toLocaleString()} (${nowGapPct >= 0 ? '+' : ''}${nowGapPct}%)`;
       const nowGapClass = nowGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
