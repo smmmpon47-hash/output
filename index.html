@@ -1085,33 +1085,37 @@
         .slice(0, totalHours);
 
       const hoursBefore = allLots.slice(0, lotIndex)
-        .reduce((s,l)=>s + Math.max(0, Number(l.hours)||0), 0);
-      const lotHours = Math.max(0, Number(lotPlan.hours)||0);
-      const lotSlots = workingSlots.slice(hoursBefore, hoursBefore + lotHours);
+        .reduce((sum, lot) => sum + Math.max(0, Number(lot.hours) || 0), 0);
 
-      // LIVE ของการ์ดต้องยึด "รอบที่รายงานจริงของ LOT นี้" เท่านั้น
-      // ไม่ใช้เวลาปัจจุบัน/slot ในอนาคตมาดันเป้าตอนนี้ให้เต็มวัน
-      let reportedActual = 0, reportedHours = 0;
+      const lotHours = Math.max(0, Number(lotPlan.hours) || 0);
+      const lotSlots = workingSlots.slice(hoursBefore, hoursBefore + lotHours);
       const lotKey = String(lotPlan.lot || '').trim().toUpperCase();
+
+      let elapsedHours = 0;
+      let actualNow = 0;
 
       lotSlots.forEach(slot => {
         if (hourlyReported[slot] !== true) return;
+
         const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
         if (slotLot && lotKey && slotLot !== lotKey) return;
-        reportedActual += Number(hourlyData[slot]) || 0;
-        reportedHours++;
+
+        elapsedHours += 1;
+        actualNow += Number(hourlyData[slot]) || 0;
       });
 
-      const dueHours = Math.min(lotHours, reportedHours);
-      const tgPerHour = lotHours > 0 ? (Number(lotPlan.target)||0) / lotHours : 0;
-      const targetNow = Math.round(tgPerHour * dueHours);
+      const dailyTG = Number(lotPlan.target) || 0;
+      const tgPerHourExact = lotHours > 0 ? dailyTG / lotHours : 0;
 
       return {
-        targetNow,
-        avgOutput: reportedHours ? reportedActual / reportedHours : 0,
-        tgPerHour,
-        reportedHours,
-        reportedActual
+        // Head's formula: Current TG = exact TG/hr × elapsed production hours
+        targetNow: Math.round(tgPerHourExact * elapsedHours),
+        // Avg Output/hr = Actual now ÷ elapsed production hours
+        avgOutput: elapsedHours > 0 ? actualNow / elapsedHours : 0,
+        // display rounds 79.6 -> 80
+        tgPerHour: tgPerHourExact,
+        reportedHours: elapsedHours,
+        reportedActual: actualNow
       };
     }
 
