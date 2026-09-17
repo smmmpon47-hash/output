@@ -1077,45 +1077,49 @@
       const hourlyData = item.hourly_data || {};
       const hourlyReported = item.hourly_reported || {};
       const hourlyLot = item.hourly_lot || {};
+      const breakSlot = getBreakSlotForDashboardLine(lineName);
 
-      const completedSlots = getCompletedWorkingSlotsForCard(item, lineName);
-      const completedSet = new Set(completedSlots);
+      const totalHours = Number(item.total_working_hours) || 8;
+      const allWorkingSlots = Object.keys(hourlyData)
+        .filter(slot => slot !== breakSlot)
+        .slice(0, Math.max(0, totalHours));
 
       const hoursBefore = allLots
         .slice(0, lotIndex)
         .reduce((sum, lot) => sum + Math.max(0, Number(lot.hours) || 0), 0);
 
       const lotHours = Math.max(0, Number(lotPlan.hours) || 0);
-      const lotPlannedSlots = completedSlots.length || Object.keys(hourlyData).length
-        ? Object.keys(hourlyData)
-            .filter(slot => slot !== getBreakSlotForDashboardLine(lineName))
-            .slice(hoursBefore, hoursBefore + lotHours)
-        : [];
-
-      const completedLotSlots = lotPlannedSlots.filter(slot => completedSet.has(slot));
-      const tgPerHour = lotHours > 0 ? (Number(lotPlan.target) || 0) / lotHours : 0;
-      const targetNow = Math.round(tgPerHour * completedLotSlots.length);
-
-      let actualNow = 0;
-      let actualHours = 0;
+      const lotSlots = allWorkingSlots.slice(hoursBefore, hoursBefore + lotHours);
       const lotKey = String(lotPlan.lot || '').trim().toUpperCase();
 
-      completedLotSlots.forEach(slot => {
-        // Only reported completed slots enter Avg. Future slots are already excluded above.
+      // "ตอนนี้" ของ Dashboard = จุดล่าสุดที่มีการรายงานจริง
+      // ไม่ใช้เวลาที่เปิด Dashboard (เช่น เปิด 23:00 แล้วกลายเป็นครบวันเอง)
+      let reportedHours = 0;
+      let reportedActual = 0;
+
+      lotSlots.forEach(slot => {
         if (hourlyReported[slot] !== true) return;
 
-        // If backend supplies hourly_lot, respect it. Otherwise use planned slot allocation.
         const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
         if (slotLot && lotKey && slotLot !== lotKey) return;
 
-        actualNow += Number(hourlyData[slot]) || 0;
-        actualHours += 1;
+        reportedHours += 1;
+        reportedActual += Number(hourlyData[slot]) || 0;
       });
 
+      const tgPerHour = lotHours > 0 ? (Number(lotPlan.target) || 0) / lotHours : 0;
+
       return {
-        targetNow,
+        // Same checkpoint for both sides:
+        // Target Now = TG/hr × จำนวนชั่วโมงของ LOT ที่รายงานจริง
+        targetNow: Math.round(tgPerHour * reportedHours),
+
+        // Avg = Actual ของ LOT ที่รายงานจริง ÷ ชั่วโมงที่รายงานจริง
+        avgOutput: reportedHours > 0 ? reportedActual / reportedHours : 0,
+
         tgPerHour,
-        avgOutput: actualHours > 0 ? actualNow / actualHours : 0
+        reportedHours,
+        reportedActual
       };
     }
 
