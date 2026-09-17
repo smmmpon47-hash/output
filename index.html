@@ -1078,45 +1078,45 @@
       const hourlyReported = item.hourly_reported || {};
       const hourlyLot = item.hourly_lot || {};
       const breakSlot = getBreakSlotForDashboardLine(lineName);
-
       const totalHours = Number(item.total_working_hours) || 8;
-      const allWorkingSlots = Object.keys(hourlyData)
+
+      const workingSlots = Object.keys(hourlyData)
         .filter(slot => slot !== breakSlot)
-        .slice(0, Math.max(0, totalHours));
+        .slice(0, totalHours);
 
-      const hoursBefore = allLots
-        .slice(0, lotIndex)
-        .reduce((sum, lot) => sum + Math.max(0, Number(lot.hours) || 0), 0);
-
-      const lotHours = Math.max(0, Number(lotPlan.hours) || 0);
-      const lotSlots = allWorkingSlots.slice(hoursBefore, hoursBefore + lotHours);
-      const lotKey = String(lotPlan.lot || '').trim().toUpperCase();
-
-      // "ตอนนี้" ของ Dashboard = จุดล่าสุดที่มีการรายงานจริง
-      // ไม่ใช้เวลาที่เปิด Dashboard (เช่น เปิด 23:00 แล้วกลายเป็นครบวันเอง)
-      let reportedHours = 0;
-      let reportedActual = 0;
-
-      lotSlots.forEach(slot => {
-        if (hourlyReported[slot] !== true) return;
-
-        const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
-        if (slotLot && lotKey && slotLot !== lotKey) return;
-
-        reportedHours += 1;
-        reportedActual += Number(hourlyData[slot]) || 0;
+      // checkpoint = working slot ล่าสุดของทั้ง LINE ที่ "รายงานจริง"
+      let checkpointIndex = -1;
+      workingSlots.forEach((slot, i) => {
+        if (hourlyReported[slot] === true) checkpointIndex = i;
       });
 
-      const tgPerHour = lotHours > 0 ? (Number(lotPlan.target) || 0) / lotHours : 0;
+      const hoursBefore = allLots.slice(0, lotIndex)
+        .reduce((s,l)=>s + Math.max(0, Number(l.hours)||0), 0);
+      const lotHours = Math.max(0, Number(lotPlan.hours)||0);
+      const lotSlots = workingSlots.slice(hoursBefore, hoursBefore + lotHours);
+
+      // จำนวนชั่วโมงของ LOT ที่ควรถึง ณ checkpoint เดียวกัน
+      const dueHours = checkpointIndex < hoursBefore
+        ? 0
+        : Math.min(lotHours, checkpointIndex - hoursBefore + 1);
+
+      const tgPerHour = lotHours > 0 ? (Number(lotPlan.target)||0) / lotHours : 0;
+      const targetNow = Math.round(tgPerHour * dueHours);
+
+      let reportedActual = 0, reportedHours = 0;
+      const lotKey = String(lotPlan.lot || '').trim().toUpperCase();
+
+      lotSlots.slice(0, dueHours).forEach(slot => {
+        if (hourlyReported[slot] !== true) return;
+        const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
+        if (slotLot && lotKey && slotLot !== lotKey) return;
+        reportedActual += Number(hourlyData[slot]) || 0;
+        reportedHours++;
+      });
 
       return {
-        // Same checkpoint for both sides:
-        // Target Now = TG/hr × จำนวนชั่วโมงของ LOT ที่รายงานจริง
-        targetNow: Math.round(tgPerHour * reportedHours),
-
-        // Avg = Actual ของ LOT ที่รายงานจริง ÷ ชั่วโมงที่รายงานจริง
-        avgOutput: reportedHours > 0 ? reportedActual / reportedHours : 0,
-
+        targetNow,
+        avgOutput: reportedHours ? reportedActual / reportedHours : 0,
         tgPerHour,
         reportedHours,
         reportedActual
