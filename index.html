@@ -1074,45 +1074,25 @@
     }
 
     function getLotTimeMetricsForCard(item, lineName, lotPlan, lotIndex, allLots) {
-      const hourlyData = item.hourly_data || {};
-      const hourlyReported = item.hourly_reported || {};
-      const hourlyLot = item.hourly_lot || {};
-      const breakSlot = getBreakSlotForDashboardLine(lineName);
-      const totalHours = Number(item.total_working_hours) || 8;
-
-      const workingSlots = Object.keys(hourlyData)
-        .filter(slot => slot !== breakSlot)
-        .slice(0, totalHours);
+      // IMPORTANT: ชั่วโมงที่ผ่านไปต้องมาจาก "รอบล่าสุดที่บันทึก" ที่ Apps Script ส่งมา
+      // ไม่ไล่นับ hourly_reported ใน HTML อีก เพราะข้อมูลเก่า/ช่องที่เคยมีค่าอาจทำให้ Current TG วิ่งเต็มวันผิด
+      const productionHoursPassed = Math.max(0, Number(item.production_hours_passed) || 0);
 
       const hoursBefore = allLots.slice(0, lotIndex)
         .reduce((sum, lot) => sum + Math.max(0, Number(lot.hours) || 0), 0);
 
       const lotHours = Math.max(0, Number(lotPlan.hours) || 0);
-      const lotSlots = workingSlots.slice(hoursBefore, hoursBefore + lotHours);
-      const lotKey = String(lotPlan.lot || '').trim().toUpperCase();
-
-      let elapsedHours = 0;
-      let actualNow = 0;
-
-      lotSlots.forEach(slot => {
-        if (hourlyReported[slot] !== true) return;
-
-        const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
-        if (slotLot && lotKey && slotLot !== lotKey) return;
-
-        elapsedHours += 1;
-        actualNow += Number(hourlyData[slot]) || 0;
-      });
+      const elapsedHours = Math.max(0, Math.min(lotHours, productionHoursPassed - hoursBefore));
 
       const dailyTG = Number(lotPlan.target) || 0;
+      const actualNow = Number(lotPlan.actual) || 0;
       const tgPerHourExact = lotHours > 0 ? dailyTG / lotHours : 0;
 
       return {
-        // Head's formula: Current TG = exact TG/hr × elapsed production hours
+        // Current TG = Daily TG ของ LOT ÷ ชั่วโมง LOT × ชั่วโมงของ LOT ที่ผ่านจริง
         targetNow: Math.round(tgPerHourExact * elapsedHours),
-        // Avg Output/hr = Actual now ÷ elapsed production hours
+        // Avg Output/hr = Actual ของ LOT ÷ ชั่วโมงของ LOT ที่ผ่านจริง
         avgOutput: elapsedHours > 0 ? actualNow / elapsedHours : 0,
-        // display rounds 79.6 -> 80
         tgPerHour: tgPerHourExact,
         reportedHours: elapsedHours,
         reportedActual: actualNow
