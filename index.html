@@ -1084,35 +1084,27 @@
         .filter(slot => slot !== breakSlot)
         .slice(0, totalHours);
 
-      // checkpoint = working slot ล่าสุดของทั้ง LINE ที่ "รายงานจริง"
-      let checkpointIndex = -1;
-      workingSlots.forEach((slot, i) => {
-        if (hourlyReported[slot] === true) checkpointIndex = i;
-      });
-
       const hoursBefore = allLots.slice(0, lotIndex)
         .reduce((s,l)=>s + Math.max(0, Number(l.hours)||0), 0);
       const lotHours = Math.max(0, Number(lotPlan.hours)||0);
       const lotSlots = workingSlots.slice(hoursBefore, hoursBefore + lotHours);
 
-      // จำนวนชั่วโมงของ LOT ที่ควรถึง ณ checkpoint เดียวกัน
-      const dueHours = checkpointIndex < hoursBefore
-        ? 0
-        : Math.min(lotHours, checkpointIndex - hoursBefore + 1);
-
-      const tgPerHour = lotHours > 0 ? (Number(lotPlan.target)||0) / lotHours : 0;
-      const targetNow = Math.round(tgPerHour * dueHours);
-
+      // LIVE ของการ์ดต้องยึด "รอบที่รายงานจริงของ LOT นี้" เท่านั้น
+      // ไม่ใช้เวลาปัจจุบัน/slot ในอนาคตมาดันเป้าตอนนี้ให้เต็มวัน
       let reportedActual = 0, reportedHours = 0;
       const lotKey = String(lotPlan.lot || '').trim().toUpperCase();
 
-      lotSlots.slice(0, dueHours).forEach(slot => {
+      lotSlots.forEach(slot => {
         if (hourlyReported[slot] !== true) return;
         const slotLot = String(hourlyLot[slot] || '').trim().toUpperCase();
         if (slotLot && lotKey && slotLot !== lotKey) return;
         reportedActual += Number(hourlyData[slot]) || 0;
         reportedHours++;
       });
+
+      const dueHours = Math.min(lotHours, reportedHours);
+      const tgPerHour = lotHours > 0 ? (Number(lotPlan.target)||0) / lotHours : 0;
+      const targetNow = Math.round(tgPerHour * dueHours);
 
       return {
         targetNow,
@@ -1169,8 +1161,6 @@
       const dayGapClass = dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
 
       const targetNow = liveMetrics ? Number(liveMetrics.targetNow) || 0 : 0;
-      // เป้าตอนนี้ต้องเทียบกับ Actual ที่เกิดขึ้นถึง checkpoint เดียวกัน
-      // ห้ามใช้ Actual ทั้งวัน/ทั้ง LOT เพราะจะทำให้ gap ของการ์ดไม่ตรงกับ Hourly/Cumulative
       const actualNow = liveMetrics ? Number(liveMetrics.reportedActual) || 0 : actual;
       const nowGap = actualNow - targetNow;
       const nowGapPct = targetNow > 0 ? Math.round((nowGap / targetNow) * 100) : 0;
