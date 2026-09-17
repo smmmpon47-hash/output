@@ -787,7 +787,7 @@
         document.getElementById('pulseGapNote').innerText = 'Forecast ใช้กับข้อมูลรายวัน';
         document.getElementById('pulseSubtitle').innerText =
           'Production Pulse ใช้เมื่อเลือกข้อมูลวันเดียว';
-        renderCumulativeChart(timeSlots, hourlyActuals, targetLine);
+        renderCumulativeChart(timeSlots, hourlyActuals, targetLine, lineObj.hourly_reported || {});
         return;
       }
 
@@ -819,7 +819,7 @@
         document.getElementById('pulseSubtitle').innerText =
           `LINE ${selectedLine} • ยังไม่มี LOT ปัจจุบัน`;
 
-        renderCumulativeChart(timeSlots, hourlyActuals, targetLine);
+        renderCumulativeChart(timeSlots, hourlyActuals, targetLine, lineObj.hourly_reported || {});
         return;
       }
 
@@ -883,18 +883,20 @@
             : 'ไม่สามารถ Forecast ได้';
       }
 
-      renderCumulativeChart(timeSlots, hourlyActuals, targetLine);
+      renderCumulativeChart(timeSlots, hourlyActuals, targetLine, lineObj.hourly_reported || {});
     }
 
-    function renderCumulativeChart(timeSlots, hourlyActuals, targetLine) {
+    function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyReported = {}) {
       const ctx = document.getElementById('cumulativeChart').getContext('2d');
       if (cumulativeChartInstance) cumulativeChartInstance.destroy();
 
       let ac = 0;
       let tg = 0;
 
-      const cumulativeActual = hourlyActuals.map(v => {
-        ac += Number(v) || 0;
+      // Actual แสดงเฉพาะรอบที่มีการรายงานจริง; รอบอนาคตเป็น null
+      const cumulativeActual = timeSlots.map((slot, idx) => {
+        if (hourlyReported[slot] !== true) return null;
+        ac += Number(hourlyActuals[idx]) || 0;
         return ac;
       });
 
@@ -929,6 +931,7 @@
               borderWidth: 3,
               pointRadius: 3,
               tension: 0.25,
+              spanGaps: false,
               fill: true,
               datalabels: { display: false }
             }
