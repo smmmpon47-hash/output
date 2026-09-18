@@ -245,7 +245,7 @@
 
     // Cache เฉพาะฝั่ง Dashboard เพื่อให้หน้าเปิดได้ทันที
     // ไม่แตะ Production write path / LOT switch / Repair / Trigger
-    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v3_multilot_';
+    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v4_lotplan_guard_';
 
     function getDashboardCacheKey(selectedDate, endDate) {
       const safeFrom = String(selectedDate || '').trim();
@@ -1284,43 +1284,65 @@
       // Old single-LOT rows may not have HOURS_1 populated.
       const effectiveH1 = h1 > 0 ? h1 : (!hasMultipleLots ? totalHours : 0);
 
-      // Multi-LOT ต้องใช้ Target ของ LOT ตัวเองเท่านั้น
-      // ถ้า TARGET_x ยังเป็น 0/ไม่มา ให้คำนวณ fallback จาก
-      // TG Original_x / TOTAL_WORKING_HOURS × HOURS_x
-      // ห้ามเอา Daily Target รวมไปใส่ LOT1 เมื่อมี LOT2/LOT3
-      const resolveLotTarget = (explicitTarget, tgOriginal, lotHours, allowDailyFallback) => {
+      const resolveLotTarget = (
+        lotName,
+        explicitTarget,
+        tgOriginal,
+        lotHours,
+        allowDailyFallback
+      ) => {
         const explicit = Number(explicitTarget) || 0;
-        if (explicit > 0) return explicit;
-
         const tg = Number(tgOriginal) || 0;
         const hrs = Number(lotHours) || 0;
 
+        if (!lotName) {
+          return { value: 0, valid: false, source: 'NO_LOT' };
+        }
+
+        if (explicit > 0) {
+          return { value: explicit, valid: true, source: 'TARGET_COLUMN' };
+        }
+
+        // Safety fallback สำหรับข้อมูลเก่า:
+        // ใช้ได้เฉพาะเมื่อมี TG Original + Hours + Total Hours ครบจริง
         if (tg > 0 && hrs > 0 && totalHours > 0) {
-          return Math.round((tg / totalHours) * hrs);
+          return {
+            value: Math.round((tg / totalHours) * hrs),
+            valid: true,
+            source: 'TG_ORIGINAL_FALLBACK'
+          };
         }
 
         if (allowDailyFallback) {
-          return Number(item.target) || 0;
+          const daily = Number(item.target) || 0;
+          if (daily > 0) {
+            return { value: daily, valid: true, source: 'SINGLE_LOT_DAILY' };
+          }
         }
 
-        return 0;
+        // มี LOT แต่ไม่มี Target/TG Original ที่ใช้คำนวณได้:
+        // ห้ามตีความเป็น Target = 0
+        return { value: 0, valid: false, source: 'PLAN_INCOMPLETE' };
       };
 
-      const target1 = resolveLotTarget(
+      const target1Info = resolveLotTarget(
+        lot1,
         item.target1,
         item.tg_original1,
         effectiveH1,
         !hasMultipleLots
       );
 
-      const target2 = resolveLotTarget(
+      const target2Info = resolveLotTarget(
+        lot2,
         item.target2,
         item.tg_original2,
         h2,
         false
       );
 
-      const target3 = resolveLotTarget(
+      const target3Info = resolveLotTarget(
+        lot3,
         item.target3,
         item.tg_original3,
         h3,
@@ -1332,7 +1354,9 @@
           no: 1,
           lot: lot1,
           model: item.model1 || item.model || '',
-          target: target1,
+          target: target1Info.value,
+          targetValid: target1Info.valid,
+          targetSource: target1Info.source,
           actual: item.actual1 !== undefined && item.actual1 !== null
             ? (Number(item.actual1) || 0)
             : (!hasMultipleLots ? (Number(item.actual) || 0) : 0),
@@ -1343,7 +1367,9 @@
           no: 2,
           lot: lot2,
           model: item.model2 || '',
-          target: target2,
+          target: target2Info.value,
+          targetValid: target2Info.valid,
+          targetSource: target2Info.source,
           actual: Number(item.actual2) || 0,
           hours: h2,
           productionHoursPassed: Number(item.production_hours_passed2) || 0
@@ -1352,7 +1378,9 @@
           no: 3,
           lot: lot3,
           model: item.model3 || '',
-          target: target3,
+          target: target3Info.value,
+          targetValid: target3Info.valid,
+          targetSource: target3Info.source,
           actual: Number(item.actual3) || 0,
           hours: h3,
           productionHoursPassed: Number(item.production_hours_passed3) || 0
@@ -1363,13 +1391,25 @@
 
     function getLotTimeMetricsForCard(item, lineName, lotPlan, lotIndex, allLots) {
       const lotHours = Math.max(0, Number(lotPlan.hours) || 0);
-      const elapsedHours = Math.min(lotHours, Math.max(0, Number(lotPlan.productionHoursPassed) || 0));
-      const dailyTG = Number(lotPlan.target) || 0;
+      const elapsedHours = Math.min(
+        lotHours,
+        Math.max(0, Number(lotPlan.productionHoursPassed) || 0)
+      );
+
+      const targetValid = lotPlan.targetValid === true;
+      const dailyTG = targetValid ? (Number(lotPlan.target) || 0) : 0;
       const actualNow = Number(lotPlan.actual) || 0;
-      const tgPerHourExact = lotHours > 0 ? dailyTG / lotHours : 0;
+      const tgPerHourExact =
+        targetValid && lotHours > 0
+          ? dailyTG / lotHours
+          : 0;
 
       return {
-        targetNow: Math.round(tgPerHourExact * elapsedHours),
+        targetValid: targetValid,
+        targetSource: lotPlan.targetSource || '',
+        targetNow: targetValid
+          ? Math.round(tgPerHourExact * elapsedHours)
+          : 0,
         avgOutput: elapsedHours > 0 ? actualNow / elapsedHours : 0,
         tgPerHour: tgPerHourExact,
         reportedHours: elapsedHours,
@@ -1388,7 +1428,7 @@
           const totalTg = Number(item.target) || ((Number(item.target1) || 0) + (Number(item.target2) || 0) + (Number(item.target3) || 0));
           const totalAc = Number(item.actual) || ((Number(item.actual1) || 0) + (Number(item.actual2) || 0) + (Number(item.actual3) || 0));
           container.innerHTML += createCardHtml(
-            lineName, '', '', totalTg, totalAc, item.remarks, null
+            lineName, '', '', totalTg, totalAc, item.remarks, null, true
           );
           return;
         }
@@ -1407,34 +1447,66 @@
             lotInfo.target,
             lotInfo.actual,
             item.remarks,
-            live
+            live,
+            lotInfo.targetValid
           );
         });
       });
     }
 
-    function createCardHtml(line, modelName, lotName, target, actual, remarks, liveMetrics) {
+    function createCardHtml(line, modelName, lotName, target, actual, remarks, liveMetrics, targetValid = true) {
       target = Number(target) || 0;
       actual = Number(actual) || 0;
 
-      const dayGap = actual - target;
-      const dayGapPct = target > 0 ? Math.round((dayGap / target) * 100) : 0;
-      const dayGapText = `${dayGap >= 0 ? '+' : ''}${dayGap.toLocaleString()} (${dayGapPct >= 0 ? '+' : ''}${dayGapPct}%)`;
-      const dayGapClass = dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
+      const hasValidTarget =
+        targetValid === true &&
+        target > 0 &&
+        (!liveMetrics || liveMetrics.targetValid !== false);
 
-      const targetNow = liveMetrics ? Number(liveMetrics.targetNow) || 0 : 0;
-      const actualNow = liveMetrics ? Number(liveMetrics.reportedActual) || 0 : actual;
-      const nowGap = actualNow - targetNow;
-      const nowGapPct = targetNow > 0 ? Math.round((nowGap / targetNow) * 100) : 0;
-      const nowGapText = `${nowGap >= 0 ? '+' : ''}${nowGap.toLocaleString()} (${nowGapPct >= 0 ? '+' : ''}${nowGapPct}%)`;
-      const nowGapClass = nowGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
+      const dayGap = hasValidTarget ? actual - target : 0;
+      const dayGapPct = hasValidTarget
+        ? Math.round((dayGap / target) * 100)
+        : 0;
+      const dayGapText = hasValidTarget
+        ? `${dayGap >= 0 ? '+' : ''}${dayGap.toLocaleString()} (${dayGapPct >= 0 ? '+' : ''}${dayGapPct}%)`
+        : 'แผน LOT ไม่ครบ';
+      const dayGapClass = hasValidTarget
+        ? (dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600')
+        : 'text-amber-600';
 
-      const avgOutput = liveMetrics ? Math.round(Number(liveMetrics.avgOutput) || 0) : 0;
-      const tgPerHour = liveMetrics ? Math.round(Number(liveMetrics.tgPerHour) || 0) : 0;
+      const targetNow = hasValidTarget && liveMetrics
+        ? Number(liveMetrics.targetNow) || 0
+        : 0;
+      const actualNow = liveMetrics
+        ? Number(liveMetrics.reportedActual) || 0
+        : actual;
+      const nowGap = hasValidTarget ? actualNow - targetNow : 0;
+      const nowGapPct = hasValidTarget && targetNow > 0
+        ? Math.round((nowGap / targetNow) * 100)
+        : 0;
+      const nowGapText = hasValidTarget
+        ? `${nowGap >= 0 ? '+' : ''}${nowGap.toLocaleString()} (${nowGapPct >= 0 ? '+' : ''}${nowGapPct}%)`
+        : '—';
+      const nowGapClass = hasValidTarget
+        ? (nowGap >= 0 ? 'text-emerald-600' : 'text-rose-600')
+        : 'text-slate-400';
 
-      const progressPct = target > 0 ? Math.round((actual / target) * 100) : 0;
-      const progressWidth = Math.max(0, Math.min(progressPct, 100));
-      const progressColor = progressPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+      const avgOutput = liveMetrics
+        ? Math.round(Number(liveMetrics.avgOutput) || 0)
+        : 0;
+      const tgPerHour = hasValidTarget && liveMetrics
+        ? Math.round(Number(liveMetrics.tgPerHour) || 0)
+        : 0;
+
+      const progressPct = hasValidTarget
+        ? Math.round((actual / target) * 100)
+        : 0;
+      const progressWidth = hasValidTarget
+        ? Math.max(0, Math.min(progressPct, 100))
+        : 0;
+      const progressColor = progressPct >= 100
+        ? 'bg-emerald-500'
+        : 'bg-amber-500';
       const remarksList = Array.isArray(remarks) ? remarks : [];
 
       return `
@@ -1451,7 +1523,7 @@
             <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
               <div class="font-semibold text-slate-500">
                 เป้าต่อวัน:
-                <span class="ml-1 font-extrabold text-slate-800">${target.toLocaleString()}</span>
+                <span class="ml-1 font-extrabold text-slate-800">${hasValidTarget ? target.toLocaleString() : '—'}</span>
               </div>
               <div class="font-extrabold ${dayGapClass}">${dayGapText}</div>
             </div>
@@ -1459,7 +1531,7 @@
             <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
               <div class="font-semibold text-slate-500">
                 เป้าตอนนี้:
-                <span class="ml-1 font-extrabold text-slate-800">${targetNow.toLocaleString()}</span>
+                <span class="ml-1 font-extrabold text-slate-800">${hasValidTarget ? targetNow.toLocaleString() : '—'}</span>
               </div>
               <div class="font-extrabold ${nowGapClass}">${nowGapText}</div>
             </div>
@@ -1471,7 +1543,7 @@
 
             <div class="text-xs font-semibold text-slate-500">
               TG Output/hr:
-              <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span>
+              <span class="ml-1 font-extrabold text-slate-800">${hasValidTarget ? tgPerHour.toLocaleString() : '—'}</span>
             </div>
           </div>
 
@@ -1479,7 +1551,7 @@
             <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
               <div class="${progressColor} h-2 rounded-full" style="width:${progressWidth}%"></div>
             </div>
-            <span class="text-xs font-extrabold text-slate-700">${progressPct}%</span>
+            <span class="text-xs font-extrabold text-slate-700">${hasValidTarget ? `${progressPct}%` : '—'}</span>
           </div>
 
           ${remarksList.length > 0 ? `
