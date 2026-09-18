@@ -1176,7 +1176,9 @@
             {
               label: 'Cumulative Actual',
               data: cumulativeActual,
-              spanGaps: false,
+              // เชื่อมเส้นข้าม slot ที่ไม่มีรายงานระหว่างกลาง
+              // แต่ trailing null หลัง slot ล่าสุดที่รายงาน จะไม่ถูกลากต่อไปอนาคต
+              spanGaps: true,
               borderColor: '#10B981',
               backgroundColor: 'rgba(16,185,129,0.08)',
               borderWidth: 3,
