@@ -245,7 +245,7 @@
 
     // Cache เฉพาะฝั่ง Dashboard เพื่อให้หน้าเปิดได้ทันที
     // ไม่แตะ Production write path / LOT switch / Repair / Trigger
-    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v4_lotplan_guard_';
+    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v5_remark_time_lot_';
 
     function getDashboardCacheKey(selectedDate, endDate) {
       const safeFrom = String(selectedDate || '').trim();
@@ -1417,6 +1417,57 @@
       };
     }
 
+    function escapeDashboardHtml_(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function getRemarksForCard_(item, lotName, isRange = false) {
+      const details = Array.isArray(item.remark_details)
+        ? item.remark_details
+        : [];
+
+      const cleanLot = String(lotName || '').trim().toUpperCase();
+
+      if (details.length > 0) {
+        const allLots = [
+          String(item.lot_number || item.lot1 || '').trim().toUpperCase(),
+          String(item.lot_number2 || item.lot2 || '').trim().toUpperCase(),
+          String(item.lot_number3 || item.lot3 || '').trim().toUpperCase()
+        ].filter(Boolean);
+
+        const hasMultipleLots = allLots.length > 1;
+
+        return details.filter(detail => {
+          if (isRange) return true;
+
+          const detailLot = String(detail && detail.lot || '')
+            .trim()
+            .toUpperCase();
+
+          if (cleanLot && detailLot) {
+            return detailLot === cleanLot;
+          }
+
+          // ข้อมูลเก่าที่ไม่มี LOT: ให้แสดงได้เฉพาะวันที่มี LOT เดียว
+          return !hasMultipleLots;
+        });
+      }
+
+      // Backward compatibility สำหรับ cache/API รุ่นเก่าที่มีแค่ข้อความ
+      const legacy = Array.isArray(item.remarks) ? item.remarks : [];
+      return legacy.map(text => ({
+        time_slot: '',
+        lot: cleanLot,
+        text: String(text || '')
+      }));
+    }
+
+
     function renderCards(lines, isRange) {
       const container = document.getElementById('cardsContainer');
       container.innerHTML = '';
@@ -1428,7 +1479,14 @@
           const totalTg = Number(item.target) || ((Number(item.target1) || 0) + (Number(item.target2) || 0) + (Number(item.target3) || 0));
           const totalAc = Number(item.actual) || ((Number(item.actual1) || 0) + (Number(item.actual2) || 0) + (Number(item.actual3) || 0));
           container.innerHTML += createCardHtml(
-            lineName, '', '', totalTg, totalAc, item.remarks, null, true
+            lineName,
+            '',
+            '',
+            totalTg,
+            totalAc,
+            getRemarksForCard_(item, '', true),
+            null,
+            true
           );
           return;
         }
@@ -1446,7 +1504,7 @@
             lotInfo.lot,
             lotInfo.target,
             lotInfo.actual,
-            item.remarks,
+            getRemarksForCard_(item, lotInfo.lot, false),
             live,
             lotInfo.targetValid
           );
@@ -1509,6 +1567,28 @@
         : 'bg-amber-500';
       const remarksList = Array.isArray(remarks) ? remarks : [];
 
+      const remarksHtml = remarksList.map(entry => {
+        const detail =
+          entry && typeof entry === 'object'
+            ? entry
+            : { time_slot: '', text: String(entry || '') };
+
+        const slot = escapeDashboardHtml_(detail.time_slot || '');
+        const text = escapeDashboardHtml_(detail.text || '');
+
+        if (!text) return '';
+
+        return `
+          <div class="flex items-start gap-1.5">
+            <span class="shrink-0">📝</span>
+            <span>
+              ${slot ? `<span class="font-extrabold">${slot}</span><span class="mx-1">•</span>` : ''}
+              ${text}
+            </span>
+          </div>
+        `;
+      }).filter(Boolean).join('');
+
       return `
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between gap-2.5">
           <!-- compact header: same visual scale as old card -->
@@ -1554,9 +1634,9 @@
             <span class="text-xs font-extrabold text-slate-700">${hasValidTarget ? `${progressPct}%` : '—'}</span>
           </div>
 
-          ${remarksList.length > 0 ? `
-          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
-            📝 ${remarksList.map(r => String(r).replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
+          ${remarksHtml ? `
+          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed space-y-1">
+            ${remarksHtml}
           </div>` : ''}
         </div>
       `;
