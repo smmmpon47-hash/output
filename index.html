@@ -241,10 +241,11 @@
     let lastDashboardVersion = "";
     let dashboardFetchInProgress = false;
     let currentDashboardIsRange = false;
+    let dashboardFetchSeq = 0; // ป้องกัน response เก่ากลับมาทับวันที่ใหม่
 
     // Cache เฉพาะฝั่ง Dashboard เพื่อให้หน้าเปิดได้ทันที
     // ไม่แตะ Production write path / LOT switch / Repair / Trigger
-    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v1_';
+    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v2_';
 
     function getDashboardCacheKey(selectedDate, endDate) {
       const safeFrom = String(selectedDate || '').trim();
@@ -279,6 +280,16 @@
         const data = cached && cached.data;
         if (!data || !Array.isArray(data.lines) || data.lines.length === 0) return false;
 
+        // cache ต้องเป็นของวันที่/ช่วงวันที่ที่กำลังเลือกเท่านั้น
+        const cachedFrom = String(cached.selectedDate || '').trim();
+        const cachedTo = String(cached.endDate || '').trim();
+        const wantedFrom = String(selectedDate || '').trim();
+        const wantedTo = String(endDate || '').trim();
+
+        if (cachedFrom !== wantedFrom || cachedTo !== wantedTo) {
+          return false;
+        }
+
         const isRange = Boolean(endDate && endDate !== selectedDate);
         currentDashboardIsRange = isRange;
         globalLinesData = data.lines;
@@ -312,6 +323,45 @@
       }
     }
 
+    function clearDashboardVisuals(message) {
+      globalLinesData = [];
+
+      const cards = document.getElementById('cardsContainer');
+      if (cards) {
+        cards.innerHTML = `
+          <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
+            ${message || 'กำลังโหลดข้อมูล...'}
+          </div>`;
+      }
+
+      if (chartInstance) {
+        chartInstance.destroy();
+        chartInstance = null;
+      }
+
+      if (hourlyChartInstance) {
+        hourlyChartInstance.destroy();
+        hourlyChartInstance = null;
+      }
+
+      if (cumulativeChartInstance) {
+        cumulativeChartInstance.destroy();
+        cumulativeChartInstance = null;
+      }
+
+      ['pulseActual', 'pulsePace', 'pulseExpectedPace', 'pulseProjected', 'pulseGap'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = '-';
+      });
+
+      const pulseSubtitle = document.getElementById('pulseSubtitle');
+      if (pulseSubtitle) pulseSubtitle.innerText = 'กำลังรอข้อมูลของวันที่เลือก';
+
+      const hourlySubtitle = document.getElementById('hourlyTargetSubtitle');
+      if (hourlySubtitle) hourlySubtitle.innerText = 'กำลังรอข้อมูลรายชั่วโมง';
+    }
+
+
     function getTodayStr() {
       const today = new Date();
       const yyyy = today.getFullYear();
@@ -337,8 +387,9 @@
     }
 
     async function fetchDashboardData(selectedDate, endDate) {
-      // กัน request ซ้อนกัน ถ้ารอบก่อนยังโหลดไม่เสร็จ
-      if (dashboardFetchInProgress) return;
+      // ทุก request มีเลขลำดับของตัวเอง
+      // ถ้าผู้ใช้เปลี่ยนวันที่ระหว่างโหลด response เก่าจะถูกทิ้งทันที
+      const requestId = ++dashboardFetchSeq;
       dashboardFetchInProgress = true;
 
       const isRange = endDate && endDate !== selectedDate;
@@ -350,8 +401,8 @@
           : `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
 
         const url = isRange
-          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
-          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
+          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}&_=${Date.now()}`
+          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&_=${Date.now()}`;
 
         const res = await fetch(url, {
           method: "GET",
@@ -372,35 +423,50 @@
           throw new Error("API ไม่ได้ส่งข้อมูล JSON กลับมา");
         }
 
-        if (data && data.lines && data.lines.length > 0) {
+        // มี request ใหม่กว่าแล้ว: ห้าม response เก่าทับหน้าจอ
+        if (requestId !== dashboardFetchSeq) {
+          return false;
+        }
+
+        if (data && Array.isArray(data.lines) && data.lines.length > 0) {
           globalLinesData = data.lines;
           renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
           updateHourlyChart();
 
-          // เก็บ snapshot ล่าสุดไว้ใน browser เพื่อเปิดครั้งถัดไปได้ทันที
           saveDashboardCache(selectedDate, endDate, data);
 
           document.getElementById('selectedDateText').innerText = isRange
             ? `แสดงข้อมูลสะสมช่วง: ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
             : `แสดงข้อมูลประจำวันที่: ${data.date || selectedDate}`;
         } else {
-          globalLinesData = [];
           showEmptyState();
+          document.getElementById('selectedDateText').innerText = isRange
+            ? `ไม่พบข้อมูลช่วง ${selectedDate} ถึง ${endDate}`
+            : `ไม่พบข้อมูลประจำวันที่ ${selectedDate}`;
         }
 
         updateLastUpdatedText(true);
+        return true;
 
       } catch (err) {
+        if (requestId !== dashboardFetchSeq) {
+          return false;
+        }
+
         console.error("Fetch Error:", err);
         document.getElementById('selectedDateText').innerText =
-          `ดึงข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง`;
+          `ดึงข้อมูล ${selectedDate}${isRange ? ` ถึง ${endDate}` : ''} ไม่สำเร็จ`;
         updateLastUpdatedText(false);
+        return false;
 
       } finally {
-        dashboardFetchInProgress = false;
+        if (requestId === dashboardFetchSeq) {
+          dashboardFetchInProgress = false;
+        }
       }
     }
+
 
     function updateLastUpdatedText(success) {
       const el = document.getElementById('lastUpdatedText');
@@ -496,28 +562,45 @@
       const selectedDate = document.getElementById('datePicker').value;
       const endDate = document.getElementById('datePickerTo').value;
 
-      if (selectedDate) {
-        await fetchDashboardData(selectedDate, endDate);
+      if (!selectedDate) return;
 
-        if (shouldWatchLiveChanges()) {
-          await syncDashboardVersionBaseline();
-        } else {
-          const el = document.getElementById('lastUpdatedText');
-          if (el) {
-            el.innerText = 'ข้อมูลย้อนหลัง';
-            el.className = "font-semibold text-slate-400";
-          }
+      // วันที่เปลี่ยน = baseline เดิมใช้ต่อไม่ได้
+      lastDashboardVersion = "";
+
+      // แสดงได้เฉพาะ cache ของวันที่/ช่วงที่เลือกเท่านั้น
+      const restored = restoreDashboardCache(selectedDate, endDate);
+
+      // ไม่มี cache ตรงวัน -> ล้างข้อมูลเดิมออกก่อน
+      // ป้องกันวันที่ 17 แต่ยังเห็นกราฟ/การ์ดของวันที่ 18
+      if (!restored) {
+        clearDashboardVisuals('กำลังโหลดข้อมูลของวันที่เลือก...');
+      }
+
+      const ok = await fetchDashboardData(selectedDate, endDate);
+
+      if (!ok && restored) {
+        const el = document.getElementById('selectedDateText');
+        if (el) {
+          el.innerText = endDate && endDate !== selectedDate
+            ? `เชื่อมต่อไม่สำเร็จ • กำลังแสดงข้อมูลที่บันทึกไว้ช่วง ${selectedDate} ถึง ${endDate}`
+            : `เชื่อมต่อไม่สำเร็จ • กำลังแสดงข้อมูลที่บันทึกไว้วันที่ ${selectedDate}`;
+        }
+      }
+
+      if (shouldWatchLiveChanges()) {
+        await syncDashboardVersionBaseline();
+      } else if (ok) {
+        const el = document.getElementById('lastUpdatedText');
+        if (el) {
+          el.innerText = 'ข้อมูลย้อนหลัง';
+          el.className = "font-semibold text-slate-400";
         }
       }
     }
 
+
     function showEmptyState() {
-      document.getElementById('cardsContainer').innerHTML = `
-        <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
-          🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก
-        </div>`;
-      if (chartInstance) chartInstance.destroy();
-      if (hourlyChartInstance) hourlyChartInstance.destroy();
+      clearDashboardVisuals('🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก');
     }
 
     // 1. กราฟ Daily Stacked Bar + Target Gap + Data Labels
@@ -1419,15 +1502,27 @@
       const todayStr = getTodayStr();
       document.getElementById('datePicker').value = todayStr;
 
+      // ป้องกัน browser จำค่าช่วงวันที่เก่าจากรอบก่อน
+      const endPicker = document.getElementById('datePickerTo');
+      if (endPicker) endPicker.value = '';
+
       // LINE profile ทำงานแยก ไม่ขวางการโหลด Dashboard
       initLiffProfile();
 
-      // แสดง snapshot ล่าสุดจาก browser ก่อน (ถ้ามี) แล้วค่อยอัปเดตข้อมูลจริงจาก Apps Script
-      // รอบแรกที่ยังไม่เคยเปิดจะไม่มี cache และทำงานเหมือนเดิม
-      restoreDashboardCache(todayStr, '');
+      // cache ต้องตรงกับวันนี้เท่านั้น
+      const restored = restoreDashboardCache(todayStr, '');
+      if (!restored) {
+        clearDashboardVisuals('กำลังโหลดข้อมูลวันนี้...');
+      }
 
-      // โหลดข้อมูลจริงจาก backend ตามเดิม โดยไม่แตะ Production logic
-      await fetchDashboardData(todayStr);
+      const ok = await fetchDashboardData(todayStr, '');
+
+      if (!ok && restored) {
+        const el = document.getElementById('selectedDateText');
+        if (el) {
+          el.innerText = `เชื่อมต่อไม่สำเร็จ • กำลังแสดงข้อมูลที่บันทึกไว้วันที่ ${todayStr}`;
+        }
+      }
 
       // หน้าแสดงแล้ว ค่อยเช็ก version และเริ่ม watcher
       syncDashboardVersionBaseline()
