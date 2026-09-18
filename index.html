@@ -129,10 +129,19 @@
             <p id="pulseActual" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
             <p class="text-[10px] text-slate-400 mt-1">ชิ้นสะสม</p>
           </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Current LOT Pace</p>
-            <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">เฉลี่ยชิ้น / ชม. ของ LOT ปัจจุบัน</p>
+          <div id="pulsePaceCard" class="bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-colors duration-300">
+            <div class="grid grid-cols-2 divide-x divide-slate-300/70">
+              <div class="pr-3">
+                <p class="text-[10px] font-semibold text-slate-500 leading-tight">Current LOT Pace</p>
+                <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
+                <p class="text-[10px] text-slate-500 mt-1">ชิ้น/ชม.</p>
+              </div>
+              <div class="pl-3">
+                <p class="text-[10px] font-semibold text-slate-500 leading-tight">งานที่ควรจะได้</p>
+                <p id="pulseExpectedPace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
+                <p class="text-[10px] text-slate-500 mt-1">ชิ้น/ชม.</p>
+              </div>
+            </div>
           </div>
           <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
             <p class="text-[11px] font-semibold text-indigo-500">Order Progress</p>
@@ -722,7 +731,7 @@
 
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        ['pulseActual', 'pulsePace', 'pulseProjected', 'pulseGap'].forEach(id => {
+        ['pulseActual', 'pulsePace', 'pulseExpectedPace', 'pulseProjected', 'pulseGap'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.innerText = '-';
         });
@@ -848,6 +857,72 @@
       };
     }
 
+    function getActiveLotExpectedPace(lineObj) {
+      const activeLot = String(lineObj.active_lot || '').trim().toUpperCase();
+
+      const candidates = [
+        {
+          lot: String(lineObj.lot_number || lineObj.lot1 || '').trim().toUpperCase(),
+          target: Number(lineObj.target1) || 0,
+          hours: Number(lineObj.hours1) || 0
+        },
+        {
+          lot: String(lineObj.lot_number2 || lineObj.lot2 || '').trim().toUpperCase(),
+          target: Number(lineObj.target2) || 0,
+          hours: Number(lineObj.hours2) || 0
+        },
+        {
+          lot: String(lineObj.lot_number3 || lineObj.lot3 || '').trim().toUpperCase(),
+          target: Number(lineObj.target3) || 0,
+          hours: Number(lineObj.hours3) || 0
+        }
+      ];
+
+      const matched = candidates.find(item => activeLot && item.lot === activeLot);
+      if (matched && matched.hours > 0) {
+        return matched.target / matched.hours;
+      }
+
+      // fallback เฉพาะกรณีข้อมูลเก่าที่หา LOT ปัจจุบันไม่เจอ
+      const totalTarget = Number(lineObj.target) || 0;
+      const totalHours = Number(lineObj.total_working_hours) || 0;
+      return totalHours > 0 ? totalTarget / totalHours : 0;
+    }
+
+    function updatePulsePaceStatus(currentPace, expectedPace) {
+      const card = document.getElementById('pulsePaceCard');
+      const expectedEl = document.getElementById('pulseExpectedPace');
+      if (!card || !expectedEl) return;
+
+      expectedEl.innerText = expectedPace > 0
+        ? Math.round(expectedPace).toLocaleString()
+        : '-';
+
+      card.classList.remove(
+        'bg-emerald-50', 'border-emerald-200',
+        'bg-amber-50', 'border-amber-200',
+        'bg-rose-50', 'border-rose-200',
+        'bg-slate-50', 'border-slate-100'
+      );
+
+      if (!(currentPace > 0) || !(expectedPace > 0)) {
+        card.classList.add('bg-slate-50', 'border-slate-100');
+        return;
+      }
+
+      // คำนวณ Gap ไว้ภายในเท่านั้น ไม่แสดงบนหน้าจอ
+      // >= -10 = เขียว | < -10 ถึง -20 = เหลือง | < -20 = แดง
+      const paceGap = currentPace - expectedPace;
+
+      if (paceGap >= -10) {
+        card.classList.add('bg-emerald-50', 'border-emerald-200');
+      } else if (paceGap >= -20) {
+        card.classList.add('bg-amber-50', 'border-amber-200');
+      } else {
+        card.classList.add('bg-rose-50', 'border-rose-200');
+      }
+    }
+
     function updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine) {
       const totalActualToday = Number(lineObj.actual) ||
         hourlyActuals.reduce((sum, v) => sum + (Number(v) || 0), 0);
@@ -857,6 +932,7 @@
 
       if (currentDashboardIsRange) {
         document.getElementById('pulsePace').innerText = '-';
+        updatePulsePaceStatus(0, 0);
         document.getElementById('pulseProjected').innerText = '-';
         document.getElementById('pulseGap').innerText = '-';
         document.getElementById('pulseOrderMeta').innerText = 'เลือกวันเดียวเพื่อดู Order';
@@ -876,11 +952,14 @@
 
       const paceInfo = getActiveLotPace(lineObj, selectedLine);
       const currentLotPace = paceInfo.pace;
+      const expectedLotPace = getActiveLotExpectedPace(lineObj);
 
       document.getElementById('pulsePace').innerText =
         currentLotPace > 0
           ? Math.round(currentLotPace).toLocaleString()
           : '-';
+
+      updatePulsePaceStatus(currentLotPace, expectedLotPace);
 
       const orderValue = document.getElementById('pulseProjected');
       const orderMeta = document.getElementById('pulseOrderMeta');
