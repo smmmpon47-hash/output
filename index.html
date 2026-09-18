@@ -233,6 +233,76 @@
     let dashboardFetchInProgress = false;
     let currentDashboardIsRange = false;
 
+    // Cache เฉพาะฝั่ง Dashboard เพื่อให้หน้าเปิดได้ทันที
+    // ไม่แตะ Production write path / LOT switch / Repair / Trigger
+    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v1_';
+
+    function getDashboardCacheKey(selectedDate, endDate) {
+      const safeFrom = String(selectedDate || '').trim();
+      const safeTo = String(endDate || '').trim();
+      return `${DASHBOARD_CACHE_PREFIX}${safeFrom}_${safeTo || safeFrom}`;
+    }
+
+    function saveDashboardCache(selectedDate, endDate, data) {
+      try {
+        if (!data || !Array.isArray(data.lines) || data.lines.length === 0) return;
+        const payload = {
+          savedAt: Date.now(),
+          selectedDate: String(selectedDate || ''),
+          endDate: String(endDate || ''),
+          data: data
+        };
+        localStorage.setItem(
+          getDashboardCacheKey(selectedDate, endDate),
+          JSON.stringify(payload)
+        );
+      } catch (err) {
+        console.warn('Dashboard cache save skipped:', err);
+      }
+    }
+
+    function restoreDashboardCache(selectedDate, endDate) {
+      try {
+        const raw = localStorage.getItem(getDashboardCacheKey(selectedDate, endDate));
+        if (!raw) return false;
+
+        const cached = JSON.parse(raw);
+        const data = cached && cached.data;
+        if (!data || !Array.isArray(data.lines) || data.lines.length === 0) return false;
+
+        const isRange = Boolean(endDate && endDate !== selectedDate);
+        currentDashboardIsRange = isRange;
+        globalLinesData = data.lines;
+
+        renderCards(data.lines, isRange);
+        renderDailyChart(data.lines);
+        updateHourlyChart();
+
+        const savedTime = cached.savedAt
+          ? new Date(cached.savedAt).toLocaleTimeString('th-TH', {
+              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+            })
+          : '';
+
+        document.getElementById('selectedDateText').innerText = isRange
+          ? `แสดงข้อมูลล่าสุดที่บันทึกไว้ช่วง ${selectedDate} ถึง ${endDate} • กำลังอัปเดต...`
+          : `แสดงข้อมูลล่าสุดที่บันทึกไว้: ${selectedDate} • กำลังอัปเดต...`;
+
+        const updatedEl = document.getElementById('lastUpdatedText');
+        if (updatedEl) {
+          updatedEl.innerText = savedTime
+            ? `ข้อมูลเดิม ${savedTime} • กำลังอัปเดต...`
+            : 'กำลังอัปเดตข้อมูลล่าสุด...';
+          updatedEl.className = 'font-semibold text-amber-500';
+        }
+
+        return true;
+      } catch (err) {
+        console.warn('Dashboard cache restore skipped:', err);
+        return false;
+      }
+    }
+
     function getTodayStr() {
       const today = new Date();
       const yyyy = today.getFullYear();
@@ -298,6 +368,9 @@
           renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
           updateHourlyChart();
+
+          // เก็บ snapshot ล่าสุดไว้ใน browser เพื่อเปิดครั้งถัดไปได้ทันที
+          saveDashboardCache(selectedDate, endDate, data);
 
           document.getElementById('selectedDateText').innerText = isRange
             ? `แสดงข้อมูลสะสมช่วง: ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
@@ -1270,7 +1343,11 @@
       // LINE profile ทำงานแยก ไม่ขวางการโหลด Dashboard
       initLiffProfile();
 
-      // โหลดข้อมูลหลักก่อน
+      // แสดง snapshot ล่าสุดจาก browser ก่อน (ถ้ามี) แล้วค่อยอัปเดตข้อมูลจริงจาก Apps Script
+      // รอบแรกที่ยังไม่เคยเปิดจะไม่มี cache และทำงานเหมือนเดิม
+      restoreDashboardCache(todayStr, '');
+
+      // โหลดข้อมูลจริงจาก backend ตามเดิม โดยไม่แตะ Production logic
       await fetchDashboardData(todayStr);
 
       // หน้าแสดงแล้ว ค่อยเช็ก version และเริ่ม watcher
