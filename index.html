@@ -93,7 +93,7 @@
       z-index:2;pointer-events:none;
     }
     .floor-zone{
-      pointer-events:auto;cursor:pointer;
+      pointer-events:all;cursor:pointer;
       fill:rgba(255,255,255,.012);stroke:rgba(37,99,235,0);stroke-width:3;
       vector-effect:non-scaling-stroke;
       transform-box:fill-box;transform-origin:center;
@@ -112,11 +112,11 @@
     }
     .floor-zone.is-selected{
       transform:translateY(-3px) scale(1.014);
-      fill:rgba(37,99,235,.13);stroke:#2563EB;
+      fill:rgba(37,99,235,.17);stroke:#2563EB;
       filter:drop-shadow(0 10px 15px rgba(37,99,235,.18));
     }
     .floor-zone[data-line="C"].is-selected{
-      fill:rgba(34,160,107,.12);stroke:#22A06B;
+      fill:rgba(34,160,107,.16);stroke:#22A06B;
       filter:drop-shadow(0 10px 15px rgba(34,160,107,.17));
     }
     .floor-mobile-hint{display:none;margin-top:10px;font-size:11px;color:#94A3B8;}
@@ -145,7 +145,16 @@
     }
 
     @media (hover:hover) and (pointer:fine){
-      .floor-zone:hover{transform:translateY(-3px) scale(1.012);}
+      .floor-zone:hover{
+        transform:translateY(-3px) scale(1.012);
+        fill:rgba(37,99,235,.12);
+        stroke:#38BDF8;
+        filter:drop-shadow(0 9px 13px rgba(15,39,71,.16));
+      }
+      .floor-zone[data-line="C"]:hover{
+        fill:rgba(34,160,107,.11);
+        stroke:#22A06B;
+      }
     }
     @media (max-width:760px){
       .floor-toolbar{align-items:flex-start;}
@@ -497,7 +506,6 @@
                       tabindex="0" role="button" aria-label="เลือก LINE B"></rect>
               </svg>
             </div>
-          </div>
           </div>
 
           <aside class="floor-side-panel">
@@ -852,20 +860,54 @@
       wrap.innerHTML=remarks.length?remarks.slice(-6).reverse().map(r=>`<div class="border-b border-slate-100 pb-2 last:border-0">${escapeFloorHtml(r)}</div>`).join(''):'<div class="text-slate-400">ยังไม่มีหมายเหตุของ LINE นี้</div>';
     }
     function openFloorLineDetail(lineCode,shouldScroll=true) {
-      const clean=normalizeLineCode(lineCode),item=getFloorLineData(clean);
-      if(!item||!['B','C'].includes(clean))return;
-      selectedFloorLine=clean;hoveredFloorLine='';
+      const clean=normalizeLineCode(lineCode);
+      if(!['B','C'].includes(clean))return;
+
+      selectedFloorLine=clean;
+      hoveredFloorLine='';
       setFloorZoneVisual(clean,'selected');
-      const section=document.getElementById('lineDetailSection');section?.classList.remove('hidden');
-      const select=document.getElementById('lineSelect');if(select)select.value=clean;
-      const target=Number(item.target)||((Number(item.target1)||0)+(Number(item.target2)||0)+(Number(item.target3)||0));
-      const actual=Number(item.actual)||((Number(item.actual1)||0)+(Number(item.actual2)||0)+(Number(item.actual3)||0));
-      const gap=actual-target,ach=target>0?(actual/target)*100:0;
-      const hours=Number(item.total_working_hours)||((Number(item.hours1)||0)+(Number(item.hours2)||0)+(Number(item.hours3)||0));
-      const activeLot=getFloorActiveLot(item),activeModel=getFloorActiveModel(item,activeLot),status=getDetailStatus(item);
-      document.getElementById('detailLineTitle').innerText=`LINE ${clean} — รายละเอียดการผลิต`;
+
+      const section=document.getElementById('lineDetailSection');
+      section?.classList.remove('hidden');
+
+      const select=document.getElementById('lineSelect');
+      if(select)select.value=clean;
+
+      document.getElementById('detailLineTitle').innerText=`LINE ${clean} — รายละเอียด`;
       document.getElementById('detailBreadcrumb').innerText=`Dashboard › ชั้น 3 › LINE ${clean}`;
       document.getElementById('detailLineBadge').innerText=`LINE ${clean}`;
+
+      const item=getFloorLineData(clean);
+
+      // เปิดครึ่งล่างก่อนทันที แล้วค่อยเติมข้อมูลเมื่อ API พร้อม
+      if(!item){
+        document.getElementById('detailStatusBadge').innerText='กำลังโหลด';
+        document.getElementById('detailStatusText').innerText='กำลังโหลด';
+        document.getElementById('detailStatusMeta').innerText='รอข้อมูล LINE จาก Dashboard';
+        document.getElementById('detailModel').innerText='-';
+        document.getElementById('detailLot').innerText='LOT -';
+        document.getElementById('detailTarget').innerText='-';
+        document.getElementById('detailActual').innerText='-';
+        document.getElementById('detailGap').innerText='-';
+        document.getElementById('detailAch').innerText='-';
+        document.getElementById('detailHours').innerText='-';
+        document.getElementById('detailLotTableBody').innerHTML='<tr><td colspan="7" class="text-slate-400">กำลังโหลดข้อมูล...</td></tr>';
+        document.getElementById('detailRemarks').innerHTML='<div class="text-slate-400">กำลังโหลดข้อมูล...</div>';
+
+        if(shouldScroll)section?.scrollIntoView({behavior:'smooth',block:'start'});
+        return;
+      }
+
+      const target=Number(item.target)||((Number(item.target1)||0)+(Number(item.target2)||0)+(Number(item.target3)||0));
+      const actual=Number(item.actual)||((Number(item.actual1)||0)+(Number(item.actual2)||0)+(Number(item.actual3)||0));
+      const gap=actual-target;
+      const ach=target>0?(actual/target)*100:0;
+      const hours=Number(item.total_working_hours)||((Number(item.hours1)||0)+(Number(item.hours2)||0)+(Number(item.hours3)||0));
+
+      const activeLot=getFloorActiveLot(item);
+      const activeModel=getFloorActiveModel(item,activeLot);
+      const status=getDetailStatus(item);
+
       document.getElementById('detailStatusBadge').innerText=status.badge;
       document.getElementById('detailStatusText').innerText=status.text;
       document.getElementById('detailStatusMeta').innerText=status.meta;
@@ -873,25 +915,33 @@
       document.getElementById('detailLot').innerText=activeLot?`LOT ${activeLot}`:'LOT -';
       document.getElementById('detailTarget').innerText=target.toLocaleString();
       document.getElementById('detailActual').innerText=actual.toLocaleString();
+
       const gapEl=document.getElementById('detailGap');
       gapEl.innerText=`${gap>=0?'+':''}${gap.toLocaleString()}`;
-      gapEl.className=`text-xl font-extrabold mt-1 ${gap>=0?'text-emerald-600':'text-rose-600'}`;
+      gapEl.className=`text-[16px] font-extrabold mt-1 ${gap>=0?'text-emerald-600':'text-rose-600'}`;
+
       document.getElementById('detailAch').innerText=`${ach.toFixed(1)}%`;
       document.getElementById('detailHours').innerText=hours>0?hours.toLocaleString():'-';
 
-      const detailUpdateEl = document.getElementById('detailUpdateTime');
-      if (detailUpdateEl) {
-        detailUpdateEl.innerText = new Date().toLocaleTimeString('th-TH', {
-          hour:'2-digit',
-          minute:'2-digit',
-          hour12:false
+      const detailUpdateEl=document.getElementById('detailUpdateTime');
+      if(detailUpdateEl){
+        detailUpdateEl.innerText=new Date().toLocaleTimeString('th-TH',{
+          hour:'2-digit',minute:'2-digit',hour12:false
         });
       }
 
-      renderFloorDetailLotTable(item,clean);renderFloorDetailRemarks(item);updateHourlyChart();
-      requestAnimationFrame(()=>{hourlyChartInstance?.resize();cumulativeChartInstance?.resize();});
+      renderFloorDetailLotTable(item,clean);
+      renderFloorDetailRemarks(item);
+      updateHourlyChart();
+
+      requestAnimationFrame(()=>{
+        hourlyChartInstance?.resize();
+        cumulativeChartInstance?.resize();
+      });
+
       if(shouldScroll)section?.scrollIntoView({behavior:'smooth',block:'start'});
     }
+
     function closeFloorLineDetail() {
       selectedFloorLine='';hoveredFloorLine='';
       document.querySelectorAll('.floor-zone').forEach(z=>z.classList.remove('is-selected','is-preview'));
@@ -901,22 +951,33 @@
     }
     function initFloor3Interaction() {
       const stage=document.getElementById('floor3Stage');
+      const zones=Array.from(document.querySelectorAll('.floor-zone'));
 
-      ['B','C'].forEach(line=>{
-        const zone=document.getElementById(`zone${line}`);
-        if(!zone)return;
+      zones.forEach(zone=>{
+        const line=zone.dataset.line;
 
         zone.addEventListener('mouseenter',()=>previewFloorLine(line));
         zone.addEventListener('mouseleave',()=>leaveFloorLine(line));
         zone.addEventListener('focus',()=>previewFloorLine(line));
         zone.addEventListener('blur',()=>leaveFloorLine(line));
 
-        // Click / tap = เลือกจริง และเปิดรายละเอียดครึ่งล่างทันที
+        // Desktop click
         zone.addEventListener('click',e=>{
+          e.preventDefault();
           e.stopPropagation();
           openFloorLineDetail(line,true);
         });
 
+        // Mobile/tablet tap
+        zone.addEventListener('pointerup',e=>{
+          if(e.pointerType==='touch'){
+            e.preventDefault();
+            e.stopPropagation();
+            openFloorLineDetail(line,true);
+          }
+        });
+
+        // Keyboard
         zone.addEventListener('keydown',e=>{
           if(e.key==='Enter'||e.key===' '){
             e.preventDefault();
@@ -927,9 +988,12 @@
 
       document.getElementById('backOverviewBtn')?.addEventListener('click',closeFloorLineDetail);
 
-      // คลิกพื้นว่างบนผัง = ปิด selected/detail
+      // Click blank floor = back to overview
       stage?.addEventListener('click',e=>{
-        if(e.target===stage||e.target.tagName==='IMG'){
+        const zone=e.target.closest?.('.floor-zone');
+        if(zone)return;
+
+        if(e.target===stage||e.target.tagName==='IMG'||e.target.tagName==='svg'){
           closeFloorLineDetail();
         }
       });
