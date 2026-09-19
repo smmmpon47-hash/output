@@ -129,19 +129,10 @@
             <p id="pulseActual" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
             <p class="text-[10px] text-slate-400 mt-1">ชิ้นสะสม</p>
           </div>
-          <div id="pulsePaceCard" class="bg-slate-50 border border-slate-100 rounded-2xl p-4 transition-colors duration-300">
-            <div class="grid grid-cols-2 divide-x divide-slate-300/70">
-              <div class="pr-3">
-                <p class="text-[10px] font-semibold text-slate-500 leading-tight">Current LOT Pace</p>
-                <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-                <p class="text-[10px] text-slate-500 mt-1">ชิ้น/ชม.</p>
-              </div>
-              <div class="pl-3">
-                <p class="text-[10px] font-semibold text-slate-500 leading-tight">งานที่ควรจะได้</p>
-                <p id="pulseExpectedPace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-                <p class="text-[10px] text-slate-500 mt-1">ชิ้น/ชม.</p>
-              </div>
-            </div>
+          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+            <p class="text-[11px] font-semibold text-slate-400">Current LOT Pace</p>
+            <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
+            <p class="text-[10px] text-slate-400 mt-1">เฉลี่ยชิ้น / ชม. ของ LOT ปัจจุบัน</p>
           </div>
           <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
             <p class="text-[11px] font-semibold text-indigo-500">Order Progress</p>
@@ -241,126 +232,6 @@
     let lastDashboardVersion = "";
     let dashboardFetchInProgress = false;
     let currentDashboardIsRange = false;
-    let dashboardFetchSeq = 0; // ป้องกัน response เก่ากลับมาทับวันที่ใหม่
-
-    // Cache เฉพาะฝั่ง Dashboard เพื่อให้หน้าเปิดได้ทันที
-    // ไม่แตะ Production write path / LOT switch / Repair / Trigger
-    const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v5_remark_time_lot_';
-
-    function getDashboardCacheKey(selectedDate, endDate) {
-      const safeFrom = String(selectedDate || '').trim();
-      const safeTo = String(endDate || '').trim();
-      return `${DASHBOARD_CACHE_PREFIX}${safeFrom}_${safeTo || safeFrom}`;
-    }
-
-    function saveDashboardCache(selectedDate, endDate, data) {
-      try {
-        if (!data || !Array.isArray(data.lines) || data.lines.length === 0) return;
-        const payload = {
-          savedAt: Date.now(),
-          selectedDate: String(selectedDate || ''),
-          endDate: String(endDate || ''),
-          data: data
-        };
-        localStorage.setItem(
-          getDashboardCacheKey(selectedDate, endDate),
-          JSON.stringify(payload)
-        );
-      } catch (err) {
-        console.warn('Dashboard cache save skipped:', err);
-      }
-    }
-
-    function restoreDashboardCache(selectedDate, endDate) {
-      try {
-        const raw = localStorage.getItem(getDashboardCacheKey(selectedDate, endDate));
-        if (!raw) return false;
-
-        const cached = JSON.parse(raw);
-        const data = cached && cached.data;
-        if (!data || !Array.isArray(data.lines) || data.lines.length === 0) return false;
-
-        // cache ต้องเป็นของวันที่/ช่วงวันที่ที่กำลังเลือกเท่านั้น
-        const cachedFrom = String(cached.selectedDate || '').trim();
-        const cachedTo = String(cached.endDate || '').trim();
-        const wantedFrom = String(selectedDate || '').trim();
-        const wantedTo = String(endDate || '').trim();
-
-        if (cachedFrom !== wantedFrom || cachedTo !== wantedTo) {
-          return false;
-        }
-
-        const isRange = Boolean(endDate && endDate !== selectedDate);
-        currentDashboardIsRange = isRange;
-        globalLinesData = data.lines;
-
-        renderCards(data.lines, isRange);
-        renderDailyChart(data.lines);
-        updateHourlyChart();
-
-        const savedTime = cached.savedAt
-          ? new Date(cached.savedAt).toLocaleTimeString('th-TH', {
-              hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-            })
-          : '';
-
-        document.getElementById('selectedDateText').innerText = isRange
-          ? `แสดงข้อมูลล่าสุดที่บันทึกไว้ช่วง ${selectedDate} ถึง ${endDate} • กำลังอัปเดต...`
-          : `แสดงข้อมูลล่าสุดที่บันทึกไว้: ${selectedDate} • กำลังอัปเดต...`;
-
-        const updatedEl = document.getElementById('lastUpdatedText');
-        if (updatedEl) {
-          updatedEl.innerText = savedTime
-            ? `ข้อมูลเดิม ${savedTime} • กำลังอัปเดต...`
-            : 'กำลังอัปเดตข้อมูลล่าสุด...';
-          updatedEl.className = 'font-semibold text-amber-500';
-        }
-
-        return true;
-      } catch (err) {
-        console.warn('Dashboard cache restore skipped:', err);
-        return false;
-      }
-    }
-
-    function clearDashboardVisuals(message) {
-      globalLinesData = [];
-
-      const cards = document.getElementById('cardsContainer');
-      if (cards) {
-        cards.innerHTML = `
-          <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
-            ${message || 'กำลังโหลดข้อมูล...'}
-          </div>`;
-      }
-
-      if (chartInstance) {
-        chartInstance.destroy();
-        chartInstance = null;
-      }
-
-      if (hourlyChartInstance) {
-        hourlyChartInstance.destroy();
-        hourlyChartInstance = null;
-      }
-
-      if (cumulativeChartInstance) {
-        cumulativeChartInstance.destroy();
-        cumulativeChartInstance = null;
-      }
-
-      ['pulseActual', 'pulsePace', 'pulseExpectedPace', 'pulseProjected', 'pulseGap'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.innerText = '-';
-      });
-
-      const pulseSubtitle = document.getElementById('pulseSubtitle');
-      if (pulseSubtitle) pulseSubtitle.innerText = 'กำลังรอข้อมูลของวันที่เลือก';
-
-      const hourlySubtitle = document.getElementById('hourlyTargetSubtitle');
-      if (hourlySubtitle) hourlySubtitle.innerText = 'กำลังรอข้อมูลรายชั่วโมง';
-    }
-
 
     function getTodayStr() {
       const today = new Date();
@@ -387,9 +258,8 @@
     }
 
     async function fetchDashboardData(selectedDate, endDate) {
-      // ทุก request มีเลขลำดับของตัวเอง
-      // ถ้าผู้ใช้เปลี่ยนวันที่ระหว่างโหลด response เก่าจะถูกทิ้งทันที
-      const requestId = ++dashboardFetchSeq;
+      // กัน request ซ้อนกัน ถ้ารอบก่อนยังโหลดไม่เสร็จ
+      if (dashboardFetchInProgress) return;
       dashboardFetchInProgress = true;
 
       const isRange = endDate && endDate !== selectedDate;
@@ -401,8 +271,8 @@
           : `กำลังโหลดข้อมูลประจำวันที่ ${selectedDate}...`;
 
         const url = isRange
-          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}&_=${Date.now()}`
-          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&_=${Date.now()}`;
+          ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
+          : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
 
         const res = await fetch(url, {
           method: "GET",
@@ -423,50 +293,32 @@
           throw new Error("API ไม่ได้ส่งข้อมูล JSON กลับมา");
         }
 
-        // มี request ใหม่กว่าแล้ว: ห้าม response เก่าทับหน้าจอ
-        if (requestId !== dashboardFetchSeq) {
-          return false;
-        }
-
-        if (data && Array.isArray(data.lines) && data.lines.length > 0) {
+        if (data && data.lines && data.lines.length > 0) {
           globalLinesData = data.lines;
           renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
           updateHourlyChart();
 
-          saveDashboardCache(selectedDate, endDate, data);
-
           document.getElementById('selectedDateText').innerText = isRange
             ? `แสดงข้อมูลสะสมช่วง: ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
             : `แสดงข้อมูลประจำวันที่: ${data.date || selectedDate}`;
         } else {
+          globalLinesData = [];
           showEmptyState();
-          document.getElementById('selectedDateText').innerText = isRange
-            ? `ไม่พบข้อมูลช่วง ${selectedDate} ถึง ${endDate}`
-            : `ไม่พบข้อมูลประจำวันที่ ${selectedDate}`;
         }
 
         updateLastUpdatedText(true);
-        return true;
 
       } catch (err) {
-        if (requestId !== dashboardFetchSeq) {
-          return false;
-        }
-
         console.error("Fetch Error:", err);
         document.getElementById('selectedDateText').innerText =
-          `ดึงข้อมูล ${selectedDate}${isRange ? ` ถึง ${endDate}` : ''} ไม่สำเร็จ`;
+          `ดึงข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง`;
         updateLastUpdatedText(false);
-        return false;
 
       } finally {
-        if (requestId === dashboardFetchSeq) {
-          dashboardFetchInProgress = false;
-        }
+        dashboardFetchInProgress = false;
       }
     }
-
 
     function updateLastUpdatedText(success) {
       const el = document.getElementById('lastUpdatedText');
@@ -562,45 +414,28 @@
       const selectedDate = document.getElementById('datePicker').value;
       const endDate = document.getElementById('datePickerTo').value;
 
-      if (!selectedDate) return;
+      if (selectedDate) {
+        await fetchDashboardData(selectedDate, endDate);
 
-      // วันที่เปลี่ยน = baseline เดิมใช้ต่อไม่ได้
-      lastDashboardVersion = "";
-
-      // แสดงได้เฉพาะ cache ของวันที่/ช่วงที่เลือกเท่านั้น
-      const restored = restoreDashboardCache(selectedDate, endDate);
-
-      // ไม่มี cache ตรงวัน -> ล้างข้อมูลเดิมออกก่อน
-      // ป้องกันวันที่ 17 แต่ยังเห็นกราฟ/การ์ดของวันที่ 18
-      if (!restored) {
-        clearDashboardVisuals('กำลังโหลดข้อมูลของวันที่เลือก...');
-      }
-
-      const ok = await fetchDashboardData(selectedDate, endDate);
-
-      if (!ok && restored) {
-        const el = document.getElementById('selectedDateText');
-        if (el) {
-          el.innerText = endDate && endDate !== selectedDate
-            ? `เชื่อมต่อไม่สำเร็จ • กำลังแสดงข้อมูลที่บันทึกไว้ช่วง ${selectedDate} ถึง ${endDate}`
-            : `เชื่อมต่อไม่สำเร็จ • กำลังแสดงข้อมูลที่บันทึกไว้วันที่ ${selectedDate}`;
-        }
-      }
-
-      if (shouldWatchLiveChanges()) {
-        await syncDashboardVersionBaseline();
-      } else if (ok) {
-        const el = document.getElementById('lastUpdatedText');
-        if (el) {
-          el.innerText = 'ข้อมูลย้อนหลัง';
-          el.className = "font-semibold text-slate-400";
+        if (shouldWatchLiveChanges()) {
+          await syncDashboardVersionBaseline();
+        } else {
+          const el = document.getElementById('lastUpdatedText');
+          if (el) {
+            el.innerText = 'ข้อมูลย้อนหลัง';
+            el.className = "font-semibold text-slate-400";
+          }
         }
       }
     }
 
-
     function showEmptyState() {
-      clearDashboardVisuals('🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก');
+      document.getElementById('cardsContainer').innerHTML = `
+        <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
+          🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก
+        </div>`;
+      if (chartInstance) chartInstance.destroy();
+      if (hourlyChartInstance) hourlyChartInstance.destroy();
     }
 
     // 1. กราฟ Daily Stacked Bar + Target Gap + Data Labels
@@ -814,7 +649,7 @@
 
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-        ['pulseActual', 'pulsePace', 'pulseExpectedPace', 'pulseProjected', 'pulseGap'].forEach(id => {
+        ['pulseActual', 'pulsePace', 'pulseProjected', 'pulseGap'].forEach(id => {
           const el = document.getElementById(id);
           if (el) el.innerText = '-';
         });
@@ -940,72 +775,6 @@
       };
     }
 
-    function getActiveLotExpectedPace(lineObj) {
-      const activeLot = String(lineObj.active_lot || '').trim().toUpperCase();
-
-      const candidates = [
-        {
-          lot: String(lineObj.lot_number || lineObj.lot1 || '').trim().toUpperCase(),
-          target: Number(lineObj.target1) || 0,
-          hours: Number(lineObj.hours1) || 0
-        },
-        {
-          lot: String(lineObj.lot_number2 || lineObj.lot2 || '').trim().toUpperCase(),
-          target: Number(lineObj.target2) || 0,
-          hours: Number(lineObj.hours2) || 0
-        },
-        {
-          lot: String(lineObj.lot_number3 || lineObj.lot3 || '').trim().toUpperCase(),
-          target: Number(lineObj.target3) || 0,
-          hours: Number(lineObj.hours3) || 0
-        }
-      ];
-
-      const matched = candidates.find(item => activeLot && item.lot === activeLot);
-      if (matched && matched.hours > 0) {
-        return matched.target / matched.hours;
-      }
-
-      // fallback เฉพาะกรณีข้อมูลเก่าที่หา LOT ปัจจุบันไม่เจอ
-      const totalTarget = Number(lineObj.target) || 0;
-      const totalHours = Number(lineObj.total_working_hours) || 0;
-      return totalHours > 0 ? totalTarget / totalHours : 0;
-    }
-
-    function updatePulsePaceStatus(currentPace, expectedPace) {
-      const card = document.getElementById('pulsePaceCard');
-      const expectedEl = document.getElementById('pulseExpectedPace');
-      if (!card || !expectedEl) return;
-
-      expectedEl.innerText = expectedPace > 0
-        ? Math.round(expectedPace).toLocaleString()
-        : '-';
-
-      card.classList.remove(
-        'bg-emerald-50', 'border-emerald-200',
-        'bg-amber-50', 'border-amber-200',
-        'bg-rose-50', 'border-rose-200',
-        'bg-slate-50', 'border-slate-100'
-      );
-
-      if (!(currentPace > 0) || !(expectedPace > 0)) {
-        card.classList.add('bg-slate-50', 'border-slate-100');
-        return;
-      }
-
-      // คำนวณ Gap ไว้ภายในเท่านั้น ไม่แสดงบนหน้าจอ
-      // >= -10 = เขียว | < -10 ถึง -20 = เหลือง | < -20 = แดง
-      const paceGap = currentPace - expectedPace;
-
-      if (paceGap >= -10) {
-        card.classList.add('bg-emerald-50', 'border-emerald-200');
-      } else if (paceGap >= -20) {
-        card.classList.add('bg-amber-50', 'border-amber-200');
-      } else {
-        card.classList.add('bg-rose-50', 'border-rose-200');
-      }
-    }
-
     function updateProductionPulse(lineObj, timeSlots, hourlyActuals, targetLine, selectedLine) {
       const totalActualToday = Number(lineObj.actual) ||
         hourlyActuals.reduce((sum, v) => sum + (Number(v) || 0), 0);
@@ -1015,7 +784,6 @@
 
       if (currentDashboardIsRange) {
         document.getElementById('pulsePace').innerText = '-';
-        updatePulsePaceStatus(0, 0);
         document.getElementById('pulseProjected').innerText = '-';
         document.getElementById('pulseGap').innerText = '-';
         document.getElementById('pulseOrderMeta').innerText = 'เลือกวันเดียวเพื่อดู Order';
@@ -1035,14 +803,11 @@
 
       const paceInfo = getActiveLotPace(lineObj, selectedLine);
       const currentLotPace = paceInfo.pace;
-      const expectedLotPace = getActiveLotExpectedPace(lineObj);
 
       document.getElementById('pulsePace').innerText =
         currentLotPace > 0
           ? Math.round(currentLotPace).toLocaleString()
           : '-';
-
-      updatePulsePaceStatus(currentLotPace, expectedLotPace);
 
       const orderValue = document.getElementById('pulseProjected');
       const orderMeta = document.getElementById('pulseOrderMeta');
@@ -1176,9 +941,7 @@
             {
               label: 'Cumulative Actual',
               data: cumulativeActual,
-              // เชื่อมเส้นข้าม slot ที่ไม่มีรายงานระหว่างกลาง
-              // แต่ trailing null หลัง slot ล่าสุดที่รายงาน จะไม่ถูกลากต่อไปอนาคต
-              spanGaps: true,
+              spanGaps: false,
               borderColor: '#10B981',
               backgroundColor: 'rgba(16,185,129,0.08)',
               borderWidth: 3,
@@ -1279,194 +1042,57 @@
       const lot2 = String(item.lot_number2 || item.lot2 || '').trim();
       const lot3 = String(item.lot_number3 || item.lot3 || '').trim();
 
-      const hasMultipleLots = Boolean(lot2 || lot3);
-
       // Old single-LOT rows may not have HOURS_1 populated.
-      const effectiveH1 = h1 > 0 ? h1 : (!hasMultipleLots ? totalHours : 0);
-
-      const resolveLotTarget = (
-        lotName,
-        explicitTarget,
-        tgOriginal,
-        lotHours,
-        allowDailyFallback
-      ) => {
-        const explicit = Number(explicitTarget) || 0;
-        const tg = Number(tgOriginal) || 0;
-        const hrs = Number(lotHours) || 0;
-
-        if (!lotName) {
-          return { value: 0, valid: false, source: 'NO_LOT' };
-        }
-
-        if (explicit > 0) {
-          return { value: explicit, valid: true, source: 'TARGET_COLUMN' };
-        }
-
-        // Safety fallback สำหรับข้อมูลเก่า:
-        // ใช้ได้เฉพาะเมื่อมี TG Original + Hours + Total Hours ครบจริง
-        if (tg > 0 && hrs > 0 && totalHours > 0) {
-          return {
-            value: Math.round((tg / totalHours) * hrs),
-            valid: true,
-            source: 'TG_ORIGINAL_FALLBACK'
-          };
-        }
-
-        if (allowDailyFallback) {
-          const daily = Number(item.target) || 0;
-          if (daily > 0) {
-            return { value: daily, valid: true, source: 'SINGLE_LOT_DAILY' };
-          }
-        }
-
-        // มี LOT แต่ไม่มี Target/TG Original ที่ใช้คำนวณได้:
-        // ห้ามตีความเป็น Target = 0
-        return { value: 0, valid: false, source: 'PLAN_INCOMPLETE' };
-      };
-
-      const target1Info = resolveLotTarget(
-        lot1,
-        item.target1,
-        item.tg_original1,
-        effectiveH1,
-        !hasMultipleLots
-      );
-
-      const target2Info = resolveLotTarget(
-        lot2,
-        item.target2,
-        item.tg_original2,
-        h2,
-        false
-      );
-
-      const target3Info = resolveLotTarget(
-        lot3,
-        item.target3,
-        item.tg_original3,
-        h3,
-        false
-      );
+      const effectiveH1 = h1 > 0 ? h1 : (!lot2 && !lot3 ? totalHours : 0);
 
       return [
         {
           no: 1,
           lot: lot1,
           model: item.model1 || item.model || '',
-          target: target1Info.value,
-          targetValid: target1Info.valid,
-          targetSource: target1Info.source,
-          actual: item.actual1 !== undefined && item.actual1 !== null
-            ? (Number(item.actual1) || 0)
-            : (!hasMultipleLots ? (Number(item.actual) || 0) : 0),
-          hours: effectiveH1,
-          productionHoursPassed: Number(item.production_hours_passed1) || 0
+          target: Number(item.target1) || Number(item.target) || 0,
+          actual: item.actual1 !== undefined && item.actual1 !== null ? (Number(item.actual1) || 0) : (Number(item.actual) || 0),
+          hours: effectiveH1
         },
         {
           no: 2,
           lot: lot2,
           model: item.model2 || '',
-          target: target2Info.value,
-          targetValid: target2Info.valid,
-          targetSource: target2Info.source,
+          target: Number(item.target2) || 0,
           actual: Number(item.actual2) || 0,
           hours: h2,
-          productionHoursPassed: Number(item.production_hours_passed2) || 0
+          productionHoursPassed: Number(item.production_hours_passed_2) || 0,
+          currentActual: Number(item.current_actual_2) || 0
         },
         {
           no: 3,
           lot: lot3,
           model: item.model3 || '',
-          target: target3Info.value,
-          targetValid: target3Info.valid,
-          targetSource: target3Info.source,
+          target: Number(item.target3) || 0,
           actual: Number(item.actual3) || 0,
           hours: h3,
-          productionHoursPassed: Number(item.production_hours_passed3) || 0
+          productionHoursPassed: Number(item.production_hours_passed_3) || 0,
+          currentActual: Number(item.current_actual_3) || 0
         }
       ];
     }
 
-
     function getLotTimeMetricsForCard(item, lineName, lotPlan, lotIndex, allLots) {
+      // ใช้ checkpoint จาก Apps Script/Hourly_Log โดยตรง ไม่เดาจากเวลาเปิด Dashboard
       const lotHours = Math.max(0, Number(lotPlan.hours) || 0);
-      const elapsedHours = Math.min(
-        lotHours,
-        Math.max(0, Number(lotPlan.productionHoursPassed) || 0)
-      );
-
-      const targetValid = lotPlan.targetValid === true;
-      const dailyTG = targetValid ? (Number(lotPlan.target) || 0) : 0;
-      const actualNow = Number(lotPlan.actual) || 0;
-      const tgPerHourExact =
-        targetValid && lotHours > 0
-          ? dailyTG / lotHours
-          : 0;
+      const dailyTG = Number(lotPlan.target) || 0;
+      const productionHoursPassed = Math.min(lotHours, Math.max(0, Number(lotPlan.productionHoursPassed) || 0));
+      const actualNow = Number(lotPlan.currentActual) || 0;
+      const tgPerHourExact = lotHours > 0 ? dailyTG / lotHours : 0;
 
       return {
-        targetValid: targetValid,
-        targetSource: lotPlan.targetSource || '',
-        targetNow: targetValid
-          ? Math.round(tgPerHourExact * elapsedHours)
-          : 0,
-        avgOutput: elapsedHours > 0 ? actualNow / elapsedHours : 0,
+        targetNow: Math.round(tgPerHourExact * productionHoursPassed),
+        avgOutput: productionHoursPassed > 0 ? actualNow / productionHoursPassed : 0,
         tgPerHour: tgPerHourExact,
-        reportedHours: elapsedHours,
+        reportedHours: productionHoursPassed,
         reportedActual: actualNow
       };
     }
-
-    function escapeDashboardHtml_(value) {
-      return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function getRemarksForCard_(item, lotName, isRange = false) {
-      const details = Array.isArray(item.remark_details)
-        ? item.remark_details
-        : [];
-
-      const cleanLot = String(lotName || '').trim().toUpperCase();
-
-      if (details.length > 0) {
-        const allLots = [
-          String(item.lot_number || item.lot1 || '').trim().toUpperCase(),
-          String(item.lot_number2 || item.lot2 || '').trim().toUpperCase(),
-          String(item.lot_number3 || item.lot3 || '').trim().toUpperCase()
-        ].filter(Boolean);
-
-        const hasMultipleLots = allLots.length > 1;
-
-        return details.filter(detail => {
-          if (isRange) return true;
-
-          const detailLot = String(detail && detail.lot || '')
-            .trim()
-            .toUpperCase();
-
-          if (cleanLot && detailLot) {
-            return detailLot === cleanLot;
-          }
-
-          // ข้อมูลเก่าที่ไม่มี LOT: ให้แสดงได้เฉพาะวันที่มี LOT เดียว
-          return !hasMultipleLots;
-        });
-      }
-
-      // Backward compatibility สำหรับ cache/API รุ่นเก่าที่มีแค่ข้อความ
-      const legacy = Array.isArray(item.remarks) ? item.remarks : [];
-      return legacy.map(text => ({
-        time_slot: '',
-        lot: cleanLot,
-        text: String(text || '')
-      }));
-    }
-
 
     function renderCards(lines, isRange) {
       const container = document.getElementById('cardsContainer');
@@ -1479,14 +1105,7 @@
           const totalTg = Number(item.target) || ((Number(item.target1) || 0) + (Number(item.target2) || 0) + (Number(item.target3) || 0));
           const totalAc = Number(item.actual) || ((Number(item.actual1) || 0) + (Number(item.actual2) || 0) + (Number(item.actual3) || 0));
           container.innerHTML += createCardHtml(
-            lineName,
-            '',
-            '',
-            totalTg,
-            totalAc,
-            getRemarksForCard_(item, '', true),
-            null,
-            true
+            lineName, '', '', totalTg, totalAc, item.remarks, null
           );
           return;
         }
@@ -1504,90 +1123,36 @@
             lotInfo.lot,
             lotInfo.target,
             lotInfo.actual,
-            getRemarksForCard_(item, lotInfo.lot, false),
-            live,
-            lotInfo.targetValid
+            item.remarks,
+            live
           );
         });
       });
     }
 
-    function createCardHtml(line, modelName, lotName, target, actual, remarks, liveMetrics, targetValid = true) {
+    function createCardHtml(line, modelName, lotName, target, actual, remarks, liveMetrics) {
       target = Number(target) || 0;
       actual = Number(actual) || 0;
 
-      const hasValidTarget =
-        targetValid === true &&
-        target > 0 &&
-        (!liveMetrics || liveMetrics.targetValid !== false);
+      const dayGap = actual - target;
+      const dayGapPct = target > 0 ? Math.round((dayGap / target) * 100) : 0;
+      const dayGapText = `${dayGap >= 0 ? '+' : ''}${dayGap.toLocaleString()} (${dayGapPct >= 0 ? '+' : ''}${dayGapPct}%)`;
+      const dayGapClass = dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
 
-      const dayGap = hasValidTarget ? actual - target : 0;
-      const dayGapPct = hasValidTarget
-        ? Math.round((dayGap / target) * 100)
-        : 0;
-      const dayGapText = hasValidTarget
-        ? `${dayGap >= 0 ? '+' : ''}${dayGap.toLocaleString()} (${dayGapPct >= 0 ? '+' : ''}${dayGapPct}%)`
-        : 'แผน LOT ไม่ครบ';
-      const dayGapClass = hasValidTarget
-        ? (dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600')
-        : 'text-amber-600';
+      const targetNow = liveMetrics ? Number(liveMetrics.targetNow) || 0 : 0;
+      const actualNow = liveMetrics ? Number(liveMetrics.reportedActual) || 0 : actual;
+      const nowGap = actualNow - targetNow;
+      const nowGapPct = targetNow > 0 ? Math.round((nowGap / targetNow) * 100) : 0;
+      const nowGapText = `${nowGap >= 0 ? '+' : ''}${nowGap.toLocaleString()} (${nowGapPct >= 0 ? '+' : ''}${nowGapPct}%)`;
+      const nowGapClass = nowGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
 
-      const targetNow = hasValidTarget && liveMetrics
-        ? Number(liveMetrics.targetNow) || 0
-        : 0;
-      const actualNow = liveMetrics
-        ? Number(liveMetrics.reportedActual) || 0
-        : actual;
-      const nowGap = hasValidTarget ? actualNow - targetNow : 0;
-      const nowGapPct = hasValidTarget && targetNow > 0
-        ? Math.round((nowGap / targetNow) * 100)
-        : 0;
-      const nowGapText = hasValidTarget
-        ? `${nowGap >= 0 ? '+' : ''}${nowGap.toLocaleString()} (${nowGapPct >= 0 ? '+' : ''}${nowGapPct}%)`
-        : '—';
-      const nowGapClass = hasValidTarget
-        ? (nowGap >= 0 ? 'text-emerald-600' : 'text-rose-600')
-        : 'text-slate-400';
+      const avgOutput = liveMetrics ? Math.round(Number(liveMetrics.avgOutput) || 0) : 0;
+      const tgPerHour = liveMetrics ? Math.round(Number(liveMetrics.tgPerHour) || 0) : 0;
 
-      const avgOutput = liveMetrics
-        ? Math.round(Number(liveMetrics.avgOutput) || 0)
-        : 0;
-      const tgPerHour = hasValidTarget && liveMetrics
-        ? Math.round(Number(liveMetrics.tgPerHour) || 0)
-        : 0;
-
-      const progressPct = hasValidTarget
-        ? Math.round((actual / target) * 100)
-        : 0;
-      const progressWidth = hasValidTarget
-        ? Math.max(0, Math.min(progressPct, 100))
-        : 0;
-      const progressColor = progressPct >= 100
-        ? 'bg-emerald-500'
-        : 'bg-amber-500';
+      const progressPct = target > 0 ? Math.round((actual / target) * 100) : 0;
+      const progressWidth = Math.max(0, Math.min(progressPct, 100));
+      const progressColor = progressPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
       const remarksList = Array.isArray(remarks) ? remarks : [];
-
-      const remarksHtml = remarksList.map(entry => {
-        const detail =
-          entry && typeof entry === 'object'
-            ? entry
-            : { time_slot: '', text: String(entry || '') };
-
-        const slot = escapeDashboardHtml_(detail.time_slot || '');
-        const text = escapeDashboardHtml_(detail.text || '');
-
-        if (!text) return '';
-
-        return `
-          <div class="flex items-start gap-1.5">
-            <span class="shrink-0">📝</span>
-            <span>
-              ${slot ? `<span class="font-extrabold">${slot}</span><span class="mx-1">•</span>` : ''}
-              ${text}
-            </span>
-          </div>
-        `;
-      }).filter(Boolean).join('');
 
       return `
         <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between gap-2.5">
@@ -1603,7 +1168,7 @@
             <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
               <div class="font-semibold text-slate-500">
                 เป้าต่อวัน:
-                <span class="ml-1 font-extrabold text-slate-800">${hasValidTarget ? target.toLocaleString() : '—'}</span>
+                <span class="ml-1 font-extrabold text-slate-800">${target.toLocaleString()}</span>
               </div>
               <div class="font-extrabold ${dayGapClass}">${dayGapText}</div>
             </div>
@@ -1611,7 +1176,7 @@
             <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
               <div class="font-semibold text-slate-500">
                 เป้าตอนนี้:
-                <span class="ml-1 font-extrabold text-slate-800">${hasValidTarget ? targetNow.toLocaleString() : '—'}</span>
+                <span class="ml-1 font-extrabold text-slate-800">${targetNow.toLocaleString()}</span>
               </div>
               <div class="font-extrabold ${nowGapClass}">${nowGapText}</div>
             </div>
@@ -1623,7 +1188,7 @@
 
             <div class="text-xs font-semibold text-slate-500">
               TG Output/hr:
-              <span class="ml-1 font-extrabold text-slate-800">${hasValidTarget ? tgPerHour.toLocaleString() : '—'}</span>
+              <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span>
             </div>
           </div>
 
@@ -1631,12 +1196,12 @@
             <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
               <div class="${progressColor} h-2 rounded-full" style="width:${progressWidth}%"></div>
             </div>
-            <span class="text-xs font-extrabold text-slate-700">${hasValidTarget ? `${progressPct}%` : '—'}</span>
+            <span class="text-xs font-extrabold text-slate-700">${progressPct}%</span>
           </div>
 
-          ${remarksHtml ? `
-          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed space-y-1">
-            ${remarksHtml}
+          ${remarksList.length > 0 ? `
+          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
+            📝 ${remarksList.map(r => String(r).replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
           </div>` : ''}
         </div>
       `;
@@ -1704,27 +1269,11 @@
       const todayStr = getTodayStr();
       document.getElementById('datePicker').value = todayStr;
 
-      // ป้องกัน browser จำค่าช่วงวันที่เก่าจากรอบก่อน
-      const endPicker = document.getElementById('datePickerTo');
-      if (endPicker) endPicker.value = '';
-
       // LINE profile ทำงานแยก ไม่ขวางการโหลด Dashboard
       initLiffProfile();
 
-      // cache ต้องตรงกับวันนี้เท่านั้น
-      const restored = restoreDashboardCache(todayStr, '');
-      if (!restored) {
-        clearDashboardVisuals('กำลังโหลดข้อมูลวันนี้...');
-      }
-
-      const ok = await fetchDashboardData(todayStr, '');
-
-      if (!ok && restored) {
-        const el = document.getElementById('selectedDateText');
-        if (el) {
-          el.innerText = `เชื่อมต่อไม่สำเร็จ • กำลังแสดงข้อมูลที่บันทึกไว้วันที่ ${todayStr}`;
-        }
-      }
+      // โหลดข้อมูลหลักก่อน
+      await fetchDashboardData(todayStr);
 
       // หน้าแสดงแล้ว ค่อยเช็ก version และเริ่ม watcher
       syncDashboardVersionBaseline()
