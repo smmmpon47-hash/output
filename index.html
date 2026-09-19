@@ -30,6 +30,11 @@
         linear-gradient(180deg,#F7FAFD 0%,var(--dash-bg) 100%);
       color:var(--dash-text);
     }
+
+    body,button,input,select,textarea,table{
+      font-family:'Kanit',sans-serif !important;
+    }
+
     .nav-btn.active{
       background-color:rgba(255,255,255,.16);
       border-left:4px solid #22C55E;
@@ -114,58 +119,6 @@
       fill:rgba(34,160,107,.12);stroke:#22A06B;
       filter:drop-shadow(0 10px 15px rgba(34,160,107,.17));
     }
-
-    .floor-preview{
-      position:absolute;z-index:5;width:min(280px,calc(100% - 24px));
-      opacity:0;visibility:hidden;transform:translateY(8px) scale(.985);
-      transition:opacity var(--floor-motion),transform var(--floor-motion),
-                 visibility 0s linear var(--floor-motion);
-      pointer-events:none;
-    }
-    .floor-preview.show{
-      opacity:1;visibility:visible;transform:translateY(0) scale(1);
-      transition-delay:0s;pointer-events:auto;
-    }
-    .floor-preview-card{
-      position:relative;background:rgba(255,255,255,.98);
-      border:1px solid rgba(148,163,184,.32);border-radius:14px;
-      box-shadow:0 18px 44px rgba(15,39,71,.18);
-      padding:14px;backdrop-filter:blur(10px);
-    }
-    .floor-preview-card::before{
-      content:"";position:absolute;left:-7px;top:44px;width:14px;height:14px;
-      background:#fff;border-left:1px solid rgba(148,163,184,.28);
-      border-bottom:1px solid rgba(148,163,184,.28);transform:rotate(45deg);
-    }
-    .floor-preview-head{
-      display:flex;align-items:flex-start;justify-content:space-between;gap:10px;
-      border-bottom:1px solid #EEF2F7;padding-bottom:10px;margin-bottom:10px;
-    }
-    .preview-status{
-      display:inline-flex;align-items:center;gap:6px;
-      font-size:10px;font-weight:700;color:#15805A;margin-top:2px;
-    }
-    .preview-grid{
-      display:grid;grid-template-columns:1fr auto;gap:5px 12px;
-      font-size:11px;align-items:baseline;
-    }
-    .preview-grid .label{color:#64748B;}
-    .preview-grid .value{color:#0F172A;font-weight:700;text-align:right;}
-    .preview-progress{
-      height:6px;background:#EAF0F6;border-radius:999px;
-      overflow:hidden;margin:10px 0 12px;
-    }
-    .preview-progress>span{
-      display:block;height:100%;background:linear-gradient(90deg,#2563EB,#38BDF8);
-      border-radius:999px;
-    }
-    .preview-details-btn{
-      width:100%;border:0;border-radius:9px;background:#173B66;color:#fff;
-      padding:9px 12px;font-family:'Kanit',sans-serif;font-size:11px;font-weight:700;
-      cursor:pointer;transition:background-color .18s ease,transform .18s ease;
-    }
-    .preview-details-btn:hover{background:#0F2747;}
-    .preview-details-btn:active{transform:translateY(1px);}
     .floor-mobile-hint{display:none;margin-top:10px;font-size:11px;color:#94A3B8;}
 
     /* ===== Detail opened by click ===== */
@@ -189,162 +142,393 @@
     @media (max-width:760px){
       .floor-toolbar{align-items:flex-start;}
       .floor-legend{gap:9px;}
-      .floor-preview{
-        left:12px!important;right:12px!important;bottom:12px!important;
-        top:auto!important;width:auto;
-      }
-      .floor-preview-card::before{display:none;}
-      .floor-mobile-hint{display:block;}
     }
+
     @media (prefers-reduced-motion:reduce){
-      .floor-stage img,.floor-zone,.floor-preview,.preview-details-btn{
+      .floor-stage img,.floor-zone{
         transition-duration:.01ms!important;animation-duration:.01ms!important;
       }
       .floor-zone.is-preview,.floor-zone.is-selected{transform:none;}
     }
+  
+    /* ===== Approved Master Mockup Skin ===== */
+    .master-header{
+      min-height:64px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+      padding:10px 16px;
+      border-radius:0 0 14px 14px;
+      background:linear-gradient(135deg,#0C2848 0%,#143A63 70%,#102E50 100%);
+      color:white;
+      box-shadow:0 7px 20px rgba(15,39,71,.14);
+    }
+    .brand-block{display:flex;align-items:center;gap:11px;min-width:0;}
+    .brand-mark{
+      width:38px;height:38px;border-radius:9px;
+      display:grid;place-items:center;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:22px;
+      flex:0 0 auto;
+    }
+    .header-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
+    .header-pill{
+      min-height:40px;
+      display:flex;align-items:center;gap:8px;
+      padding:7px 11px;border-radius:9px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.11);
+      color:#E2E8F0;
+      font-size:11px;
+    }
+    .header-pill strong{font-size:12px;color:#fff;}
+    .header-live-dot{
+      width:9px;height:9px;border-radius:999px;background:#22C55E;
+      box-shadow:0 0 0 4px rgba(34,197,94,.08);
+    }
+    .header-nav-btn{
+      width:38px;height:38px;border-radius:9px;border:1px solid rgba(255,255,255,.11);
+      background:rgba(255,255,255,.06);color:#fff;
+      display:grid;place-items:center;cursor:pointer;
+      transition:background .18s ease,transform .18s ease;
+    }
+    .header-nav-btn:hover{background:rgba(255,255,255,.12);transform:translateY(-1px);}
+    .mock-section{
+      background:#fff;
+      border:1px solid #E3EBF4;
+      border-radius:14px;
+      box-shadow:0 4px 14px rgba(15,39,71,.04);
+    }
+    .mock-section-title{
+      font-size:14px;font-weight:800;color:#172033;
+    }
+
+    .overview-layout{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 155px;
+      gap:10px;
+      align-items:stretch;
+    }
+    .overview-side{
+      display:grid;
+      gap:8px;
+      align-content:start;
+    }
+    .overview-stat{
+      display:grid;
+      grid-template-columns:36px 1fr;
+      gap:9px;
+      align-items:center;
+      background:#F8FAFD;
+      border:1px solid #E6EDF5;
+      border-radius:10px;
+      padding:10px;
+      min-height:68px;
+    }
+    .overview-stat-icon{
+      width:34px;height:34px;border-radius:8px;
+      display:grid;place-items:center;
+      font-size:15px;font-weight:800;
+      background:#EDF4FB;color:#173B66;
+    }
+    .overview-stat.actual .overview-stat-icon{background:#E7F8EF;color:#159A67;}
+    .overview-stat.actual .overview-stat-value{color:#14A66F;}
+    .overview-stat-value{
+      font-size:22px;line-height:1;font-weight:800;color:#17304E;
+    }
+    .overview-stat-label{font-size:9px;color:#64748B;font-weight:600;margin-bottom:4px;}
+
+    .line-cards-master{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:8px;
+    }
+    .master-line-card{
+      background:#fff;border:1px solid #E4EBF3;border-radius:12px;
+      padding:12px;min-width:0;
+      box-shadow:0 3px 10px rgba(15,39,71,.035);
+    }
+    .master-line-head{
+      display:flex;justify-content:space-between;align-items:flex-start;gap:8px;
+      margin-bottom:8px;
+    }
+    .master-status{
+      display:inline-flex;align-items:center;gap:5px;
+      padding:4px 7px;border-radius:8px;
+      font-size:9px;font-weight:700;white-space:nowrap;
+    }
+    .master-status.running{background:#EAF9F2;color:#16865D;}
+    .master-status.warning{background:#FFF6E2;color:#B87709;}
+    .master-status.muted{background:#F1F5F9;color:#64748B;}
+    .master-status-dot{width:7px;height:7px;border-radius:999px;background:currentColor;}
+    .card-stat-row{
+      display:grid;grid-template-columns:1fr auto;gap:7px;
+      align-items:baseline;font-size:10px;line-height:1.35;
+    }
+    .master-card-progress{
+      height:6px;border-radius:999px;background:#EAF0F6;overflow:hidden;
+    }
+
+    .floor-master-grid{
+      display:grid;
+      grid-template-columns:minmax(0,3.25fr) minmax(215px,.9fr);
+      gap:12px;
+      align-items:stretch;
+    }
+    .floor-side-panel{
+      background:#F8FAFD;border:1px solid #E6EDF5;border-radius:12px;
+      padding:14px;
+      min-width:0;
+    }
+    .usage-step{
+      display:grid;grid-template-columns:24px 1fr;gap:9px;
+      align-items:start;margin-top:9px;
+      color:#475569;font-size:10px;
+    }
+    .usage-no{
+      width:22px;height:22px;border-radius:999px;
+      display:grid;place-items:center;background:#4F46E5;color:#fff;
+      font-size:10px;font-weight:800;
+    }
+
+    .detail-master{
+      border:2px solid #163A61;
+      border-radius:15px;
+      background:#fff;
+      overflow:hidden;
+      box-shadow:0 6px 16px rgba(15,39,71,.06);
+    }
+    .detail-topbar{
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      flex-wrap:wrap;padding:11px 12px 7px;
+      border-bottom:1px solid #E9EFF6;
+    }
+    .production-tab{
+      display:inline-flex;align-items:center;gap:7px;
+      padding:8px 17px;border-radius:8px 8px 0 0;
+      background:#2168F3;color:#fff;font-size:10px;font-weight:800;
+      margin-top:1px;
+    }
+    .detail-kpi-master-grid{
+      display:grid;
+      grid-template-columns:1.35fr 1.25fr repeat(5,minmax(0,.85fr));
+      gap:7px;
+      padding:9px 10px 5px;
+    }
+    .detail-kpi.compact{
+      padding:9px 10px;border-radius:9px;
+    }
+    .detail-content-master{
+      display:grid;
+      grid-template-columns:minmax(0,1.1fr) minmax(0,1.05fr) minmax(220px,.62fr);
+      gap:8px;
+      padding:5px 10px 10px;
+      align-items:stretch;
+    }
+    .detail-right-stack{display:grid;grid-template-rows:auto 1fr;gap:8px;}
+    .detail-subpanel.compact{border-radius:10px;padding:10px;}
+    .detail-subpanel.compact h3{font-size:10px;}
+
+    @media(max-width:1150px){
+      .line-cards-master{grid-template-columns:repeat(3,minmax(0,1fr));}
+      .detail-kpi-master-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+      .detail-content-master{grid-template-columns:1fr 1fr;}
+      .detail-right-stack{grid-column:1/-1;grid-template-columns:1fr 1fr;grid-template-rows:none;}
+    }
+    @media(max-width:860px){
+      .overview-layout{grid-template-columns:1fr;}
+      .overview-side{grid-template-columns:repeat(3,1fr);}
+      .floor-master-grid{grid-template-columns:1fr;}
+      .line-cards-master{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .detail-content-master{grid-template-columns:1fr;}
+      .detail-right-stack{grid-column:auto;grid-template-columns:1fr;}
+    }
+    @media(max-width:560px){
+      .master-header{align-items:flex-start;}
+      .header-meta{width:100%;justify-content:flex-start;}
+      .overview-side{grid-template-columns:1fr;}
+      .line-cards-master{grid-template-columns:1fr;}
+      .detail-kpi-master-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
+
   </style>
 </head>
-<body class="flex h-screen overflow-hidden">
-
-  <!-- Sidebar ด้านข้าง -->
-  <div class="w-16 bg-slate-900 text-white flex flex-col items-center py-6 gap-8 shadow-xl z-20">
-    <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">📊</div>
-    <div class="flex flex-col gap-4 w-full">
-      <button onclick="switchTab('tab1')" id="nav-tab1" class="nav-btn active p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">📈</span>
-      </button>
-      <button onclick="switchTab('tab2')" id="nav-tab2" class="nav-btn p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">🔍</span>
-      </button>
-    </div>
-  </div>
-
+<body class="min-h-screen overflow-x-hidden">
   <!-- Content Area -->
-  <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-    
+  <div class="w-full max-w-[1680px] mx-auto p-2 md:p-3 pb-16">
     <!-- Top Bar -->
-    <div class="dashboard-topbar flex justify-between items-center mb-6 p-4 rounded-2xl">
-      <div>
-        <h1 id="pageTitle" class="text-lg font-bold text-white">Production Dashboard</h1>
-        <p class="text-xs text-slate-300">
-          <span class="font-semibold text-emerald-600">● LIVE</span>
-          • อัปเดตเมื่อข้อมูลเปลี่ยน
-          • <span id="lastUpdatedText">กำลังโหลด...</span>
-        </p>
+    <header class="master-header mb-3">
+      <div class="brand-block">
+        <div class="brand-mark">🏭</div>
+        <div class="min-w-0">
+          <h1 id="pageTitle" class="text-[17px] leading-tight font-extrabold text-white">Production Dashboard</h1>
+          <p class="text-[10px] text-slate-300 mt-0.5">ติดตามการผลิตและสถานะไลน์การผลิตแบบเรียลไทม์</p>
+        </div>
       </div>
-      <div class="flex items-center gap-2 bg-white/10 border border-white/10 px-3 py-1.5 rounded-full">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="displayName" class="text-xs font-semibold text-white">กำลังเชื่อมต่อ LINE...</span>
-      </div>
-    </div>
 
-    <!-- PAGE 1: Dashboard ภาพรวม -->
-    <div id="tab1" class="space-y-6">
-
-      <section class="dash-panel p-5 rounded-3xl">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+      <div class="header-meta">
+        <div class="header-pill">
+          <span>📅</span>
           <div>
-            <h2 class="font-bold text-slate-800 text-base">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
-            <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
+            <strong id="headerDateText">กำลังโหลด...</strong>
+            <div class="text-[9px] text-slate-400">วันที่ปัจจุบัน</div>
           </div>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl w-full sm:w-auto">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">📅 จาก:</span>
-              <input type="date" id="datePicker" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">ถึง:</span>
-              <input type="date" id="datePickerTo" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
+        </div>
+
+        <div class="header-pill">
+          <span>◷</span>
+          <div>
+            <strong id="headerTimeText">--:--:--</strong>
+            <div class="text-[9px] text-emerald-400 flex items-center gap-1">
+              <span class="header-live-dot"></span> ระบบปกติ
             </div>
           </div>
         </div>
-        <div class="h-64 relative"><canvas id="factoryChart"></canvas></div>
+
+        <button id="overviewTabBtn" type="button" class="header-nav-btn" title="Dashboard ภาพรวม" onclick="switchTab('tab1')">📊</button>
+        <button id="searchTabBtn" type="button" class="header-nav-btn" title="ค้นหา LOT" onclick="switchTab('tab2')">🔍</button>
+
+        <div class="hidden sm:block pl-2 border-l border-white/10">
+          <div class="text-[9px] leading-tight text-slate-300">Better Production</div>
+          <div class="text-[9px] leading-tight text-slate-300">A Better Tomorrow</div>
+          <span id="displayName" class="hidden">Guest User</span>
+        </div>
+      </div>
+    </header>
+<!-- PAGE 1: Dashboard ภาพรวม -->
+    <div id="tab1" class="space-y-3">
+
+      <!-- DAILY SUMMARY + RIGHT TOTALS -->
+      <section class="mock-section p-3">
+        <div class="overview-layout">
+          <div class="min-w-0">
+            <div class="flex flex-wrap justify-between items-start gap-2 mb-2">
+              <div>
+                <h2 class="mock-section-title text-blue-700">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
+                <p id="selectedDateText" class="text-[9px] text-blue-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
+              </div>
+
+              <div class="flex flex-wrap items-center gap-1.5 bg-slate-50 border border-slate-200 px-2 py-1.5 rounded-lg">
+                <span class="text-[9px] font-bold text-slate-500">📅 จาก:</span>
+                <input type="date" id="datePicker" onchange="onDateChange()" class="bg-white border border-slate-200 rounded-md px-2 py-1 text-[9px] font-semibold text-slate-700 focus:outline-none focus:border-blue-400">
+                <span class="text-[9px] font-bold text-slate-500">ถึง:</span>
+                <input type="date" id="datePickerTo" onchange="onDateChange()" class="bg-white border border-slate-200 rounded-md px-2 py-1 text-[9px] font-semibold text-slate-700 focus:outline-none focus:border-blue-400">
+              </div>
+            </div>
+
+            <div class="h-[220px] relative">
+              <canvas id="factoryChart"></canvas>
+            </div>
+          </div>
+
+          <aside class="overview-side">
+            <div class="overview-stat actual">
+              <div class="overview-stat-icon">▣</div>
+              <div>
+                <div class="overview-stat-label">กำลังผลิตรวม (Actual)</div>
+                <div id="overviewActualTotal" class="overview-stat-value">-</div>
+                <div class="text-[8px] text-slate-400 mt-1">ชิ้น</div>
+              </div>
+            </div>
+            <div class="overview-stat">
+              <div class="overview-stat-icon">▦</div>
+              <div>
+                <div class="overview-stat-label">เป้าหมายรวม</div>
+                <div id="overviewTargetTotal" class="overview-stat-value">-</div>
+                <div class="text-[8px] text-slate-400 mt-1">ชิ้น</div>
+              </div>
+            </div>
+            <div class="overview-stat">
+              <div class="overview-stat-icon">%</div>
+              <div>
+                <div class="overview-stat-label">คิดเป็น</div>
+                <div id="overviewAchTotal" class="overview-stat-value">-</div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </section>
 
+      <!-- LINE & LOT OVERVIEW CARDS -->
       <section>
-        <div class="mb-3">
-          <h2 class="font-bold text-slate-800">รายละเอียดแยกตามไลน์ & LOT</h2>
-          <p class="text-[11px] text-slate-400 mt-0.5">ภาพรวมก่อนเลือกดู LINE จากผังโรงงาน</p>
-        </div>
-        <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+        <h2 class="text-[12px] font-extrabold text-slate-800 mb-1.5">รายละเอียดแยกตามไลน์ & LOT</h2>
+        <div id="cardsContainer" class="line-cards-master"></div>
       </section>
 
-      <section id="factoryFloorSection" class="dash-panel factory-floor-shell p-5 rounded-3xl">
-        <div class="floor-toolbar">
+      <!-- INTERACTIVE FACTORY FLOOR -->
+      <section id="factoryFloorSection" class="mock-section p-3">
+        <div class="flex flex-wrap justify-between items-end gap-3 mb-2">
           <div>
-            <h2 class="font-bold text-slate-800 text-base">ผังไลน์การผลิต</h2>
-            <p class="text-xs text-slate-400 mt-1">ชี้เพื่อ Preview • คลิก LINE เพื่อเปิดรายละเอียดครึ่งล่าง</p>
-          </div>
-
-          <div class="flex items-center gap-4 flex-wrap">
-            <div class="floor-tabs" aria-label="เลือกชั้น">
-              <button type="button" class="floor-tab active" aria-current="page">ชั้น 3</button>
-              <button type="button" class="floor-tab" disabled title="ทำหลัง Floor 3 เสร็จ">ชั้น 4</button>
-            </div>
-            <div class="floor-legend" aria-label="สถานะ">
-              <span class="floor-legend-item"><span class="floor-dot" style="background:#22A06B"></span>มีการผลิต</span>
-              <span class="floor-legend-item"><span class="floor-dot" style="background:#D99B2B"></span>มีแผน / ยังไม่รายงาน</span>
-              <span class="floor-legend-item"><span class="floor-dot" style="background:#94A3B8"></span>ไม่มีข้อมูล</span>
-            </div>
+            <h2 class="text-[12px] font-extrabold text-slate-800">ผังไลน์การผลิต</h2>
+            <p class="text-[9px] text-slate-400 mt-0.5">เลือกชั้นเพื่อดูผัง และคลิกที่ไลน์เพื่อดูรายละเอียด</p>
           </div>
         </div>
 
-        <div id="floor3Stage" class="floor-stage" aria-label="Interactive Factory Floor ชั้น 3">
-          <img src="./floor3_interactive.png" alt="แปลนโรงงาน ชั้น 3">
+        <div class="floor-master-grid">
+          <div class="min-w-0">
+            <div class="floor-tabs mb-2" aria-label="เลือกชั้น">
+              <button type="button" class="floor-tab active" aria-current="page">ชั้น 3</button>
+              <button type="button" class="floor-tab" disabled title="จะต่อ Floor 4 หลังจาก Floor 3 เสร็จ">ชั้น 4</button>
+            </div>
 
-          <svg class="floor-overlay" viewBox="0 0 1065 393" preserveAspectRatio="xMidYMid meet" aria-label="พื้นที่เลือก LINE ชั้น 3">
-            <rect id="zoneC" class="floor-zone" data-line="C"
-                  x="539" y="87" width="274" height="78" rx="5"
-                  tabindex="0" role="button" aria-label="เลือก LINE C"></rect>
-            <rect id="zoneB" class="floor-zone" data-line="B"
-                  x="539" y="206" width="274" height="85" rx="5"
-                  tabindex="0" role="button" aria-label="เลือก LINE B"></rect>
-          </svg>
+            <div id="floor3Stage" class="floor-stage !mt-0" aria-label="Interactive Factory Floor ชั้น 3">
+              <img src="./floor3_interactive.png" alt="แปลนโรงงาน ชั้น 3">
 
-          <div id="floorPreview" class="floor-preview" aria-live="polite">
-            <div class="floor-preview-card">
-              <div class="floor-preview-head">
-                <div>
-                  <div id="previewLine" class="text-base font-extrabold text-slate-900">LINE B</div>
-                  <div id="previewStatus" class="preview-status">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-                    <span>มีการผลิตวันนี้</span>
-                  </div>
-                </div>
-                <span class="text-[10px] font-bold text-slate-400">ชั้น 3</span>
-              </div>
-
-              <div class="preview-grid">
-                <span class="label">Model</span><span id="previewModel" class="value">-</span>
-                <span class="label">LOT</span><span id="previewLot" class="value">-</span>
-                <span class="label">Target</span><span id="previewTarget" class="value">-</span>
-                <span class="label">Output</span><span id="previewOutput" class="value">-</span>
-                <span class="label">% Complete</span><span id="previewEfficiency" class="value">-</span>
-              </div>
-
-              <div class="preview-progress"><span id="previewProgressBar" style="width:0%"></span></div>
-              <button id="previewDetailsBtn" type="button" class="preview-details-btn">ดูรายละเอียด →</button>
+              <svg class="floor-overlay" viewBox="0 0 1065 393" preserveAspectRatio="xMidYMid meet" aria-label="พื้นที่เลือก LINE ชั้น 3">
+                <rect id="zoneC" class="floor-zone" data-line="C"
+                      x="539" y="87" width="274" height="78" rx="5"
+                      tabindex="0" role="button" aria-label="เลือก LINE C"></rect>
+                <rect id="zoneB" class="floor-zone" data-line="B"
+                      x="539" y="206" width="274" height="85" rx="5"
+                      tabindex="0" role="button" aria-label="เลือก LINE B"></rect>
+              </svg>
             </div>
           </div>
+          </div>
+
+          <aside class="floor-side-panel">
+            <h3 class="text-[11px] font-extrabold text-slate-800">สัญลักษณ์สถานะไลน์</h3>
+            <div class="space-y-2 mt-3 text-[10px] text-slate-600">
+              <div class="flex items-center gap-2"><span class="floor-dot" style="background:#22A06B"></span><span>ผลิตปกติ / มีการรายงาน</span></div>
+              <div class="flex items-center gap-2"><span class="floor-dot" style="background:#D99B2B"></span><span>มีแผน / ยังไม่รายงาน</span></div>
+              <div class="flex items-center gap-2"><span class="floor-dot" style="background:#94A3B8"></span><span>ไม่มีข้อมูล</span></div>
+            </div>
+
+            <div class="border-t border-slate-200 mt-4 pt-3">
+              <h3 class="text-[11px] font-extrabold text-slate-800">ℹ วิธีใช้งาน</h3>
+              <div class="usage-step"><span class="usage-no">1</span><span>เลือกชั้นที่ต้องการ</span></div>
+              <div class="usage-step"><span class="usage-no">2</span><span>ชี้เมาส์ที่ LINE B / C เพื่อ Highlight</span></div>
+              <div class="usage-step"><span class="usage-no">3</span><span>คลิก LINE เพื่อเปิดรายละเอียดครึ่งล่าง</span></div>
+            </div>
+          </aside>
         </div>
 
         <div class="floor-mobile-hint">บนมือถือ: แตะ LINE เพื่อเลือกและเปิดรายละเอียดได้ทันที</div>
       </section>
 
-      <section id="lineDetailSection" class="hidden line-detail-shell dash-panel p-5 rounded-3xl space-y-4">
-        <div class="flex flex-wrap justify-between items-center gap-3 border-b border-slate-100 pb-4">
-          <div class="flex items-center gap-3">
-            <button id="backOverviewBtn" type="button" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-xl text-xs font-bold transition">← กลับภาพรวม</button>
-            <div>
-              <h2 id="detailLineTitle" class="text-xl font-extrabold text-slate-900">LINE B — รายละเอียดการผลิต</h2>
-              <p id="detailBreadcrumb" class="text-[11px] text-indigo-500 font-semibold mt-0.5">Dashboard › ชั้น 3 › LINE B</p>
+      <!-- CLICKED LINE DETAIL: HIDDEN UNTIL CLICK -->
+      <section id="lineDetailSection" class="hidden detail-master line-detail-shell">
+        <div class="detail-topbar">
+          <div class="flex items-center gap-3 min-w-0">
+            <button id="backOverviewBtn" type="button" class="bg-[#173B66] hover:bg-[#0F2747] text-white px-3 py-2 rounded-lg text-[9px] font-bold transition">← กลับภาพรวม</button>
+            <div class="min-w-0">
+              <h2 id="detailLineTitle" class="text-[16px] font-extrabold text-slate-900 truncate">LINE B — รายละเอียด</h2>
+              <p id="detailBreadcrumb" class="text-[9px] text-blue-600 font-semibold">Dashboard › ชั้น 3 › LINE B</p>
             </div>
           </div>
+
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="text-xs font-bold px-3 py-1.5 rounded-full bg-violet-100 text-violet-700">ชั้น 3</span>
-            <span id="detailLineBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-sky-100 text-sky-700">LINE B</span>
-            <span id="detailStatusBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700">กำลังผลิต</span>
+            <span class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-violet-100 text-violet-700">ชั้น 3</span>
+            <span id="detailLineBadge" class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-sky-100 text-sky-700">LINE B</span>
+            <span id="detailStatusBadge" class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700">กำลังผลิต</span>
+            <span class="text-[9px] font-semibold text-slate-400">อัปเดต <span id="detailUpdateTime">--:--</span></span>
           </div>
+        </div>
+
+        <div class="px-2 pt-1">
+          <div class="production-tab">▣ Production</div>
         </div>
 
         <select id="lineSelect" onchange="updateHourlyChart()" class="hidden" aria-hidden="true">
@@ -352,77 +536,78 @@
           <option value="D">LINE D</option><option value="E">LINE E</option><option value="F">LINE F</option>
         </select>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3">
-          <div class="detail-kpi col-span-2">
-            <p class="text-[10px] font-semibold text-slate-400">รุ่นปัจจุบัน / LOT</p>
-            <p id="detailModel" class="text-base font-extrabold text-slate-800 mt-1">-</p>
-            <p id="detailLot" class="text-[11px] font-bold text-indigo-600 mt-0.5">LOT -</p>
+        <div class="detail-kpi-master-grid">
+          <div class="detail-kpi compact">
+            <p class="text-[8px] font-semibold text-slate-400">รุ่นปัจจุบัน</p>
+            <p id="detailModel" class="text-[12px] font-extrabold text-slate-800 mt-1">-</p>
+            <p id="detailLot" class="text-[9px] font-bold text-blue-600 mt-0.5">LOT -</p>
           </div>
-          <div class="detail-kpi bg-emerald-50/70 border-emerald-100">
-            <p class="text-[10px] font-semibold text-emerald-600">สถานะปัจจุบัน</p>
-            <p id="detailStatusText" class="text-base font-extrabold text-emerald-700 mt-1">-</p>
-            <p id="detailStatusMeta" class="text-[9px] text-emerald-500 mt-0.5">-</p>
+          <div class="detail-kpi compact bg-emerald-50/70 border-emerald-100">
+            <p class="text-[8px] font-semibold text-emerald-600">สถานะปัจจุบัน</p>
+            <p id="detailStatusText" class="text-[12px] font-extrabold text-emerald-700 mt-1">-</p>
+            <p id="detailStatusMeta" class="text-[8px] text-emerald-500 mt-0.5">-</p>
           </div>
-          <div class="detail-kpi"><p class="text-[10px] font-semibold text-slate-400">Target วันนี้</p><p id="detailTarget" class="text-xl font-extrabold text-slate-800 mt-1">-</p></div>
-          <div class="detail-kpi"><p class="text-[10px] font-semibold text-slate-400">Actual ตอนนี้</p><p id="detailActual" class="text-xl font-extrabold text-emerald-600 mt-1">-</p></div>
-          <div class="detail-kpi"><p class="text-[10px] font-semibold text-slate-400">Gap</p><p id="detailGap" class="text-xl font-extrabold text-rose-600 mt-1">-</p></div>
-          <div class="detail-kpi"><p class="text-[10px] font-semibold text-slate-400">% Ach.</p><p id="detailAch" class="text-xl font-extrabold text-slate-800 mt-1">-</p></div>
-          <div class="detail-kpi"><p class="text-[10px] font-semibold text-slate-400">เวลาทำงาน</p><p id="detailHours" class="text-xl font-extrabold text-slate-800 mt-1">-</p><p class="text-[9px] text-slate-400 mt-0.5">ชม.</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">เป้าหมายวันนี้</p><p id="detailTarget" class="text-[16px] font-extrabold text-slate-800 mt-1">-</p><p class="text-[8px] text-slate-400">ชิ้น</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">Actual ตอนนี้</p><p id="detailActual" class="text-[16px] font-extrabold text-emerald-600 mt-1">-</p><p class="text-[8px] text-slate-400">ชิ้น</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">Gap</p><p id="detailGap" class="text-[16px] font-extrabold text-rose-600 mt-1">-</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">% Ach.</p><p id="detailAch" class="text-[16px] font-extrabold text-slate-800 mt-1">-</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">เวลาทำงาน</p><p id="detailHours" class="text-[16px] font-extrabold text-slate-800 mt-1">-</p><p class="text-[8px] text-slate-400">ชม.</p></div>
         </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-          <div class="detail-subpanel p-4 xl:col-span-5">
-            <div class="border-b border-slate-100 pb-3 mb-3">
-              <h3 class="font-bold text-slate-700 text-sm">⏱️ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h3>
-              <p id="hourlyTargetSubtitle" class="text-[11px] text-slate-400 mt-0.5">เลือก LINE จากผังเพื่อดูข้อมูล</p>
-            </div>
-            <div class="h-64 relative"><canvas id="hourlyChart"></canvas></div>
+        <div class="detail-content-master">
+          <div class="detail-subpanel compact">
+            <h3 class="font-bold text-slate-700">⏱ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h3>
+            <p id="hourlyTargetSubtitle" class="text-[8px] text-slate-400 mt-0.5 mb-1">เลือก LINE จากผังเพื่อดูข้อมูล</p>
+            <div class="h-[215px] relative"><canvas id="hourlyChart"></canvas></div>
           </div>
 
-          <div class="detail-subpanel p-4 xl:col-span-7 space-y-4">
-            <div class="flex justify-between items-start gap-2 border-b border-slate-100 pb-3">
-              <div>
-                <h3 class="font-bold text-slate-700 text-sm">⚡ Production Pulse</h3>
-                <p id="pulseSubtitle" class="text-[11px] text-slate-400 mt-0.5">ประมาณการจากรอบที่มีข้อมูลของไลน์ที่เลือก</p>
+          <div class="detail-subpanel compact space-y-2">
+            <h3 class="font-bold text-slate-700">⚡ Production Pulse</h3>
+            <p id="pulseSubtitle" class="text-[8px] text-slate-400 mt-0.5">ประมาณการจากรอบที่มีข้อมูลของไลน์ที่เลือก</p>
+            <div id="pulseLineBadge" class="hidden">LINE B</div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+              <div class="bg-slate-50 border border-slate-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-slate-400">Actual ตอนนี้</p>
+                <p id="pulseActual" class="text-[14px] font-extrabold text-slate-800 mt-1">-</p>
               </div>
-              <div id="pulseLineBadge" class="text-[11px] font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">LINE B</div>
+              <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-emerald-600">Current LOT Pace</p>
+                <p id="pulsePace" class="text-[14px] font-extrabold text-emerald-700 mt-1">-</p>
+              </div>
+              <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-indigo-500">Order Progress</p>
+                <p id="pulseProjected" class="text-[12px] font-extrabold text-indigo-700 mt-1">-</p>
+                <p id="pulseOrderMeta" class="text-[7px] text-indigo-400 mt-1">LOT ปัจจุบัน</p>
+              </div>
+              <div class="bg-slate-50 border border-slate-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-slate-400">Forecast Completion</p>
+                <p id="pulseGap" class="text-[12px] font-extrabold text-slate-800 mt-1">-</p>
+                <p id="pulseGapNote" class="text-[7px] text-slate-400 mt-1">อิงกำลังผลิต LOT ปัจจุบัน</p>
+              </div>
             </div>
 
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3">
-                <p class="text-[10px] font-semibold text-slate-400">Actual ตอนนี้</p><p id="pulseActual" class="text-xl font-extrabold text-slate-800 mt-1">-</p><p class="text-[9px] text-slate-400 mt-1">ชิ้นสะสม</p>
-              </div>
-              <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-3">
-                <p class="text-[10px] font-semibold text-emerald-600">Current LOT Pace</p><p id="pulsePace" class="text-xl font-extrabold text-emerald-700 mt-1">-</p><p class="text-[9px] text-emerald-500 mt-1">ชิ้น / ชม.</p>
-              </div>
-              <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3">
-                <p class="text-[10px] font-semibold text-indigo-500">Order Progress</p><p id="pulseProjected" class="text-lg font-extrabold text-indigo-700 mt-1">-</p><p id="pulseOrderMeta" class="text-[9px] text-indigo-400 mt-1">LOT ปัจจุบัน</p>
-              </div>
-              <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3">
-                <p class="text-[10px] font-semibold text-slate-400">Forecast Completion</p><p id="pulseGap" class="text-lg font-extrabold text-slate-800 mt-1">-</p><p id="pulseGapNote" class="text-[9px] text-slate-400 mt-1">อิงกำลังผลิต LOT ปัจจุบัน</p>
-              </div>
-            </div>
-
-            <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-3">
-              <h3 class="text-xs font-bold text-slate-700 mb-2">📈 Cumulative Target vs Actual</h3>
-              <div class="h-48 relative"><canvas id="cumulativeChart"></canvas></div>
+            <div class="border-t border-slate-100 pt-2">
+              <h3 class="font-bold text-slate-700 mb-1">📈 Cumulative Target vs Actual</h3>
+              <div class="h-[150px] relative"><canvas id="cumulativeChart"></canvas></div>
             </div>
           </div>
-        </div>
 
-        <div class="grid grid-cols-1 xl:grid-cols-12 gap-4">
-          <div class="detail-subpanel p-4 xl:col-span-8 overflow-hidden">
-            <h3 id="detailLotTableTitle" class="text-sm font-bold text-slate-700 mb-3">รายการ LOT วันนี้</h3>
-            <div class="overflow-x-auto">
-              <table class="lot-table w-full text-xs">
-                <thead><tr><th>ลำดับ</th><th>LOT</th><th>Model</th><th>ชั่วโมง</th><th>Target</th><th>Actual</th><th>สถานะ</th></tr></thead>
-                <tbody id="detailLotTableBody"><tr><td colspan="7" class="text-slate-400">เลือก LINE เพื่อดูข้อมูล</td></tr></tbody>
-              </table>
+          <div class="detail-right-stack">
+            <div class="detail-subpanel compact overflow-hidden">
+              <h3 id="detailLotTableTitle" class="font-bold text-slate-700 mb-2">รายการ LOT วันนี้</h3>
+              <div class="overflow-x-auto">
+                <table class="lot-table w-full text-[8px]">
+                  <thead><tr><th>ลำดับ</th><th>LOT</th><th>Model</th><th>ชม.</th><th>TG</th><th>Actual</th><th>สถานะ</th></tr></thead>
+                  <tbody id="detailLotTableBody"><tr><td colspan="7" class="text-slate-400">เลือก LINE เพื่อดูข้อมูล</td></tr></tbody>
+                </table>
+              </div>
             </div>
-          </div>
-          <div class="detail-subpanel p-4 xl:col-span-4">
-            <h3 class="text-sm font-bold text-slate-700 mb-3">หมายเหตุล่าสุด</h3>
-            <div id="detailRemarks" class="space-y-2 text-xs text-slate-600"><div class="text-slate-400">เลือก LINE เพื่อดูหมายเหตุ</div></div>
+
+            <div class="detail-subpanel compact">
+              <h3 class="font-bold text-slate-700 mb-2">หมายเหตุล่าสุด</h3>
+              <div id="detailRemarks" class="space-y-1.5 text-[9px] text-slate-600"><div class="text-slate-400">เลือก LINE เพื่อดูหมายเหตุ</div></div>
+            </div>
           </div>
         </div>
       </section>
@@ -482,6 +667,7 @@
 
   <script>
     Chart.register(ChartDataLabels);
+    Chart.defaults.font.family = 'Kanit';
 
     // วาง Web App URL ของ Apps Script ล่าสุดที่นี่
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
@@ -509,18 +695,22 @@
     }
 
     function switchTab(tabId) {
-      document.getElementById('tab1').classList.add('hidden');
-      document.getElementById('tab2').classList.add('hidden');
-      document.getElementById('nav-tab1').classList.remove('active');
-      document.getElementById('nav-tab2').classList.remove('active');
+      document.getElementById('tab1')?.classList.add('hidden');
+      document.getElementById('tab2')?.classList.add('hidden');
 
-      document.getElementById(tabId).classList.remove('hidden');
-      if(tabId === 'tab1') {
-        document.getElementById('nav-tab1').classList.add('active');
+      document.getElementById(tabId)?.classList.remove('hidden');
+
+      const overviewBtn = document.getElementById('overviewTabBtn');
+      const searchBtn = document.getElementById('searchTabBtn');
+
+      if (tabId === 'tab1') {
+        if (overviewBtn) overviewBtn.style.background = 'rgba(255,255,255,.14)';
+        if (searchBtn) searchBtn.style.background = 'rgba(255,255,255,.06)';
         document.getElementById('pageTitle').innerText = "Production Dashboard";
       } else {
-        document.getElementById('nav-tab2').classList.add('active');
-        document.getElementById('pageTitle').innerText = "ค้นหาและติดตามสถานะ LOT";
+        if (overviewBtn) overviewBtn.style.background = 'rgba(255,255,255,.06)';
+        if (searchBtn) searchBtn.style.background = 'rgba(255,255,255,.14)';
+        document.getElementById('pageTitle').innerText = "ค้นหา LOT";
       }
     }
 
@@ -571,40 +761,6 @@
       const model = getFloorActiveModel(item, lot);
       return {line:normalizeLineCode(lineCode),model:model||'-',lot:lot||'-',target,actual,efficiency:target>0?Math.max(0,(actual/target)*100):0,status:getFloorStatus(item)};
     }
-    function positionFloorPreview(lineCode) {
-      const preview=document.getElementById('floorPreview'),stage=document.getElementById('floor3Stage'),zone=document.getElementById(`zone${normalizeLineCode(lineCode)}`);
-      if(!preview||!stage||!zone)return;
-      const stageRect=stage.getBoundingClientRect(),zoneRect=zone.getBoundingClientRect();
-      if(window.matchMedia('(max-width: 760px)').matches){
-        preview.style.left='12px';preview.style.right='12px';preview.style.top='auto';preview.style.bottom='12px';return;
-      }
-      preview.style.right='auto';preview.style.bottom='auto';
-      const cardWidth=Math.min(280,stageRect.width-24),margin=14;
-      const zoneLeft=zoneRect.left-stageRect.left,zoneRight=zoneRect.right-stageRect.left,zoneTop=zoneRect.top-stageRect.top;
-      let left=zoneRight+margin;
-      if(left+cardWidth>stageRect.width-margin)left=Math.max(margin,zoneLeft-cardWidth-margin);
-      let top=Math.max(margin,zoneTop+2);
-      if(top+230>stageRect.height-margin)top=Math.max(margin,stageRect.height-230-margin);
-      preview.style.left=`${left}px`;preview.style.top=`${top}px`;
-    }
-    function renderFloorPreview(lineCode, keepOpen=false) {
-      const clean=normalizeLineCode(lineCode),preview=document.getElementById('floorPreview');
-      if(!preview||!clean)return;
-      const d=getFloorLineSummary(clean),pct=Math.min(100,Math.max(0,d.efficiency));
-      document.getElementById('previewLine').innerText=`LINE ${clean}`;
-      document.getElementById('previewModel').innerText=d.model;
-      document.getElementById('previewLot').innerText=d.lot==='-'?'-':`LOT ${d.lot}`;
-      document.getElementById('previewTarget').innerText=d.target.toLocaleString();
-      document.getElementById('previewOutput').innerText=d.actual.toLocaleString();
-      document.getElementById('previewEfficiency').innerText=`${d.efficiency.toFixed(1)}%`;
-      document.getElementById('previewProgressBar').style.width=`${pct}%`;
-      const statusEl=document.getElementById('previewStatus');
-      const tone=d.status.tone==='running'?'bg-emerald-500':d.status.tone==='warning'?'bg-amber-500':'bg-slate-400';
-      statusEl.innerHTML=`<span class="w-2 h-2 rounded-full ${tone}"></span><span>${escapeFloorHtml(d.status.text)}</span>`;
-      document.getElementById('previewDetailsBtn').dataset.line=clean;
-      positionFloorPreview(clean);preview.classList.add('show');
-      if(!keepOpen)hoveredFloorLine=clean;
-    }
     function setFloorZoneVisual(lineCode,mode) {
       const clean=normalizeLineCode(lineCode),stage=document.getElementById('floor3Stage');
       document.querySelectorAll('.floor-zone').forEach(zone=>{
@@ -614,21 +770,41 @@
       });
       stage?.classList.toggle('is-focused',Boolean(clean&&(mode==='preview'||mode==='selected')));
     }
+
     function previewFloorLine(lineCode) {
       const clean=normalizeLineCode(lineCode);
-      if(selectedFloorLine&&selectedFloorLine!==clean)setFloorZoneVisual(selectedFloorLine,'selected');
-      else setFloorZoneVisual(clean,'preview');
-      renderFloorPreview(clean);
+
+      // ถ้ามี LINE ที่ถูกเลือกอยู่ ให้ selected state เป็นตัวหลัก
+      if (selectedFloorLine) {
+        if (selectedFloorLine === clean) {
+          setFloorZoneVisual(clean,'selected');
+        } else {
+          const zone=document.getElementById(`zone${clean}`);
+          zone?.classList.add('is-preview');
+          document.getElementById('floor3Stage')?.classList.add('is-focused');
+        }
+        return;
+      }
+
+      // Hover อย่างเดียว: ไม่มี Floating Card
+      setFloorZoneVisual(clean,'preview');
+      hoveredFloorLine=clean;
     }
-    function leaveFloorLine() {
-      if(selectedFloorLine){setFloorZoneVisual(selectedFloorLine,'selected');renderFloorPreview(selectedFloorLine,true);}
-      else{
-        document.querySelectorAll('.floor-zone').forEach(z=>z.classList.remove('is-preview'));
+
+    function leaveFloorLine(lineCode='') {
+      const clean=normalizeLineCode(lineCode || hoveredFloorLine);
+
+      document.getElementById(`zone${clean}`)?.classList.remove('is-preview');
+      hoveredFloorLine='';
+
+      if (selectedFloorLine) {
+        setFloorZoneVisual(selectedFloorLine,'selected');
+      } else {
+        document.querySelectorAll('.floor-zone').forEach(z=>z.classList.remove('is-preview','is-selected'));
         document.getElementById('floor3Stage')?.classList.remove('is-focused');
-        document.getElementById('floorPreview')?.classList.remove('show');
-        hoveredFloorLine='';
       }
     }
+
     function getDetailStatus(item) {
       const s=getFloorStatus(item);
       if(currentDashboardIsRange)return {text:'ข้อมูลสะสม',badge:'ข้อมูลช่วง',meta:'เลือกวันเดียวเพื่อดูสถานะปัจจุบัน'};
@@ -667,7 +843,7 @@
       const clean=normalizeLineCode(lineCode),item=getFloorLineData(clean);
       if(!item||!['B','C'].includes(clean))return;
       selectedFloorLine=clean;hoveredFloorLine='';
-      setFloorZoneVisual(clean,'selected');renderFloorPreview(clean,true);
+      setFloorZoneVisual(clean,'selected');
       const section=document.getElementById('lineDetailSection');section?.classList.remove('hidden');
       const select=document.getElementById('lineSelect');if(select)select.value=clean;
       const target=Number(item.target)||((Number(item.target1)||0)+(Number(item.target2)||0)+(Number(item.target3)||0));
@@ -690,6 +866,16 @@
       gapEl.className=`text-xl font-extrabold mt-1 ${gap>=0?'text-emerald-600':'text-rose-600'}`;
       document.getElementById('detailAch').innerText=`${ach.toFixed(1)}%`;
       document.getElementById('detailHours').innerText=hours>0?hours.toLocaleString():'-';
+
+      const detailUpdateEl = document.getElementById('detailUpdateTime');
+      if (detailUpdateEl) {
+        detailUpdateEl.innerText = new Date().toLocaleTimeString('th-TH', {
+          hour:'2-digit',
+          minute:'2-digit',
+          hour12:false
+        });
+      }
+
       renderFloorDetailLotTable(item,clean);renderFloorDetailRemarks(item);updateHourlyChart();
       requestAnimationFrame(()=>{hourlyChartInstance?.resize();cumulativeChartInstance?.resize();});
       if(shouldScroll)section?.scrollIntoView({behavior:'smooth',block:'start'});
@@ -698,36 +884,45 @@
       selectedFloorLine='';hoveredFloorLine='';
       document.querySelectorAll('.floor-zone').forEach(z=>z.classList.remove('is-selected','is-preview'));
       document.getElementById('floor3Stage')?.classList.remove('is-focused');
-      document.getElementById('floorPreview')?.classList.remove('show');
       document.getElementById('lineDetailSection')?.classList.add('hidden');
       document.getElementById('factoryFloorSection')?.scrollIntoView({behavior:'smooth',block:'start'});
     }
     function initFloor3Interaction() {
       const stage=document.getElementById('floor3Stage');
+
       ['B','C'].forEach(line=>{
-        const zone=document.getElementById(`zone${line}`);if(!zone)return;
+        const zone=document.getElementById(`zone${line}`);
+        if(!zone)return;
+
         zone.addEventListener('mouseenter',()=>previewFloorLine(line));
-        zone.addEventListener('mouseleave',leaveFloorLine);
+        zone.addEventListener('mouseleave',()=>leaveFloorLine(line));
         zone.addEventListener('focus',()=>previewFloorLine(line));
-        zone.addEventListener('blur',leaveFloorLine);
-        zone.addEventListener('click',e=>{e.stopPropagation();openFloorLineDetail(line,true);});
+        zone.addEventListener('blur',()=>leaveFloorLine(line));
+
+        // Click / tap = เลือกจริง และเปิดรายละเอียดครึ่งล่างทันที
+        zone.addEventListener('click',e=>{
+          e.stopPropagation();
+          openFloorLineDetail(line,true);
+        });
+
         zone.addEventListener('keydown',e=>{
-          if(e.key==='Enter'||e.key===' '){e.preventDefault();openFloorLineDetail(line,true);}
+          if(e.key==='Enter'||e.key===' '){
+            e.preventDefault();
+            openFloorLineDetail(line,true);
+          }
         });
       });
-      document.getElementById('previewDetailsBtn')?.addEventListener('click',e=>{
-        e.stopPropagation();const line=e.currentTarget.dataset.line||selectedFloorLine||hoveredFloorLine;
-        if(line)openFloorLineDetail(line,true);
-      });
+
       document.getElementById('backOverviewBtn')?.addEventListener('click',closeFloorLineDetail);
+
+      // คลิกพื้นว่างบนผัง = ปิด selected/detail
       stage?.addEventListener('click',e=>{
-        if(e.target===stage||e.target.tagName==='IMG')closeFloorLineDetail();
-      });
-      window.addEventListener('resize',()=>{
-        const line=selectedFloorLine||hoveredFloorLine;
-        if(line&&document.getElementById('floorPreview')?.classList.contains('show'))positionFloorPreview(line);
+        if(e.target===stage||e.target.tagName==='IMG'){
+          closeFloorLineDetail();
+        }
       });
     }
+
 
     async function fetchDashboardData(selectedDate, endDate) {
       // กัน request ซ้อนกัน ถ้ารอบก่อนยังโหลดไม่เสร็จ
@@ -769,6 +964,7 @@
           globalLinesData = data.lines;
           renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
+          updateOverviewTotals(data.lines);
 
           if (selectedFloorLine && ['B','C'].includes(selectedFloorLine)) {
             openFloorLineDetail(selectedFloorLine, false);
@@ -907,7 +1103,6 @@
     function showEmptyState() {
       selectedFloorLine = '';
       document.getElementById('lineDetailSection')?.classList.add('hidden');
-      document.getElementById('floorPreview')?.classList.remove('show');
       document.querySelectorAll('.floor-zone').forEach(z => z.classList.remove('is-selected','is-preview'));
       document.getElementById('floor3Stage')?.classList.remove('is-focused');
 
@@ -1632,58 +1827,56 @@
 
       const progressPct = target > 0 ? Math.round((actual / target) * 100) : 0;
       const progressWidth = Math.max(0, Math.min(progressPct, 100));
-      const progressColor = progressPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
-      const remarksList = Array.isArray(remarks) ? remarks : [];
+      const progressColor = progressPct >= 100 ? '#22A06B' : '#F59E0B';
+
+      const item = getFloorLineData(line);
+      const status = getFloorStatus(item);
+      const statusClass = status.tone === 'running'
+        ? 'running'
+        : status.tone === 'warning'
+          ? 'warning'
+          : 'muted';
 
       return `
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between gap-2.5">
-          <!-- compact header: same visual scale as old card -->
-          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span class="font-extrabold text-slate-800">LINE ${line}</span>
-            ${modelName ? `<span class="text-[11px] font-bold text-slate-700">รุ่น ${modelName}</span>` : ''}
-            ${lotName ? `<span class="text-slate-300 text-[10px]">•</span><span class="text-[11px] font-bold text-indigo-600">LOT ${lotName}</span>` : ''}
+        <div class="master-line-card">
+          <div class="master-line-head">
+            <div class="min-w-0">
+              <div class="text-[13px] font-extrabold text-slate-900 leading-tight">LINE ${line}</div>
+              ${modelName ? `<div class="text-[9px] font-semibold text-slate-600 mt-1 truncate">รุ่น ${escapeFloorHtml(modelName)}</div>` : ''}
+              ${lotName ? `<div class="text-[9px] font-bold text-blue-600 mt-0.5 truncate">LOT ${escapeFloorHtml(lotName)}</div>` : ''}
+            </div>
+            <span class="master-status ${statusClass}">
+              <span class="master-status-dot"></span>${escapeFloorHtml(status.text)}
+            </span>
           </div>
 
-          <!-- exactly the hand-drawn concept; no big inner boxes -->
-          <div class="border-t border-slate-100 pt-2.5 space-y-1.5">
-            <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
-              <div class="font-semibold text-slate-500">
-                เป้าต่อวัน:
-                <span class="ml-1 font-extrabold text-slate-800">${target.toLocaleString()}</span>
-              </div>
-              <div class="font-extrabold ${dayGapClass}">${dayGapText}</div>
+          <div class="space-y-1">
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">เป้าหมาย:</span>
+              <span class="font-extrabold text-slate-800">${target.toLocaleString()}</span>
             </div>
-
-            <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
-              <div class="font-semibold text-slate-500">
-                เป้าตอนนี้:
-                <span class="ml-1 font-extrabold text-slate-800">${targetNow.toLocaleString()}</span>
-              </div>
-              <div class="font-extrabold ${nowGapClass}">${nowGapText}</div>
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">ผลได้ตอนนี้:</span>
+              <span class="font-extrabold text-slate-800">${actualNow.toLocaleString()}</span>
             </div>
-
-            <div class="text-xs font-semibold text-slate-500">
-              Avg Output/hr:
-              <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span>
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">Gap:</span>
+              <span class="font-extrabold ${dayGapClass}">${dayGapText}</span>
             </div>
-
-            <div class="text-xs font-semibold text-slate-500">
-              TG Output/hr:
-              <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span>
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">เป้าตอนนี้:</span>
+              <span class="font-extrabold ${nowGapClass}">${targetNow.toLocaleString()} / ${nowGapText}</span>
             </div>
+            <div class="text-[9px] font-semibold text-slate-500">Avg Output/hr: <span class="font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
+            <div class="text-[9px] font-semibold text-slate-500">TG Output/hr: <span class="font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
           </div>
 
-          <div class="flex items-center gap-2 pt-1">
-            <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="${progressColor} h-2 rounded-full" style="width:${progressWidth}%"></div>
+          <div class="flex items-center gap-2 mt-2">
+            <div class="master-card-progress flex-1">
+              <div style="height:100%;width:${progressWidth}%;background:${progressColor};border-radius:999px"></div>
             </div>
-            <span class="text-xs font-extrabold text-slate-700">${progressPct}%</span>
+            <span class="text-[9px] font-extrabold text-slate-700">${progressPct}%</span>
           </div>
-
-          ${remarksList.length > 0 ? `
-          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
-            📝 ${remarksList.map(r => String(r).replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
-          </div>` : ''}
         </div>
       `;
     }
@@ -1750,8 +1943,14 @@
       const todayStr = getTodayStr();
       document.getElementById('datePicker').value = todayStr;
 
+      updateMasterHeaderClock();
+      setInterval(updateMasterHeaderClock, 1000);
+
       // เตรียม Interactive Floor 3 ก่อน แล้วข้อมูลจริงจะเติมหลัง fetch
       initFloor3Interaction();
+
+      const overviewBtn = document.getElementById('overviewTabBtn');
+      if (overviewBtn) overviewBtn.style.background = 'rgba(255,255,255,.14)';
 
       // LINE profile ทำงานแยก ไม่ขวางการโหลด Dashboard
       initLiffProfile();
