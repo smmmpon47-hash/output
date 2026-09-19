@@ -998,7 +998,7 @@
       if (parts.length !== 2) return null;
       const hm = parts[1].trim().split('.');
       if (hm.length !== 2) return null;
-      const h = Number(hm[0]);
+const h = Number(hm[0]);
       const m = Number(hm[1]);
       if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
       return (h * 60) + m;
@@ -1052,7 +1052,9 @@
           model: item.model1 || item.model || '',
           target: Number(item.target1) || Number(item.target) || 0,
           actual: item.actual1 !== undefined && item.actual1 !== null ? (Number(item.actual1) || 0) : (Number(item.actual) || 0),
-          hours: effectiveH1
+          hours: effectiveH1,
+          productionHoursPassed: Number(item.production_hours_passed_1) || 0,
+          currentActual: Number(item.current_actual_1) || 0
         },
         {
           no: 2,
