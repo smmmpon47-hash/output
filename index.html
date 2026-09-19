@@ -136,6 +136,14 @@
     }
     .lot-table th{background:#F8FAFC;color:#64748B;font-weight:700;}
 
+
+    .floor-zone:focus-visible{
+      stroke:#2563EB;
+      fill:rgba(37,99,235,.10);
+      outline:none;
+      filter:drop-shadow(0 8px 12px rgba(37,99,235,.15));
+    }
+
     @media (hover:hover) and (pointer:fine){
       .floor-zone:hover{transform:translateY(-3px) scale(1.012);}
     }
@@ -273,14 +281,18 @@
 
     .floor-master-grid{
       display:grid;
-      grid-template-columns:minmax(0,3.25fr) minmax(215px,.9fr);
+      grid-template-columns:minmax(0,1fr) 280px;
       gap:12px;
       align-items:stretch;
     }
     .floor-side-panel{
-      background:#F8FAFD;border:1px solid #E6EDF5;border-radius:12px;
+      background:#F8FAFD;
+      border:1px solid #E6EDF5;
+      border-radius:12px;
       padding:14px;
       min-width:0;
+      height:100%;
+      align-self:stretch;
     }
     .usage-step{
       display:grid;grid-template-columns:24px 1fr;gap:9px;
@@ -337,7 +349,7 @@
       .detail-content-master{grid-template-columns:1fr 1fr;}
       .detail-right-stack{grid-column:1/-1;grid-template-columns:1fr 1fr;grid-template-rows:none;}
     }
-    @media(max-width:860px){
+    @media(max-width:980px){
       .overview-layout{grid-template-columns:1fr;}
       .overview-side{grid-template-columns:repeat(3,1fr);}
       .floor-master-grid{grid-template-columns:1fr;}
@@ -499,8 +511,8 @@
             <div class="border-t border-slate-200 mt-4 pt-3">
               <h3 class="text-[11px] font-extrabold text-slate-800">ℹ วิธีใช้งาน</h3>
               <div class="usage-step"><span class="usage-no">1</span><span>เลือกชั้นที่ต้องการ</span></div>
-              <div class="usage-step"><span class="usage-no">2</span><span>ชี้เมาส์ที่ LINE B / C เพื่อ Highlight</span></div>
-              <div class="usage-step"><span class="usage-no">3</span><span>คลิก LINE เพื่อเปิดรายละเอียดครึ่งล่าง</span></div>
+              <div class="usage-step"><span class="usage-no">2</span><span>ชี้ LINE B / C เพื่อ Highlight พื้นที่</span></div>
+              <div class="usage-step"><span class="usage-no">3</span><span>คลิก LINE แล้วรายละเอียดจะแสดงในครึ่งล่าง</span></div>
             </div>
           </aside>
         </div>
