@@ -11,156 +11,826 @@
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600;700&display=swap" rel="stylesheet">
   <style>
-    body { font-family: 'Kanit', sans-serif; background-color: #F8FAFC; }
-    .nav-btn.active { background-color: rgba(255, 255, 255, 0.25); border-left: 4px solid #06C755; }
+    :root{
+      --dash-navy:#0F2747;
+      --dash-navy-2:#173B66;
+      --dash-bg:#F5F8FC;
+      --dash-border:#E4ECF5;
+      --dash-text:#1F2937;
+      --dash-accent:#2563EB;
+      --dash-running:#22A06B;
+      --dash-warning:#D99B2B;
+      --floor-motion:280ms cubic-bezier(0.22,1,0.36,1);
+    }
+    *{box-sizing:border-box;}
+    body{
+      font-family:'Kanit',sans-serif;
+      background:
+        radial-gradient(circle at 16% -10%, rgba(37,99,235,.06), transparent 30%),
+        linear-gradient(180deg,#F7FAFD 0%,var(--dash-bg) 100%);
+      color:var(--dash-text);
+    }
+
+    body,button,input,select,textarea,table{
+      font-family:'Kanit',sans-serif !important;
+    }
+
+    .nav-btn.active{
+      background-color:rgba(255,255,255,.16);
+      border-left:4px solid #22C55E;
+    }
+    .dashboard-topbar{
+      background:linear-gradient(135deg,var(--dash-navy),var(--dash-navy-2));
+      color:#fff;
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 10px 28px rgba(15,39,71,.15);
+    }
+    .dash-panel{
+      background:rgba(255,255,255,.97);
+      border:1px solid var(--dash-border);
+      box-shadow:0 8px 24px rgba(15,39,71,.05);
+    }
+
+    /* ===== Interactive Floor 3 ===== */
+    .factory-floor-shell{overflow:visible;}
+    .floor-toolbar{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:16px;flex-wrap:wrap;
+    }
+    .floor-tabs{
+      display:inline-flex;padding:3px;border-radius:10px;
+      border:1px solid #DCE6F1;background:#F4F7FB;
+    }
+    .floor-tab{
+      min-width:84px;padding:7px 15px;border:0;border-radius:8px;
+      background:transparent;color:#64748B;font-size:12px;font-weight:700;
+      transition:background-color .2s ease,color .2s ease,box-shadow .2s ease;
+    }
+    .floor-tab.active{
+      background:#173B66;color:#fff;
+      box-shadow:0 4px 10px rgba(15,39,71,.16);
+    }
+    .floor-tab[disabled]{opacity:.48;cursor:not-allowed;}
+    .floor-legend{
+      display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+      font-size:11px;color:#64748B;
+    }
+    .floor-legend-item{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+    .floor-dot{width:8px;height:8px;border-radius:999px;}
+
+    .floor-stage{
+      position:relative;width:100%;margin-top:15px;overflow:hidden;
+      border:1px solid #D8E2EC;border-radius:18px;background:#0F172A;
+      isolation:isolate;
+    }
+    .floor-stage img{
+      width:100%;height:auto;display:block;user-select:none;-webkit-user-drag:none;
+      transition:filter var(--floor-motion),opacity var(--floor-motion);
+    }
+    .floor-stage.is-focused img{filter:saturate(.88) brightness(.94);}
+    .floor-overlay{
+      position:absolute;inset:0;width:100%;height:100%;
+      z-index:2;pointer-events:none;
+    }
+    .floor-zone{
+      pointer-events:all;cursor:pointer;
+      fill:rgba(255,255,255,.012);stroke:rgba(37,99,235,0);stroke-width:3;
+      vector-effect:non-scaling-stroke;
+      transform-box:fill-box;transform-origin:center;
+      transition:transform var(--floor-motion),fill var(--floor-motion),
+                 stroke var(--floor-motion),filter var(--floor-motion),opacity var(--floor-motion);
+      outline:none;
+    }
+    .floor-stage.is-focused .floor-zone:not(.is-preview):not(.is-selected){opacity:.38;}
+    .floor-zone.is-preview{
+      transform:translateY(-3px) scale(1.012);
+      fill:rgba(37,99,235,.10);stroke:#38BDF8;
+      filter:drop-shadow(0 9px 13px rgba(15,39,71,.16));
+    }
+    .floor-zone[data-line="C"].is-preview{
+      fill:rgba(34,160,107,.09);stroke:#22A06B;
+    }
+    .floor-zone.is-selected{
+      transform:translateY(-3px) scale(1.014);
+      fill:rgba(37,99,235,.17);stroke:#2563EB;
+      filter:drop-shadow(0 10px 15px rgba(37,99,235,.18));
+    }
+    .floor-zone[data-line="C"].is-selected{
+      fill:rgba(34,160,107,.16);stroke:#22A06B;
+      filter:drop-shadow(0 10px 15px rgba(34,160,107,.17));
+    }
+    .floor-mobile-hint{display:none;margin-top:10px;font-size:11px;color:#94A3B8;}
+
+    /* ===== Detail opened by click ===== */
+    .line-detail-shell{scroll-margin-top:18px;}
+    .detail-kpi{
+      background:linear-gradient(180deg,#FFFFFF,#FAFCFF);
+      border:1px solid #E7EDF5;border-radius:15px;padding:12px 13px;min-width:0;
+    }
+    .detail-subpanel{
+      background:#fff;border:1px solid #E7EDF5;border-radius:18px;
+      box-shadow:0 5px 16px rgba(15,39,71,.04);
+    }
+    .lot-table th,.lot-table td{
+      padding:8px 9px;border-bottom:1px solid #EEF2F6;white-space:nowrap;text-align:left;
+    }
+    .lot-table th{background:#F8FAFC;color:#64748B;font-weight:700;}
+
+
+    .floor-zone:focus-visible{
+      stroke:#2563EB;
+      fill:rgba(37,99,235,.10);
+      outline:none;
+      filter:drop-shadow(0 8px 12px rgba(37,99,235,.15));
+    }
+
+    @media (hover:hover) and (pointer:fine){
+      .floor-zone:hover{
+        transform:translateY(-3px) scale(1.012);
+        fill:rgba(37,99,235,.12);
+        stroke:#38BDF8;
+        filter:drop-shadow(0 9px 13px rgba(15,39,71,.16));
+      }
+      .floor-zone[data-line="C"]:hover{
+        fill:rgba(34,160,107,.11);
+        stroke:#22A06B;
+      }
+    }
+    @media (max-width:760px){
+      .floor-toolbar{align-items:flex-start;}
+      .floor-legend{gap:9px;}
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      .floor-stage img,.floor-zone{
+        transition-duration:.01ms!important;animation-duration:.01ms!important;
+      }
+      .floor-zone.is-preview,.floor-zone.is-selected{transform:none;}
+    }
+  
+
+    /* Real HTML buttons over the floor image: reliable mouse/touch interaction */
+    .floor-hit{
+      position:absolute;
+      z-index:4;
+      display:block;
+      appearance:none;
+      -webkit-appearance:none;
+      padding:0;
+      margin:0;
+      border:3px solid transparent;
+      border-radius:6px;
+      background:transparent;
+      cursor:pointer;
+      touch-action:manipulation;
+      transition:
+        transform var(--floor-motion),
+        background-color var(--floor-motion),
+        border-color var(--floor-motion),
+        box-shadow var(--floor-motion),
+        opacity var(--floor-motion);
+    }
+
+    #zoneC{
+      left:50.61%;
+      top:22.14%;
+      width:25.73%;
+      height:19.85%;
+    }
+
+    #zoneB{
+      left:50.61%;
+      top:52.42%;
+      width:25.73%;
+      height:21.63%;
+    }
+
+    .floor-stage.is-focused .floor-hit:not(.is-preview):not(.is-selected){
+      opacity:.42;
+    }
+
+    .floor-hit.is-preview{
+      transform:translateY(-3px) scale(1.012);
+      background:rgba(37,99,235,.11);
+      border-color:#38BDF8;
+      box-shadow:0 10px 24px rgba(15,39,71,.16);
+    }
+
+    .floor-hit[data-line="C"].is-preview{
+      background:rgba(34,160,107,.10);
+      border-color:#22A06B;
+    }
+
+    .floor-hit.is-selected{
+      transform:translateY(-3px) scale(1.014);
+      background:rgba(37,99,235,.16);
+      border-color:#2563EB;
+      box-shadow:0 11px 26px rgba(37,99,235,.18);
+    }
+
+    .floor-hit[data-line="C"].is-selected{
+      background:rgba(34,160,107,.15);
+      border-color:#22A06B;
+      box-shadow:0 11px 26px rgba(34,160,107,.17);
+    }
+
+    .floor-hit:focus-visible{
+      outline:3px solid rgba(37,99,235,.28);
+      outline-offset:2px;
+    }
+
+    @media (hover:hover) and (pointer:fine){
+      .floor-hit:hover{
+        transform:translateY(-3px) scale(1.012);
+        background:rgba(37,99,235,.11);
+        border-color:#38BDF8;
+        box-shadow:0 10px 24px rgba(15,39,71,.16);
+      }
+      .floor-hit[data-line="C"]:hover{
+        background:rgba(34,160,107,.10);
+        border-color:#22A06B;
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce){
+      .floor-hit{
+        transition-duration:.01ms!important;
+      }
+      .floor-hit.is-preview,
+      .floor-hit.is-selected{
+        transform:none;
+      }
+    }
+
+
+    /* ===== V10 Typography / Proportion System ===== */
+    :root{
+      --fs-micro:10px;
+      --fs-small:11px;
+      --fs-body:12px;
+      --fs-card:13px;
+      --fs-title:15px;
+      --fs-heading:17px;
+    }
+
+    body{
+      font-size:var(--fs-body);
+      line-height:1.35;
+    }
+
+    button,input,select,textarea,table{
+      font-family:'Kanit',sans-serif !important;
+    }
+
+    .v10-section-title{
+      font-size:var(--fs-title);
+      font-weight:800;
+      color:#172033;
+      line-height:1.2;
+    }
+
+    .v10-section-subtitle{
+      font-size:var(--fs-small);
+      color:#94A3B8;
+      line-height:1.3;
+    }
+
+    /* ===== Approved Master Mockup Skin ===== */
+    .master-header{
+      min-height:52px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:7px 11px;
+      border-radius:0 0 10px 10px;
+      background:linear-gradient(135deg,#0C2848 0%,#143A63 70%,#102E50 100%);
+      color:white;
+      box-shadow:0 7px 20px rgba(15,39,71,.14);
+    }
+    .brand-block{display:flex;align-items:center;gap:11px;min-width:0;}
+    .brand-mark{
+      width:32px;height:32px;border-radius:7px;
+      display:grid;place-items:center;
+      background:rgba(255,255,255,.10);
+      border:1px solid rgba(255,255,255,.12);
+      font-size:18px;
+      flex:0 0 auto;
+    }
+    .header-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+    .header-pill{
+      min-height:34px;
+      display:flex;align-items:center;gap:8px;
+      padding:5px 9px;border-radius:7px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.11);
+      color:#E2E8F0;
+      font-size:11px;
+    }
+    .header-pill strong{font-size:12px;color:#fff;}
+    .header-live-dot{
+      width:9px;height:9px;border-radius:999px;background:#22C55E;
+      box-shadow:0 0 0 4px rgba(34,197,94,.08);
+    }
+    .header-nav-btn{
+      width:32px;height:32px;border-radius:7px;border:1px solid rgba(255,255,255,.11);
+      background:rgba(255,255,255,.06);color:#fff;
+      display:grid;place-items:center;cursor:pointer;
+      transition:background .18s ease,transform .18s ease;
+    }
+    .header-nav-btn:hover{background:rgba(255,255,255,.12);transform:translateY(-1px);}
+    .mock-section{
+      background:#fff;
+      border:1px solid #E3EBF4;
+      border-radius:9px;
+      box-shadow:0 2px 8px rgba(15,39,71,.035);
+    }
+    .mock-section-title{
+      font-size:14px;font-weight:800;color:#172033;
+    }
+
+    .overview-layout{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 118px;
+      gap:7px;
+      align-items:stretch;
+    }
+    .overview-side{
+      display:grid;
+      gap:5px;
+      align-content:start;
+    }
+    .overview-stat{
+      display:grid;
+      grid-template-columns:28px 1fr;
+      gap:6px;
+      align-items:center;
+      background:#F8FAFD;
+      border:1px solid #E6EDF5;
+      border-radius:7px;
+      padding:7px;
+      min-height:48px;
+    }
+    .overview-stat-icon{
+      width:28px;height:28px;border-radius:6px;
+      display:grid;place-items:center;
+      font-size:15px;font-weight:800;
+      background:#EDF4FB;color:#173B66;
+    }
+    .overview-stat.actual .overview-stat-icon{background:#E7F8EF;color:#159A67;}
+    .overview-stat.actual .overview-stat-value{color:#14A66F;}
+    .overview-stat-value{
+      font-size:22px;line-height:1;font-weight:800;color:#17304E;
+    }
+    .overview-stat-label{font-size:10px;color:#64748B;font-weight:600;margin-bottom:3px;}
+
+    .line-cards-master{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:5px;
+    }
+    .master-line-card{
+      background:#fff;
+      border:1px solid #E4EBF3;
+      border-radius:10px;
+      padding:11px 12px;
+      min-width:0;
+      box-shadow:0 2px 7px rgba(15,39,71,.035);
+    }
+    .master-line-head{
+      display:flex;justify-content:space-between;align-items:flex-start;gap:5px;
+      margin-bottom:5px;
+    }
+    .master-status{
+      display:inline-flex;align-items:center;gap:5px;
+      padding:4px 7px;border-radius:7px;
+      font-size:10px;font-weight:700;white-space:nowrap;
+    }
+    .master-status.running{background:#EAF9F2;color:#16865D;}
+    .master-status.warning{background:#FFF6E2;color:#B87709;}
+    .master-status.muted{background:#F1F5F9;color:#64748B;}
+    .master-status-dot{width:7px;height:7px;border-radius:999px;background:currentColor;}
+    .card-stat-row{
+      display:grid;grid-template-columns:1fr auto;gap:7px;
+      align-items:baseline;font-size:11px;line-height:1.35;
+    }
+    .master-card-progress{
+      height:5px;border-radius:999px;background:#EAF0F6;overflow:hidden;
+    }
+
+    .floor-master-grid{
+      display:grid;
+      grid-template-columns:118px minmax(0,1fr) 225px;
+      gap:10px;
+      align-items:stretch;
+      max-height:430px;
+    }
+
+    .floor-left-tabs{
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      min-width:0;
+    }
+    .floor-left-tabs .floor-tab{
+      width:100%;
+      min-height:52px;
+      border-radius:0;
+      font-size:14px;
+      font-weight:800;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .floor-left-tabs .floor-tab.active{
+      background:linear-gradient(180deg,#153A68 0%,#0F315B 100%);
+      color:#fff;
+      box-shadow:0 3px 8px rgba(15,49,91,.12);
+    }
+    .floor-left-tabs .floor-tab[disabled]{
+      background:#B4BECC;
+      color:#F8FAFC;
+      opacity:1;
+    }
+    .floor-map-wrap{
+      min-width:0;
+      display:flex;
+      align-items:stretch;
+      max-height:430px;
+    }
+    .floor-map-wrap .floor-stage{
+      width:100%;
+      height:100%;
+      min-height:330px;
+      max-height:430px;
+      margin:0;
+      border-radius:8px;
+      border:1px solid #D6E0EB;
+      overflow:hidden;
+    }
+    .floor-map-wrap .floor-stage img{
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      background:#102331;
+    }
+
+    .floor-side-panel{
+      background:#F8FAFD;
+      border:1px solid #E6EDF5;
+      border-radius:7px;
+      padding:8px 10px;
+      min-width:0;
+      height:100%;
+      align-self:stretch;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+    .usage-step{
+      display:grid;grid-template-columns:23px 1fr;gap:8px;
+      align-items:start;margin-top:9px;
+      color:#475569;font-size:11px;
+      line-height:1.35;
+    }
+    .usage-no{
+      width:22px;height:22px;border-radius:999px;
+      display:grid;place-items:center;background:#4F46E5;color:#fff;
+      font-size:10px;font-weight:800;
+    }
+
+    .detail-master{
+      border:2px solid #163A61;
+      border-radius:15px;
+      background:#fff;
+      overflow:hidden;
+      box-shadow:0 6px 16px rgba(15,39,71,.06);
+    }
+    .detail-topbar{
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      flex-wrap:wrap;padding:11px 12px 7px;
+      border-bottom:1px solid #E9EFF6;
+    }
+    .production-tab{
+      display:inline-flex;align-items:center;gap:7px;
+      padding:8px 17px;border-radius:8px 8px 0 0;
+      background:#2168F3;color:#fff;font-size:10px;font-weight:800;
+      margin-top:1px;
+    }
+    .detail-kpi-master-grid{
+      display:grid;
+      grid-template-columns:1.35fr 1.25fr repeat(5,minmax(0,.85fr));
+      gap:7px;
+      padding:9px 10px 5px;
+    }
+    .detail-kpi.compact{
+      padding:9px 10px;border-radius:9px;
+    }
+    .detail-content-master{
+      display:grid;
+      grid-template-columns:minmax(0,1.1fr) minmax(0,1.05fr) minmax(220px,.62fr);
+      gap:8px;
+      padding:5px 10px 10px;
+      align-items:stretch;
+    }
+    .detail-right-stack{display:grid;grid-template-rows:auto 1fr;gap:8px;}
+    .detail-subpanel.compact{border-radius:10px;padding:10px;}
+    .detail-subpanel.compact h3{font-size:10px;}
+
+    @media(max-width:1150px){
+      .line-cards-master{grid-template-columns:repeat(3,minmax(0,1fr));}
+      .detail-kpi-master-grid{grid-template-columns:repeat(4,minmax(0,1fr));}
+      .detail-content-master{grid-template-columns:1fr 1fr;}
+      .detail-right-stack{grid-column:1/-1;grid-template-columns:1fr 1fr;grid-template-rows:none;}
+    }
+    @media(max-width:900px){
+      .overview-layout{grid-template-columns:1fr;}
+      .overview-side{grid-template-columns:repeat(3,1fr);}
+      .floor-master-grid{grid-template-columns:1fr;}
+      .floor-left-tabs{flex-direction:row;}
+      .floor-left-tabs .floor-tab{min-height:38px;}
+      .line-cards-master{grid-template-columns:repeat(2,minmax(0,1fr));}
+      .detail-content-master{grid-template-columns:1fr;}
+      .detail-right-stack{grid-column:auto;grid-template-columns:1fr;}
+    }
+
+    @media(max-width:900px){
+      .floor-master-grid,
+      .floor-map-wrap{
+        max-height:none;
+      }
+      .floor-map-wrap .floor-stage{
+        min-height:0;
+        max-height:none;
+      }
+    }
+
+    @media(max-width:560px){
+      .master-header{align-items:flex-start;}
+      .header-meta{width:100%;justify-content:flex-start;}
+      .overview-side{grid-template-columns:1fr;}
+      .line-cards-master{grid-template-columns:1fr;}
+      .detail-kpi-master-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+    }
+
   </style>
 </head>
-<body class="flex h-screen overflow-hidden">
-
-  <!-- Sidebar ด้านข้าง -->
-  <div class="w-16 bg-slate-900 text-white flex flex-col items-center py-6 gap-8 shadow-xl z-20">
-    <div class="w-10 h-10 bg-emerald-500 rounded-2xl flex items-center justify-center font-bold text-xl shadow-lg">📊</div>
-    <div class="flex flex-col gap-4 w-full">
-      <button onclick="switchTab('tab1')" id="nav-tab1" class="nav-btn active p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">📈</span>
-      </button>
-      <button onclick="switchTab('tab2')" id="nav-tab2" class="nav-btn p-3 w-full flex justify-center hover:bg-white/10 transition">
-        <span class="text-xl">🔍</span>
-      </button>
-    </div>
-  </div>
-
+<body class="min-h-screen overflow-x-hidden">
   <!-- Content Area -->
-  <div class="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-    
+  <div class="w-full max-w-[1680px] mx-auto px-1.5 md:px-2 pt-1.5 pb-14">
     <!-- Top Bar -->
-    <div class="flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-      <div>
-        <h1 id="pageTitle" class="text-lg font-bold text-slate-800">Dashboard ภาพรวมการผลิต</h1>
-        <p class="text-xs text-slate-400">
-          <span class="font-semibold text-emerald-600">● LIVE</span>
-          • อัปเดตเมื่อข้อมูลเปลี่ยน
-          • <span id="lastUpdatedText">กำลังโหลด...</span>
-        </p>
+    <header class="master-header mb-3">
+      <div class="brand-block">
+        <div class="brand-mark">🏭</div>
+        <div class="min-w-0">
+          <h1 id="pageTitle" class="text-[18px] leading-tight font-extrabold text-white">Production Dashboard</h1>
+          <p class="text-[11px] text-slate-300 mt-0.5">ติดตามการผลิตแบบเรียลไทม์</p>
+        </div>
       </div>
-      <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-full">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span id="displayName" class="text-xs font-semibold text-slate-700">กำลังเชื่อมต่อ LINE...</span>
-      </div>
-    </div>
 
-    <!-- PAGE 1: Dashboard ภาพรวม -->
-    <div id="tab1" class="space-y-6">
-      
-      <!-- 1. ภาพรวมรายวัน (Daily Overview - Stacked Bar Chart) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100">
-        <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+      <div class="header-meta">
+        <div class="header-pill">
+          <span>📅</span>
           <div>
-            <h2 class="font-bold text-slate-700 text-base">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
-            <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
-          </div>
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-xl w-full sm:w-auto">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">📅 จาก:</span>
-              <input type="date" id="datePicker" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-500 w-9 shrink-0">ถึง:</span>
-              <input type="date" id="datePickerTo" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:border-indigo-400 cursor-pointer">
-            </div>
+            <strong id="headerDateText">กำลังโหลด...</strong>
+            <div class="text-[9px] text-slate-400">วันที่ปัจจุบัน</div>
           </div>
         </div>
 
-        <div class="h-64 relative">
-          <canvas id="factoryChart"></canvas>
-        </div>
-      </div>
-
-      <!-- 2. รายละเอียดแยกตามไลน์ & LOT -->
-      <!-- Summary Cards Grid -->
-      <div>
-        <h2 class="font-bold text-slate-700 mb-3">รายละเอียดแยกตามไลน์ & LOT</h2>
-        <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <!-- Cards Dynamic Generation -->
-        </div>
-      </div>
-
-
-      <!-- 3. เจาะลึกรายชั่วโมง (Hourly Tracking Section) -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex flex-wrap justify-between items-center gap-2 border-b border-slate-100 pb-3">
+        <div class="header-pill">
+          <span>◷</span>
           <div>
-            <h2 class="font-bold text-slate-700 text-base">⏱️ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h2>
-            <p id="hourlyTargetSubtitle" class="text-xs text-slate-400">เลือกไลน์เพื่อดูเป้าหมายเฉลี่ยต่อชั่วโมง</p>
-          </div>
-          
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-bold text-slate-500">เลือกลูกไลน์:</span>
-            <select id="lineSelect" onchange="updateHourlyChart()" class="bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-indigo-500">
-              <option value="B">LINE B</option>
-              <option value="C">LINE C</option>
-              <option value="D">LINE D</option>
-              <option value="E">LINE E</option>
-              <option value="F">LINE F</option>
-            </select>
+            <strong id="headerTimeText">--:--:--</strong>
+            <div class="text-[9px] text-emerald-400 flex items-center gap-1">
+              <span class="header-live-dot"></span> ระบบปกติ
+            </div>
           </div>
         </div>
 
-        <div class="h-60 relative">
-          <canvas id="hourlyChart"></canvas>
+        <button id="overviewTabBtn" type="button" class="header-nav-btn" title="Dashboard ภาพรวม" onclick="switchTab('tab1')">📊</button>
+        <button id="searchTabBtn" type="button" class="header-nav-btn" title="ค้นหา LOT" onclick="switchTab('tab2')">🔍</button>
+
+        <div class="hidden sm:block pl-2 border-l border-white/10">
+          <div class="text-[9px] leading-tight text-slate-300">Better Production</div>
+          <div class="text-[9px] leading-tight text-slate-300">A Better Tomorrow</div>
+          <span id="displayName" class="hidden">Guest User</span>
         </div>
       </div>
+    </header>
+<!-- PAGE 1: Dashboard ภาพรวม -->
+    <div id="tab1" class="space-y-1.5">
 
-      <!-- 4. Production Pulse -->
-      <div class="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
-        <div class="flex flex-wrap justify-between items-start gap-2 border-b border-slate-100 pb-3">
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="font-bold text-slate-700 text-base">⚡ Production Pulse</h2>
-            </div>
-            <p id="pulseSubtitle" class="text-xs text-slate-400 mt-1">ประมาณการจากรอบที่มีข้อมูลของไลน์ที่เลือก</p>
-          </div>
-          <div id="pulseLineBadge" class="text-xs font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">LINE B</div>
-        </div>
+      <!-- DAILY SUMMARY + RIGHT TOTALS -->
+      <section class="mock-section px-2.5 py-2">
+        <div class="overview-layout">
+          <div class="min-w-0">
+            <div class="flex flex-wrap justify-between items-start gap-2 mb-2">
+              <div>
+                <h2 class="text-[15px] font-extrabold text-blue-700">📊 สรุปยอดผลิตภาพรวมรายวัน (Daily Summary)</h2>
+                <p id="selectedDateText" class="text-[11px] text-blue-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
+              </div>
 
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Actual ตอนนี้</p>
-            <p id="pulseActual" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">ชิ้นสะสม</p>
-          </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Current LOT Pace</p>
-            <p id="pulsePace" class="text-2xl font-extrabold text-slate-800 mt-1">-</p>
-            <p class="text-[10px] text-slate-400 mt-1">เฉลี่ยชิ้น / ชม. ของ LOT ปัจจุบัน</p>
-          </div>
-          <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-indigo-500">Order Progress</p>
-            <p id="pulseProjected" class="text-xl font-extrabold text-indigo-700 mt-1">-</p>
-            <p id="pulseOrderMeta" class="text-[10px] text-indigo-400 mt-1">LOT ปัจจุบัน</p>
-          </div>
-          <div class="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-            <p class="text-[11px] font-semibold text-slate-400">Forecast Completion</p>
-            <p id="pulseGap" class="text-xl font-extrabold text-slate-800 mt-1">-</p>
-            <p id="pulseGapNote" class="text-[10px] text-slate-400 mt-1">อิงกำลังผลิต LOT ปัจจุบัน</p>
-          </div>
-        </div>
-
-        <div class="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-          <div class="flex justify-between items-center gap-2 mb-3">
-            <div>
-              <h3 class="text-sm font-bold text-slate-700">📈 Cumulative Target vs Actual</h3>
-              <p class="text-[11px] text-slate-400">เห็นว่าผลผลิตเริ่มห่างจากแผนตั้งแต่ช่วงไหน</p>
+              <div class="flex flex-wrap items-center gap-1 bg-slate-50 border border-slate-200 px-1.5 py-1 rounded-md">
+                <span class="text-[9px] font-bold text-slate-500">📅 จาก:</span>
+                <input type="date" id="datePicker" onchange="onDateChange()" class="bg-white border border-slate-200 rounded-md px-2 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none focus:border-blue-400">
+                <span class="text-[9px] font-bold text-slate-500">ถึง:</span>
+                <input type="date" id="datePickerTo" onchange="onDateChange()" class="bg-white border border-slate-200 rounded-md px-2 py-1 text-[11px] font-semibold text-slate-700 focus:outline-none focus:border-blue-400">
+              </div>
             </div>
 
+            <div class="h-[205px] relative">
+              <canvas id="factoryChart"></canvas>
+            </div>
           </div>
-          <div class="h-64 relative">
-            <canvas id="cumulativeChart"></canvas>
+
+          <aside class="overview-side">
+            <div class="overview-stat actual">
+              <div class="overview-stat-icon">▣</div>
+              <div>
+                <div class="overview-stat-label">กำลังผลิตรวม (Actual)</div>
+                <div id="overviewActualTotal" class="overview-stat-value">-</div>
+                <div class="text-[8px] text-slate-400 mt-1">ชิ้น</div>
+              </div>
+            </div>
+            <div class="overview-stat">
+              <div class="overview-stat-icon">▦</div>
+              <div>
+                <div class="overview-stat-label">เป้าหมายรวม</div>
+                <div id="overviewTargetTotal" class="overview-stat-value">-</div>
+                <div class="text-[8px] text-slate-400 mt-1">ชิ้น</div>
+              </div>
+            </div>
+            <div class="overview-stat">
+              <div class="overview-stat-icon">%</div>
+              <div>
+                <div class="overview-stat-label">คิดเป็น</div>
+                <div id="overviewAchTotal" class="overview-stat-value">-</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- LINE & LOT OVERVIEW CARDS -->
+      <section>
+        <h2 class="text-[15px] font-extrabold text-slate-800 mb-2">รายละเอียดแยกตามไลน์ & LOT</h2>
+        <div id="cardsContainer" class="line-cards-master"></div>
+      </section>
+
+      <!-- INTERACTIVE FACTORY FLOOR -->
+      <section id="factoryFloorSection" class="mock-section px-2 py-1.5">
+        <div class="flex flex-wrap items-baseline gap-2 mb-1">
+          <h2 class="text-[15px] font-extrabold text-slate-800">ผังไลน์การผลิต</h2>
+          <p class="text-[11px] text-slate-400">เลือกชั้นเพื่อดูผัง และคลิกที่ไลน์เพื่อดูรายละเอียด</p>
+        </div>
+
+        <div class="floor-master-grid">
+          <div class="floor-left-tabs" aria-label="เลือกชั้น">
+            <button type="button" class="floor-tab active" aria-current="page">ชั้น 3</button>
+            <button type="button" class="floor-tab" disabled title="จะต่อ Floor 4 ภายหลัง">ชั้น 4</button>
+          </div>
+
+          <div class="floor-map-wrap">
+            <div id="floor3Stage" class="floor-stage" aria-label="Interactive Factory Floor ชั้น 3">
+              <img src="./floor3_interactive.png" alt="แปลนโรงงาน ชั้น 3">
+
+              <button id="zoneC"
+                      type="button"
+                      class="floor-hit floor-zone"
+                      data-line="C"
+                      aria-label="เปิดรายละเอียด LINE C"
+                      onclick="openFloorLineDetail('C', true)"></button>
+
+              <button id="zoneB"
+                      type="button"
+                      class="floor-hit floor-zone"
+                      data-line="B"
+                      aria-label="เปิดรายละเอียด LINE B"
+                      onclick="openFloorLineDetail('B', true)"></button>
+            </div>
+          </div>
+
+          <aside class="floor-side-panel">
+            <h3 class="text-[13px] font-extrabold text-slate-800">สัญลักษณ์สถานะไลน์</h3>
+            <div class="space-y-2 mt-2.5 text-[11px] text-slate-600">
+              <div class="flex items-center gap-1.5"><span class="floor-dot" style="background:#22A06B"></span><span>ผลิตปกติ</span></div>
+              <div class="flex items-center gap-1.5"><span class="floor-dot" style="background:#D99B2B"></span><span>ใกล้เป้า</span></div>
+              <div class="flex items-center gap-1.5"><span class="floor-dot" style="background:#D64545"></span><span>ต่ำกว่าเป้า</span></div>
+            </div>
+
+            <div class="border-t border-slate-200 mt-2.5 pt-2">
+              <h3 class="text-[13px] font-extrabold text-slate-800">ℹ วิธีใช้งาน</h3>
+              <div class="usage-step"><span class="usage-no">1</span><span>เลือกชั้น</span></div>
+              <div class="usage-step"><span class="usage-no">2</span><span>ชี้ LINE เพื่อ Highlight</span></div>
+              <div class="usage-step"><span class="usage-no">3</span><span>คลิก LINE เพื่อดูรายละเอียด</span></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- CLICKED LINE DETAIL: HIDDEN UNTIL CLICK -->
+      <section id="lineDetailSection" class="hidden detail-master line-detail-shell">
+        <div class="detail-topbar">
+          <div class="flex items-center gap-3 min-w-0">
+            <button id="backOverviewBtn" type="button" class="bg-[#173B66] hover:bg-[#0F2747] text-white px-3 py-2 rounded-lg text-[9px] font-bold transition">← กลับภาพรวม</button>
+            <div class="min-w-0">
+              <h2 id="detailLineTitle" class="text-[16px] font-extrabold text-slate-900 truncate">LINE B — รายละเอียด</h2>
+              <p id="detailBreadcrumb" class="text-[9px] text-blue-600 font-semibold">Dashboard › ชั้น 3 › LINE B</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-violet-100 text-violet-700">ชั้น 3</span>
+            <span id="detailLineBadge" class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-sky-100 text-sky-700">LINE B</span>
+            <span id="detailStatusBadge" class="text-[9px] font-bold px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700">กำลังผลิต</span>
+            <span class="text-[9px] font-semibold text-slate-400">อัปเดต <span id="detailUpdateTime">--:--</span></span>
           </div>
         </div>
-      </div>
 
+        <div class="px-2 pt-1">
+          <div class="production-tab">▣ Production</div>
+        </div>
 
+        <select id="lineSelect" onchange="updateHourlyChart()" class="hidden" aria-hidden="true">
+          <option value="B">LINE B</option><option value="C">LINE C</option>
+          <option value="D">LINE D</option><option value="E">LINE E</option><option value="F">LINE F</option>
+        </select>
+
+        <div class="detail-kpi-master-grid">
+          <div class="detail-kpi compact">
+            <p class="text-[8px] font-semibold text-slate-400">รุ่นปัจจุบัน</p>
+            <p id="detailModel" class="text-[12px] font-extrabold text-slate-800 mt-1">-</p>
+            <p id="detailLot" class="text-[9px] font-bold text-blue-600 mt-0.5">LOT -</p>
+          </div>
+          <div class="detail-kpi compact bg-emerald-50/70 border-emerald-100">
+            <p class="text-[8px] font-semibold text-emerald-600">สถานะปัจจุบัน</p>
+            <p id="detailStatusText" class="text-[12px] font-extrabold text-emerald-700 mt-1">-</p>
+            <p id="detailStatusMeta" class="text-[8px] text-emerald-500 mt-0.5">-</p>
+          </div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">เป้าหมายวันนี้</p><p id="detailTarget" class="text-[16px] font-extrabold text-slate-800 mt-1">-</p><p class="text-[8px] text-slate-400">ชิ้น</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">Actual ตอนนี้</p><p id="detailActual" class="text-[16px] font-extrabold text-emerald-600 mt-1">-</p><p class="text-[8px] text-slate-400">ชิ้น</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">Gap</p><p id="detailGap" class="text-[16px] font-extrabold text-rose-600 mt-1">-</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">% Ach.</p><p id="detailAch" class="text-[16px] font-extrabold text-slate-800 mt-1">-</p></div>
+          <div class="detail-kpi compact"><p class="text-[8px] font-semibold text-slate-400">เวลาทำงาน</p><p id="detailHours" class="text-[16px] font-extrabold text-slate-800 mt-1">-</p><p class="text-[8px] text-slate-400">ชม.</p></div>
+        </div>
+
+        <div class="detail-content-master">
+          <div class="detail-subpanel compact">
+            <h3 class="font-bold text-slate-700">⏱ ติดตามผลการผลิตรายชั่วโมง (Hourly Tracking)</h3>
+            <p id="hourlyTargetSubtitle" class="text-[8px] text-slate-400 mt-0.5 mb-1">เลือก LINE จากผังเพื่อดูข้อมูล</p>
+            <div class="h-[215px] relative"><canvas id="hourlyChart"></canvas></div>
+          </div>
+
+          <div class="detail-subpanel compact space-y-2">
+            <h3 class="font-bold text-slate-700">⚡ Production Pulse</h3>
+            <p id="pulseSubtitle" class="text-[8px] text-slate-400 mt-0.5">ประมาณการจากรอบที่มีข้อมูลของไลน์ที่เลือก</p>
+            <div id="pulseLineBadge" class="hidden">LINE B</div>
+
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-1.5">
+              <div class="bg-slate-50 border border-slate-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-slate-400">Actual ตอนนี้</p>
+                <p id="pulseActual" class="text-[14px] font-extrabold text-slate-800 mt-1">-</p>
+              </div>
+              <div class="bg-emerald-50 border border-emerald-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-emerald-600">Current LOT Pace</p>
+                <p id="pulsePace" class="text-[14px] font-extrabold text-emerald-700 mt-1">-</p>
+              </div>
+              <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-indigo-500">Order Progress</p>
+                <p id="pulseProjected" class="text-[12px] font-extrabold text-indigo-700 mt-1">-</p>
+                <p id="pulseOrderMeta" class="text-[7px] text-indigo-400 mt-1">LOT ปัจจุบัน</p>
+              </div>
+              <div class="bg-slate-50 border border-slate-100 rounded-lg p-2">
+                <p class="text-[8px] font-semibold text-slate-400">Forecast Completion</p>
+                <p id="pulseGap" class="text-[12px] font-extrabold text-slate-800 mt-1">-</p>
+                <p id="pulseGapNote" class="text-[7px] text-slate-400 mt-1">อิงกำลังผลิต LOT ปัจจุบัน</p>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-100 pt-2">
+              <h3 class="font-bold text-slate-700 mb-1">📈 Cumulative Target vs Actual</h3>
+              <div class="h-[150px] relative"><canvas id="cumulativeChart"></canvas></div>
+            </div>
+          </div>
+
+          <div class="detail-right-stack">
+            <div class="detail-subpanel compact overflow-hidden">
+              <h3 id="detailLotTableTitle" class="font-bold text-slate-700 mb-2">รายการ LOT วันนี้</h3>
+              <div class="overflow-x-auto">
+                <table class="lot-table w-full text-[8px]">
+                  <thead><tr><th>ลำดับ</th><th>LOT</th><th>Model</th><th>ชม.</th><th>TG</th><th>Actual</th><th>สถานะ</th></tr></thead>
+                  <tbody id="detailLotTableBody"><tr><td colspan="7" class="text-slate-400">เลือก LINE เพื่อดูข้อมูล</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="detail-subpanel compact">
+              <h3 class="font-bold text-slate-700 mb-2">หมายเหตุล่าสุด</h3>
+              <div id="detailRemarks" class="space-y-1.5 text-[9px] text-slate-600"><div class="text-slate-400">เลือก LINE เพื่อดูหมายเหตุ</div></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- PAGE 2: ค้นหา LOT -->
@@ -217,6 +887,7 @@
 
   <script>
     Chart.register(ChartDataLabels);
+    Chart.defaults.font.family = 'Kanit';
 
     // วาง Web App URL ของ Apps Script ล่าสุดที่นี่
     const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec"; 
@@ -226,6 +897,8 @@
     let hourlyChartInstance = null;
     let cumulativeChartInstance = null;
     let globalLinesData = [];
+    let hoveredFloorLine = '';
+    let selectedFloorLine = '';
 
     const CHANGE_CHECK_MS = 30000; // ตรวจเงียบ ๆ ทุก 30 วิ ลด request ไป Apps Script
     let changeWatchTimer = null;
@@ -242,20 +915,275 @@
     }
 
     function switchTab(tabId) {
-      document.getElementById('tab1').classList.add('hidden');
-      document.getElementById('tab2').classList.add('hidden');
-      document.getElementById('nav-tab1').classList.remove('active');
-      document.getElementById('nav-tab2').classList.remove('active');
+      document.getElementById('tab1')?.classList.add('hidden');
+      document.getElementById('tab2')?.classList.add('hidden');
 
-      document.getElementById(tabId).classList.remove('hidden');
-      if(tabId === 'tab1') {
-        document.getElementById('nav-tab1').classList.add('active');
-        document.getElementById('pageTitle').innerText = "Dashboard ภาพรวมการผลิต";
+      document.getElementById(tabId)?.classList.remove('hidden');
+
+      const overviewBtn = document.getElementById('overviewTabBtn');
+      const searchBtn = document.getElementById('searchTabBtn');
+
+      if (tabId === 'tab1') {
+        if (overviewBtn) overviewBtn.style.background = 'rgba(255,255,255,.14)';
+        if (searchBtn) searchBtn.style.background = 'rgba(255,255,255,.06)';
+        document.getElementById('pageTitle').innerText = "Production Dashboard";
       } else {
-        document.getElementById('nav-tab2').classList.add('active');
-        document.getElementById('pageTitle').innerText = "ค้นหาและติดตามสถานะ LOT";
+        if (overviewBtn) overviewBtn.style.background = 'rgba(255,255,255,.06)';
+        if (searchBtn) searchBtn.style.background = 'rgba(255,255,255,.14)';
+        document.getElementById('pageTitle').innerText = "ค้นหา LOT";
       }
     }
+
+
+    function escapeFloorHtml(value) {
+      return String(value ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+    function normalizeLineCode(value) {
+      return String(value || '').replace(/LINE/ig,'').replace(/\s+/g,'').toUpperCase();
+    }
+    function getFloorLineData(lineCode) {
+      const clean = normalizeLineCode(lineCode);
+      return globalLinesData.find(item => normalizeLineCode(item.line || item.lineName) === clean) || null;
+    }
+    function getFloorActiveLot(item) {
+      if (!item) return '';
+      const explicit = String(item.active_lot || '').trim();
+      if (explicit) return explicit;
+      return String(item.lot_number3 || item.lot3 || item.lot_number2 || item.lot2 || item.lot_number || item.lot1 || '').trim();
+    }
+    function getFloorActiveModel(item, activeLot) {
+      if (!item) return '';
+      const explicit = String(item.active_model || '').trim();
+      if (explicit) return explicit;
+      const candidates = [
+        {lot:String(item.lot_number || item.lot1 || '').trim(),model:String(item.model1 || item.model || '').trim()},
+        {lot:String(item.lot_number2 || item.lot2 || '').trim(),model:String(item.model2 || '').trim()},
+        {lot:String(item.lot_number3 || item.lot3 || '').trim(),model:String(item.model3 || '').trim()}
+      ];
+      const found = candidates.find(x => x.lot && x.lot.toUpperCase() === String(activeLot || '').toUpperCase());
+      return found ? found.model : String(item.model || '').trim();
+    }
+    function getFloorStatus(item) {
+      if (!item) return {text:'ไม่มีข้อมูล',tone:'muted'};
+      const activeLot = getFloorActiveLot(item);
+      const reported = item.hourly_reported || {};
+      const hasReported = Object.values(reported).some(v => v === true);
+      if (activeLot && hasReported) return {text:'กำลังผลิต',tone:'running'};
+      if (activeLot) return {text:'มีแผนวันนี้',tone:'warning'};
+      return {text:'ยังไม่มีแผน',tone:'muted'};
+    }
+    function getFloorLineSummary(lineCode) {
+      const item = getFloorLineData(lineCode);
+      if (!item) return {line:normalizeLineCode(lineCode),model:'-',lot:'-',target:0,actual:0,efficiency:0,status:getFloorStatus(null)};
+      const target = Number(item.target) || ((Number(item.target1)||0)+(Number(item.target2)||0)+(Number(item.target3)||0));
+      const actual = Number(item.actual) || ((Number(item.actual1)||0)+(Number(item.actual2)||0)+(Number(item.actual3)||0));
+      const lot = getFloorActiveLot(item);
+      const model = getFloorActiveModel(item, lot);
+      return {line:normalizeLineCode(lineCode),model:model||'-',lot:lot||'-',target,actual,efficiency:target>0?Math.max(0,(actual/target)*100):0,status:getFloorStatus(item)};
+    }
+    function setFloorZoneVisual(lineCode,mode) {
+      const clean=normalizeLineCode(lineCode),stage=document.getElementById('floor3Stage');
+      document.querySelectorAll('.floor-zone').forEach(zone=>{
+        const isThis=zone.dataset.line===clean;
+        zone.classList.toggle('is-preview',isThis&&mode==='preview');
+        zone.classList.toggle('is-selected',isThis&&mode==='selected');
+      });
+      stage?.classList.toggle('is-focused',Boolean(clean&&(mode==='preview'||mode==='selected')));
+    }
+
+    function previewFloorLine(lineCode) {
+      const clean=normalizeLineCode(lineCode);
+
+      // ถ้ามี LINE ที่ถูกเลือกอยู่ ให้ selected state เป็นตัวหลัก
+      if (selectedFloorLine) {
+        if (selectedFloorLine === clean) {
+          setFloorZoneVisual(clean,'selected');
+        } else {
+          const zone=document.getElementById(`zone${clean}`);
+          zone?.classList.add('is-preview');
+          document.getElementById('floor3Stage')?.classList.add('is-focused');
+        }
+        return;
+      }
+
+      // Hover อย่างเดียว: ไม่มี Floating Card
+      setFloorZoneVisual(clean,'preview');
+      hoveredFloorLine=clean;
+    }
+
+    function leaveFloorLine(lineCode='') {
+      const clean=normalizeLineCode(lineCode || hoveredFloorLine);
+
+      document.getElementById(`zone${clean}`)?.classList.remove('is-preview');
+      hoveredFloorLine='';
+
+      if (selectedFloorLine) {
+        setFloorZoneVisual(selectedFloorLine,'selected');
+      } else {
+        document.querySelectorAll('.floor-zone').forEach(z=>z.classList.remove('is-preview','is-selected'));
+        document.getElementById('floor3Stage')?.classList.remove('is-focused');
+      }
+    }
+
+    function getDetailStatus(item) {
+      const s=getFloorStatus(item);
+      if(currentDashboardIsRange)return {text:'ข้อมูลสะสม',badge:'ข้อมูลช่วง',meta:'เลือกวันเดียวเพื่อดูสถานะปัจจุบัน'};
+      return {text:s.text,badge:s.text,meta:s.tone==='running'?'อ้างอิงจากการรายงานรายชั่วโมงล่าสุด':s.tone==='warning'?'มี LOT ปัจจุบัน แต่ยังไม่มีรอบรายงาน':'ยังไม่มี LOT ปัจจุบัน'};
+    }
+    function renderFloorDetailLotTable(item,lineCode) {
+      const body=document.getElementById('detailLotTableBody'),title=document.getElementById('detailLotTableTitle');
+      if(!body||!title)return;
+      title.innerText=`รายการ LOT วันนี้ (LINE ${lineCode})`;
+      if(!item){body.innerHTML='<tr><td colspan="7" class="text-slate-400">ไม่มีข้อมูล</td></tr>';return;}
+      const activeLot=getFloorActiveLot(item).toUpperCase();
+      const rows=[
+        {no:1,lot:String(item.lot_number||item.lot1||'').trim(),model:String(item.model1||item.model||'').trim(),hours:Number(item.hours1)||0,target:Number(item.target1)||0,actual:Number(item.actual1)||0},
+        {no:2,lot:String(item.lot_number2||item.lot2||'').trim(),model:String(item.model2||'').trim(),hours:Number(item.hours2)||0,target:Number(item.target2)||0,actual:Number(item.actual2)||0},
+        {no:3,lot:String(item.lot_number3||item.lot3||'').trim(),model:String(item.model3||'').trim(),hours:Number(item.hours3)||0,target:Number(item.target3)||0,actual:Number(item.actual3)||0}
+      ].filter(r=>r.lot);
+      if(!rows.length){body.innerHTML='<tr><td colspan="7" class="text-slate-400">ยังไม่มี LOT ของ LINE นี้</td></tr>';return;}
+      body.innerHTML=rows.map(r=>{
+        const badge=r.lot.toUpperCase()===activeLot
+          ?'<span class="inline-flex px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold">กำลังผลิต</span>'
+          :'<span class="inline-flex px-2 py-1 rounded-full bg-slate-100 text-slate-600 font-bold">แผนวันนี้</span>';
+        return `<tr><td>${r.no}</td><td class="font-bold text-indigo-600">${escapeFloorHtml(r.lot)}</td><td>${escapeFloorHtml(r.model||'-')}</td><td>${r.hours.toLocaleString()} ชม.</td><td>${r.target.toLocaleString()}</td><td class="font-bold text-slate-800">${r.actual.toLocaleString()}</td><td>${badge}</td></tr>`;
+      }).join('');
+    }
+    function renderFloorDetailRemarks(item) {
+      const wrap=document.getElementById('detailRemarks');if(!wrap)return;
+      const details=Array.isArray(item?.remark_details)?item.remark_details:[];
+      if(details.length){
+        wrap.innerHTML=details.slice(-6).reverse().map(r=>`<div class="flex items-start gap-2 border-b border-slate-100 pb-2 last:border-0"><span class="min-w-[76px] text-slate-500 font-bold">${escapeFloorHtml(r.time_slot||'-')}</span><div class="min-w-0">${r.lot?`<div class="text-[10px] text-indigo-500 font-bold">LOT ${escapeFloorHtml(r.lot)}</div>`:''}<div class="text-slate-700 break-words">${escapeFloorHtml(r.text||'')}</div></div></div>`).join('');
+        return;
+      }
+      const remarks=Array.isArray(item?.remarks)?item.remarks:[];
+      wrap.innerHTML=remarks.length?remarks.slice(-6).reverse().map(r=>`<div class="border-b border-slate-100 pb-2 last:border-0">${escapeFloorHtml(r)}</div>`).join(''):'<div class="text-slate-400">ยังไม่มีหมายเหตุของ LINE นี้</div>';
+    }
+    function openFloorLineDetail(lineCode,shouldScroll=true) {
+      const clean=normalizeLineCode(lineCode);
+      if(!['B','C'].includes(clean))return;
+
+      selectedFloorLine=clean;
+      hoveredFloorLine='';
+      setFloorZoneVisual(clean,'selected');
+
+      const section=document.getElementById('lineDetailSection');
+      section?.classList.remove('hidden');
+
+      // เปิด/เลื่อนมาครึ่งล่างทันที ไม่รอ chart หรือ API render
+      if(shouldScroll){
+        requestAnimationFrame(()=>{
+          section?.scrollIntoView({behavior:'smooth',block:'start'});
+        });
+      }
+
+      const select=document.getElementById('lineSelect');
+      if(select)select.value=clean;
+
+      document.getElementById('detailLineTitle').innerText=`LINE ${clean} — รายละเอียด`;
+      document.getElementById('detailBreadcrumb').innerText=`Dashboard › ชั้น 3 › LINE ${clean}`;
+      document.getElementById('detailLineBadge').innerText=`LINE ${clean}`;
+
+      const item=getFloorLineData(clean);
+
+      // เปิดครึ่งล่างก่อนทันที แล้วค่อยเติมข้อมูลเมื่อ API พร้อม
+      if(!item){
+        document.getElementById('detailStatusBadge').innerText='กำลังโหลด';
+        document.getElementById('detailStatusText').innerText='กำลังโหลด';
+        document.getElementById('detailStatusMeta').innerText='รอข้อมูล LINE จาก Dashboard';
+        document.getElementById('detailModel').innerText='-';
+        document.getElementById('detailLot').innerText='LOT -';
+        document.getElementById('detailTarget').innerText='-';
+        document.getElementById('detailActual').innerText='-';
+        document.getElementById('detailGap').innerText='-';
+        document.getElementById('detailAch').innerText='-';
+        document.getElementById('detailHours').innerText='-';
+        document.getElementById('detailLotTableBody').innerHTML='<tr><td colspan="7" class="text-slate-400">กำลังโหลดข้อมูล...</td></tr>';
+        document.getElementById('detailRemarks').innerHTML='<div class="text-slate-400">กำลังโหลดข้อมูล...</div>';
+
+        return;
+      }
+
+      const target=Number(item.target)||((Number(item.target1)||0)+(Number(item.target2)||0)+(Number(item.target3)||0));
+      const actual=Number(item.actual)||((Number(item.actual1)||0)+(Number(item.actual2)||0)+(Number(item.actual3)||0));
+      const gap=actual-target;
+      const ach=target>0?(actual/target)*100:0;
+      const hours=Number(item.total_working_hours)||((Number(item.hours1)||0)+(Number(item.hours2)||0)+(Number(item.hours3)||0));
+
+      const activeLot=getFloorActiveLot(item);
+      const activeModel=getFloorActiveModel(item,activeLot);
+      const status=getDetailStatus(item);
+
+      document.getElementById('detailStatusBadge').innerText=status.badge;
+      document.getElementById('detailStatusText').innerText=status.text;
+      document.getElementById('detailStatusMeta').innerText=status.meta;
+      document.getElementById('detailModel').innerText=activeModel||'-';
+      document.getElementById('detailLot').innerText=activeLot?`LOT ${activeLot}`:'LOT -';
+      document.getElementById('detailTarget').innerText=target.toLocaleString();
+      document.getElementById('detailActual').innerText=actual.toLocaleString();
+
+      const gapEl=document.getElementById('detailGap');
+      gapEl.innerText=`${gap>=0?'+':''}${gap.toLocaleString()}`;
+      gapEl.className=`text-[16px] font-extrabold mt-1 ${gap>=0?'text-emerald-600':'text-rose-600'}`;
+
+      document.getElementById('detailAch').innerText=`${ach.toFixed(1)}%`;
+      document.getElementById('detailHours').innerText=hours>0?hours.toLocaleString():'-';
+
+      const detailUpdateEl=document.getElementById('detailUpdateTime');
+      if(detailUpdateEl){
+        detailUpdateEl.innerText=new Date().toLocaleTimeString('th-TH',{
+          hour:'2-digit',minute:'2-digit',hour12:false
+        });
+      }
+
+      renderFloorDetailLotTable(item,clean);
+      renderFloorDetailRemarks(item);
+
+      // Chart error must not block the click/detail UX.
+      try{
+        updateHourlyChart();
+      }catch(err){
+        console.error('Floor detail chart render failed:', err);
+      }
+
+      requestAnimationFrame(()=>{
+        try{ hourlyChartInstance?.resize(); }catch(e){}
+        try{ cumulativeChartInstance?.resize(); }catch(e){}
+      });
+    }
+
+    function closeFloorLineDetail() {
+      selectedFloorLine='';hoveredFloorLine='';
+      document.querySelectorAll('.floor-zone').forEach(z=>z.classList.remove('is-selected','is-preview'));
+      document.getElementById('floor3Stage')?.classList.remove('is-focused');
+      document.getElementById('lineDetailSection')?.classList.add('hidden');
+      document.getElementById('factoryFloorSection')?.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+    function initFloor3Interaction() {
+      const stage=document.getElementById('floor3Stage');
+      const zones=Array.from(document.querySelectorAll('.floor-zone'));
+
+      zones.forEach(zone=>{
+        const line=zone.dataset.line;
+
+        zone.addEventListener('mouseenter',()=>previewFloorLine(line));
+        zone.addEventListener('mouseleave',()=>leaveFloorLine(line));
+        zone.addEventListener('focus',()=>previewFloorLine(line));
+        zone.addEventListener('blur',()=>leaveFloorLine(line));
+      });
+
+      document.getElementById('backOverviewBtn')?.addEventListener('click',closeFloorLineDetail);
+
+      // Click an empty part of the floor = close selected/detail.
+      stage?.addEventListener('click',e=>{
+        if(e.target.closest?.('.floor-zone'))return;
+
+        if(e.target===stage||e.target.tagName==='IMG'){
+          closeFloorLineDetail();
+        }
+      });
+    }
+
 
     async function fetchDashboardData(selectedDate, endDate) {
       // กัน request ซ้อนกัน ถ้ารอบก่อนยังโหลดไม่เสร็จ
@@ -297,7 +1225,11 @@
           globalLinesData = data.lines;
           renderCards(data.lines, isRange);
           renderDailyChart(data.lines);
-          updateHourlyChart();
+          updateOverviewTotals(data.lines);
+
+          if (selectedFloorLine && ['B','C'].includes(selectedFloorLine)) {
+            openFloorLineDetail(selectedFloorLine, false);
+          }
 
           document.getElementById('selectedDateText').innerText = isRange
             ? `แสดงข้อมูลสะสมช่วง: ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
@@ -430,6 +1362,11 @@
     }
 
     function showEmptyState() {
+      selectedFloorLine = '';
+      document.getElementById('lineDetailSection')?.classList.add('hidden');
+      document.querySelectorAll('.floor-zone').forEach(z => z.classList.remove('is-selected','is-preview'));
+      document.getElementById('floor3Stage')?.classList.remove('is-focused');
+
       document.getElementById('cardsContainer').innerHTML = `
         <div class="col-span-full bg-white p-6 rounded-2xl text-center text-slate-400 font-bold">
           🚫 ไม่พบข้อมูลการผลิตของวันที่เลือก
@@ -543,7 +1480,7 @@
     };
 
     function updateHourlyChart() {
-      const selectedLine = document.getElementById('lineSelect').value;
+      const selectedLine = document.getElementById('lineSelect')?.value || selectedFloorLine || 'B';
       const hourlyCanvas = document.getElementById('hourlyChart');
 
       if (!hourlyCanvas) {
@@ -998,7 +1935,7 @@
       if (parts.length !== 2) return null;
       const hm = parts[1].trim().split('.');
       if (hm.length !== 2) return null;
-const h = Number(hm[0]);
+      const h = Number(hm[0]);
       const m = Number(hm[1]);
       if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
       return (h * 60) + m;
@@ -1052,9 +1989,7 @@ const h = Number(hm[0]);
           model: item.model1 || item.model || '',
           target: Number(item.target1) || Number(item.target) || 0,
           actual: item.actual1 !== undefined && item.actual1 !== null ? (Number(item.actual1) || 0) : (Number(item.actual) || 0),
-          hours: effectiveH1,
-          productionHoursPassed: Number(item.production_hours_passed_1) || 0,
-          currentActual: Number(item.current_actual_1) || 0
+          hours: effectiveH1
         },
         {
           no: 2,
@@ -1153,58 +2088,56 @@ const h = Number(hm[0]);
 
       const progressPct = target > 0 ? Math.round((actual / target) * 100) : 0;
       const progressWidth = Math.max(0, Math.min(progressPct, 100));
-      const progressColor = progressPct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
-      const remarksList = Array.isArray(remarks) ? remarks : [];
+      const progressColor = progressPct >= 100 ? '#22A06B' : '#F59E0B';
+
+      const item = getFloorLineData(line);
+      const status = getFloorStatus(item);
+      const statusClass = status.tone === 'running'
+        ? 'running'
+        : status.tone === 'warning'
+          ? 'warning'
+          : 'muted';
 
       return `
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between gap-2.5">
-          <!-- compact header: same visual scale as old card -->
-          <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span class="font-extrabold text-slate-800">LINE ${line}</span>
-            ${modelName ? `<span class="text-[11px] font-bold text-slate-700">รุ่น ${modelName}</span>` : ''}
-            ${lotName ? `<span class="text-slate-300 text-[10px]">•</span><span class="text-[11px] font-bold text-indigo-600">LOT ${lotName}</span>` : ''}
+        <div class="master-line-card">
+          <div class="master-line-head">
+            <div class="min-w-0">
+              <div class="text-[15px] font-extrabold text-slate-900 leading-tight">LINE ${line}</div>
+              ${modelName ? `<div class="text-[11px] font-semibold text-slate-600 mt-1 truncate">รุ่น ${escapeFloorHtml(modelName)}</div>` : ''}
+              ${lotName ? `<div class="text-[11px] font-bold text-blue-600 mt-0.5 truncate">LOT ${escapeFloorHtml(lotName)}</div>` : ''}
+            </div>
+            <span class="master-status ${statusClass}">
+              <span class="master-status-dot"></span>${escapeFloorHtml(status.text)}
+            </span>
           </div>
 
-          <!-- exactly the hand-drawn concept; no big inner boxes -->
-          <div class="border-t border-slate-100 pt-2.5 space-y-1.5">
-            <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
-              <div class="font-semibold text-slate-500">
-                เป้าต่อวัน:
-                <span class="ml-1 font-extrabold text-slate-800">${target.toLocaleString()}</span>
-              </div>
-              <div class="font-extrabold ${dayGapClass}">${dayGapText}</div>
+          <div class="space-y-1">
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">เป้าหมาย:</span>
+              <span class="font-extrabold text-slate-800">${target.toLocaleString()}</span>
             </div>
-
-            <div class="grid grid-cols-[1fr_auto] items-baseline gap-2 text-xs">
-              <div class="font-semibold text-slate-500">
-                เป้าตอนนี้:
-                <span class="ml-1 font-extrabold text-slate-800">${targetNow.toLocaleString()}</span>
-              </div>
-              <div class="font-extrabold ${nowGapClass}">${nowGapText}</div>
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">ผลได้ตอนนี้:</span>
+              <span class="font-extrabold text-slate-800">${actualNow.toLocaleString()}</span>
             </div>
-
-            <div class="text-xs font-semibold text-slate-500">
-              Avg Output/hr:
-              <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span>
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">Gap:</span>
+              <span class="font-extrabold ${dayGapClass}">${dayGapText}</span>
             </div>
-
-            <div class="text-xs font-semibold text-slate-500">
-              TG Output/hr:
-              <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span>
+            <div class="card-stat-row">
+              <span class="text-slate-500 font-semibold">เป้าตอนนี้:</span>
+              <span class="font-extrabold ${nowGapClass}">${targetNow.toLocaleString()} / ${nowGapText}</span>
             </div>
+            <div class="text-[11px] font-semibold text-slate-500">Avg Output/hr: <span class="font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
+            <div class="text-[11px] font-semibold text-slate-500">TG Output/hr: <span class="font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
           </div>
 
-          <div class="flex items-center gap-2 pt-1">
-            <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-              <div class="${progressColor} h-2 rounded-full" style="width:${progressWidth}%"></div>
+          <div class="flex items-center gap-2 mt-2">
+            <div class="master-card-progress flex-1">
+              <div style="height:100%;width:${progressWidth}%;background:${progressColor};border-radius:999px"></div>
             </div>
-            <span class="text-xs font-extrabold text-slate-700">${progressPct}%</span>
+            <span class="text-[11px] font-extrabold text-slate-700">${progressPct}%</span>
           </div>
-
-          ${remarksList.length > 0 ? `
-          <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-xs text-amber-800 leading-relaxed">
-            📝 ${remarksList.map(r => String(r).replace(/</g, '&lt;').replace(/>/g, '&gt;')).join(' · ')}
-          </div>` : ''}
         </div>
       `;
     }
@@ -1270,6 +2203,15 @@ const h = Number(hm[0]);
     async function main() {
       const todayStr = getTodayStr();
       document.getElementById('datePicker').value = todayStr;
+
+      updateMasterHeaderClock();
+      setInterval(updateMasterHeaderClock, 1000);
+
+      // เตรียม Interactive Floor 3 ก่อน แล้วข้อมูลจริงจะเติมหลัง fetch
+      initFloor3Interaction();
+
+      const overviewBtn = document.getElementById('overviewTabBtn');
+      if (overviewBtn) overviewBtn.style.background = 'rgba(255,255,255,.14)';
 
       // LINE profile ทำงานแยก ไม่ขวางการโหลด Dashboard
       initLiffProfile();
