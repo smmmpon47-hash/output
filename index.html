@@ -33,15 +33,33 @@
     align-items:stretch;
   }
   .planStage{ min-width:0; }
+  .floorSwitch{
+    width:210px;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:4px;
+    margin-bottom:8px;
+    padding:4px;
+    border-radius:14px;
+    background:#EEF2F7;
+  }
   .planWrap{
     position:relative;
     width:100%;
-    aspect-ratio:1374 / 773;   /* รูปชั้น 3 และชั้น 4 ใช้สเกลเดียวกัน */
-    border-radius:20px;
+    aspect-ratio:3 / 1;
+    border-radius:16px;
     overflow:hidden;
     background:#22303F;
     border:1px solid #DCE4EE;
     box-shadow:0 18px 36px -28px rgba(15,23,42,.65);
+  }
+  .planCanvas{
+    position:absolute;
+    left:0;
+    top:50%;
+    width:100%;
+    aspect-ratio:1374 / 773;
+    transform:translateY(-50%);
   }
   .planImg{
     display:block;
@@ -157,6 +175,7 @@
   }
   @media (max-width:640px){
     .planAside{ display:flex; }
+    .planWrap{ aspect-ratio:2.25 / 1; }
   }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
@@ -274,39 +293,41 @@
         <h2 class="font-bold text-slate-800">ผังไลน์การผลิต</h2>
         <p class="text-xs text-slate-400">ชี้ที่ไลน์เพื่อดูยอดย่อ คลิกเพื่อเปิดรายละเอียดทั้งหมด</p>
       </div>
-      <div class="flex gap-2 bg-slate-100 p-1 rounded-2xl">
-        <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active px-5 py-2 rounded-xl text-sm font-bold">ชั้น 3</button>
-        <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab px-5 py-2 rounded-xl text-sm font-bold text-slate-500">ชั้น 4</button>
-      </div>
     </div>
 
     <div class="planGrid">
       <div class="planStage">
-        <div id="planWrap" class="planWrap">
-        <img id="planImg" class="planImg" alt="ผังโรงงาน">
-        <div id="hotspots"></div>
-        <div id="planTip">
-          <div class="flex items-center justify-between gap-2">
-            <p id="tipLine" class="font-extrabold text-slate-800">LINE B</p>
-            <span id="tipStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">-</span>
-          </div>
-          <p id="tipModel" class="text-[11px] text-slate-400 mb-2">-</p>
-          <div class="space-y-1 text-xs">
-            <div class="flex justify-between"><span class="text-slate-500">เป้าหมาย</span><span id="tipTarget" class="font-bold text-slate-800">-</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">ผลิตแล้ว</span><span id="tipActual" class="font-bold text-slate-800">-</span></div>
-            <div class="flex justify-between"><span class="text-slate-500">คืบหน้า</span><span id="tipPct" class="font-bold text-slate-800">-</span></div>
-          </div>
-          <div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div id="tipBar" class="h-1.5 rounded-full bg-emerald-500" style="width:0%"></div>
-          </div>
-          <p class="text-[10px] text-slate-400 mt-2">คลิกเพื่อดูรายละเอียดไลน์</p>
+        <div class="floorSwitch" aria-label="เลือกชั้นของผังโรงงาน">
+          <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active px-4 py-2 rounded-xl text-sm font-bold">ชั้น 3</button>
+          <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab px-4 py-2 rounded-xl text-sm font-bold text-slate-500">ชั้น 4</button>
         </div>
+        <div id="planWrap" class="planWrap">
+          <div id="planCanvas" class="planCanvas">
+            <img id="planImg" class="planImg" alt="ผังโรงงาน">
+            <div id="hotspots"></div>
+          </div>
+          <div id="planTip">
+              <div class="flex items-center justify-between gap-2">
+                <p id="tipLine" class="font-extrabold text-slate-800">LINE B</p>
+                <span id="tipStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">-</span>
+              </div>
+              <p id="tipModel" class="text-[11px] text-slate-400 mb-2">-</p>
+              <div class="space-y-1 text-xs">
+                <div class="flex justify-between"><span class="text-slate-500">เป้าหมาย</span><span id="tipTarget" class="font-bold text-slate-800">-</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">ผลิตแล้ว</span><span id="tipActual" class="font-bold text-slate-800">-</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">คืบหน้า</span><span id="tipPct" class="font-bold text-slate-800">-</span></div>
+              </div>
+              <div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                <div id="tipBar" class="h-1.5 rounded-full bg-emerald-500" style="width:0%"></div>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-2">คลิกเพื่อดูรายละเอียดไลน์</p>
+          </div>
         </div>
       </div>
 
       <aside class="planAside" aria-label="สัญลักษณ์และวิธีใช้งานผังไลน์การผลิต">
         <div>
-          <p class="text-sm font-extrabold text-slate-800">สัญลักษณ์สี</p>
+          <p class="text-sm font-extrabold text-slate-800">สัญลักษณ์สถานะไลน์</p>
           <div class="legendList mt-3">
             <span class="legendItem"><span class="legendDot bg-emerald-500"></span>ผลิตปกติ</span>
             <span class="legendItem"><span class="legendDot bg-amber-500"></span>ใกล้เป้า</span>
@@ -327,14 +348,6 @@
 
             <div class="guideStep">
               <span class="guideNo">2</span>
-              <div>
-                <p class="text-xs font-bold text-slate-700">ชี้ที่ LINE</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">ดูยอดผลิตแบบย่อ</p>
-              </div>
-            </div>
-
-            <div class="guideStep">
-              <span class="guideNo">3</span>
               <div>
                 <p class="text-xs font-bold text-slate-700">คลิก LINE</p>
                 <p class="text-[10px] text-slate-400 mt-0.5">เปิดรายละเอียดด้านล่าง</p>
@@ -932,8 +945,8 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live)
    ======================================================= */
 function switchFloor(floor){
   currentFloor = floor;
-  el('floorBtn3').className = 'floorTab px-5 py-2 rounded-xl text-sm font-bold ' + (floor===3 ? 'active' : 'text-slate-500');
-  el('floorBtn4').className = 'floorTab px-5 py-2 rounded-xl text-sm font-bold ' + (floor===4 ? 'active' : 'text-slate-500');
+  el('floorBtn3').className = 'floorTab px-4 py-2 rounded-xl text-sm font-bold ' + (floor===3 ? 'active' : 'text-slate-500');
+  el('floorBtn4').className = 'floorTab px-4 py-2 rounded-xl text-sm font-bold ' + (floor===4 ? 'active' : 'text-slate-500');
   el('floorBtn3').setAttribute('aria-pressed', floor===3 ? 'true' : 'false');
   el('floorBtn4').setAttribute('aria-pressed', floor===4 ? 'true' : 'false');
 
@@ -1005,8 +1018,12 @@ function showTip(cfg, hotEl){
   el('tipBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
   el('tipBar').className = 'h-1.5 rounded-full ' + (st.key==='bad' ? 'bg-rose-500' : st.key==='warn' ? 'bg-amber-500' : 'bg-emerald-500');
 
+  const wrapRect = wrap.getBoundingClientRect();
+  const hotRect = hotEl.getBoundingClientRect();
   const w = wrap.clientWidth, h = wrap.clientHeight;
-  const hx = hotEl.offsetLeft, hy = hotEl.offsetTop, hw = hotEl.offsetWidth, hh = hotEl.offsetHeight;
+  const hx = hotRect.left - wrapRect.left;
+  const hy = hotRect.top - wrapRect.top;
+  const hw = hotRect.width, hh = hotRect.height;
   const tw = 230, th = tip.offsetHeight || 190;
 
   let left = hx + hw + 12;
