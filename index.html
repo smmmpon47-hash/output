@@ -20,7 +20,15 @@
   .card{ background:#fff; border:1px solid #E6EBF2; border-radius:22px; }
   .soft{ box-shadow:0 10px 30px -22px rgba(15,23,42,.45); }
 
+  /* ---------- line cards ---------- */
+  .lineCard{ border-left:5px solid #CBD5E1; }
+  .lineCard.st-ok{ border-left-color:#10B981; }
+  .lineCard.st-warn{ border-left-color:#F59E0B; }
+  .lineCard.st-bad{ border-left-color:#EF4444; }
+  .lineCard.st-none{ border-left-color:#CBD5E1; }
+
   /* ---------- floor plan ---------- */
+  .planStage{ max-width:820px; margin:0 auto; }
   .planWrap{ position:relative; border-radius:18px; overflow:hidden; background:#22303F; }
   .planImg{ display:block; width:100%; height:auto; }
   .hot{
@@ -166,7 +174,7 @@
       <h2 class="font-bold text-slate-800">รายละเอียดแยกตามไลน์ และ LOT</h2>
       <p class="text-[11px] text-slate-400">เทียบเป้าต่อวัน กับ เป้า ณ เวลานี้</p>
     </div>
-    <div id="cardsContainer" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+    <div id="cardsContainer" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3"></div>
   </section>
 
   <!-- ======================= 3. FLOOR PLAN ======================= -->
@@ -183,8 +191,8 @@
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-4">
-      <div class="overflow-x-auto">
-        <div id="planWrap" class="planWrap" style="min-width:640px">
+      <div class="overflow-x-auto planStage">
+        <div id="planWrap" class="planWrap" style="min-width:520px">
           <img id="planImg" class="planImg" alt="ผังโรงงาน">
           <div id="hotspots"></div>
           <div id="planTip">
@@ -474,6 +482,27 @@ function getBreakSlotForDashboardLine(lineCode){
   if (['D','E','F','G'].includes(c)) return '11.30-12.30';
   return '';
 }
+/* หมายเหตุ: รองรับทั้งแบบเดิม (ข้อความล้วน) และแบบใหม่ที่มีรอบเวลา */
+function normalizeRemarks(remarks){
+  if (!Array.isArray(remarks)) return [];
+  return remarks.map(r => {
+    if (r && typeof r === 'object'){
+      return {
+        slot: String(r.slot || r.timeSlot || '').trim(),
+        lot:  String(r.lot || '').trim(),
+        note: String(r.note || r.remark || r.text || '').trim()
+      };
+    }
+    return { slot:'', lot:'', note:String(r || '').trim() };
+  }).filter(r => r.note);
+}
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function slotTimeText(slot){
+  const s = String(slot||'').trim();
+  if (!s) return '';
+  return s.replace('.', ':').replace('-', ' ถึง ').replace('.', ':') + ' น.';
+}
+
 function findLine(code){
   return globalLinesData.find(d => String(d.line||d.lineName||'').toUpperCase().includes(code)) || null;
 }
@@ -747,14 +776,29 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live)
 
   const pct = target > 0 ? Math.round(actual/target*100) : 0;
   const width = Math.max(0, Math.min(pct, 100));
-  const barColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
 
-  const item = findLine(String(line).toUpperCase());
-  const st = getLineStatus(item);
-  const remarksList = Array.isArray(remarks) ? remarks : [];
+  /* เกณฑ์เดียวกับผังไลน์: ถึงเป้า ณ เวลานี้ = เขียว, ต่ำกว่าไม่เกิน 10% = เหลือง, เกินกว่านั้น = แดง */
+  let lotKey = 'none';
+  if (live){
+    if (targetNow <= 0 && actualNow <= 0) lotKey = 'none';
+    else if (targetNow <= 0) lotKey = 'ok';
+    else {
+      const r = actualNow / targetNow;
+      lotKey = r >= 1 ? 'ok' : (r >= 0.9 ? 'warn' : 'bad');
+    }
+  } else if (target > 0){
+    const r = actual / target;
+    lotKey = r >= 1 ? 'ok' : (r >= 0.9 ? 'warn' : 'bad');
+  }
+  const barColor = lotKey==='ok' ? 'bg-emerald-500' : lotKey==='warn' ? 'bg-amber-500' : lotKey==='bad' ? 'bg-rose-500' : 'bg-slate-300';
+  const lotLabel = lotKey==='ok' ? 'ผลิตปกติ' : lotKey==='warn' ? 'ใกล้เป้า' : lotKey==='bad' ? 'ต่ำกว่าเป้า' : 'รอเริ่มผลิต';
+  const lotText  = lotKey==='ok' ? 'text-emerald-600' : lotKey==='warn' ? 'text-amber-600' : lotKey==='bad' ? 'text-rose-600' : 'text-slate-500';
+
+  const st = { cls:'st-'+lotKey, label:lotLabel, text:lotText };
+  const remarksList = normalizeRemarks(remarks);
 
   return `
-    <div class="card p-4 flex flex-col gap-2.5 cursor-pointer hover:border-indigo-200 transition" onclick="openLine('${String(line).toUpperCase()}')">
+    <div class="card lineCard ${st.cls} p-4 flex flex-col gap-2.5 cursor-pointer hover:border-indigo-200 transition" onclick="openLine('${String(line).toUpperCase()}')">
       <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
         <span class="font-extrabold text-slate-800">LINE ${line}</span>
         ${modelName ? `<span class="text-[11px] font-semibold text-slate-600">รุ่น ${modelName}</span>` : ''}
@@ -785,8 +829,11 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live)
       </div>
 
       ${remarksList.length ? `
-      <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-[11px] text-amber-800 leading-relaxed">
-        ${remarksList.map(r => String(r).replace(/</g,'&lt;').replace(/>/g,'&gt;')).join(' · ')}
+      <div class="bg-amber-50 border border-amber-100 rounded-xl px-3 py-2 text-[11px] text-amber-800 leading-relaxed space-y-1">
+        ${remarksList.map(r => `<div class="flex gap-1.5">
+            ${r.slot ? `<span class="shrink-0 font-bold text-amber-700 tabular-nums">${esc(r.slot)}</span>` : ''}
+            <span>${esc(r.note)}</span>
+          </div>`).join('')}
       </div>` : ''}
     </div>`;
 }
@@ -974,9 +1021,16 @@ function renderLineDetail(code){
   el('dtLotTable').innerHTML = rows || `<tr><td colspan="5" class="py-3 text-center text-slate-400">ยังไม่มี LOT ของวันนี้</td></tr>`;
 
   /* หมายเหตุ */
-  const remarks = Array.isArray(item.remarks) ? item.remarks : [];
+  const remarks = normalizeRemarks(item.remarks);
   el('dtRemarks').innerHTML = remarks.length
-    ? remarks.map(r => `<p class="flex gap-2"><span class="text-amber-500">•</span><span>${String(r).replace(/</g,'&lt;').replace(/>/g,'&gt;')}</span></p>`).join('')
+    ? remarks.map(r => `
+        <div class="flex gap-2 items-start bg-white/70 border border-amber-100 rounded-xl px-2.5 py-2">
+          <span class="shrink-0 text-[10px] font-extrabold text-amber-700 bg-amber-100 rounded-lg px-2 py-1 tabular-nums">${esc(r.slot || '-')}</span>
+          <div class="min-w-0">
+            <p class="leading-snug">${esc(r.note)}</p>
+            ${(r.slot || r.lot) ? `<p class="text-[10px] text-amber-700/60 mt-0.5">${r.slot ? slotTimeText(r.slot) : ''}${r.lot ? ' • LOT ' + esc(r.lot) : ''}</p>` : ''}
+          </div>
+        </div>`).join('')
     : `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
 
   updateHourlyChart(code);
