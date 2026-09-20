@@ -839,9 +839,13 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live)
           <div class="font-semibold text-slate-500">เป้าตอนนี้ <span class="ml-1 font-extrabold text-slate-800">${targetNow.toLocaleString()}</span></div>
           <div class="font-extrabold ${nowGapClass}">${nowGapText}</div>
         </div>
-        <div class="grid grid-cols-2 gap-2 text-xs pt-0.5">
-          <div class="font-semibold text-slate-500">ผลิตจริง/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
-          <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
+        <div class="space-y-2 text-xs pt-0.5">
+          <div class="font-semibold text-slate-500">
+            ผลิตจริง/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span>
+          </div>
+          <div class="font-semibold text-slate-500">
+            เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span>
+          </div>
         </div>
       </div>
 
