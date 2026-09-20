@@ -74,7 +74,7 @@
   .guideColumn{
     min-width:0;
     display:grid;
-    grid-template-rows:52px 76px 52px 128px;
+    grid-template-rows:52px 60px 52px 156px;
     gap:10px;
     align-self:start;
   }
@@ -92,7 +92,7 @@
     color:#0F172A;
   }
   .lineShortcutBody{
-    padding:10px 14px;
+    padding:6px 12px;
     border:1px solid #E2E8F0;
     border-radius:20px;
     background:#fff;
@@ -117,7 +117,7 @@
     background:#F8FAFF;
   }
   .guideBody{
-    padding:16px 20px;
+    padding:14px 20px;
     border:1px solid #E2E8F0;
     border-radius:20px;
     background:#fff;
@@ -203,8 +203,8 @@
   @media (max-width:900px){
     .floorLayout{ grid-template-columns:1fr; }
     .guideColumn{ grid-template-rows:auto; }
-    .lineShortcutBody{ min-height:96px; }
-    .guideBody{ min-height:190px; }
+    .lineShortcutBody{ min-height:60px; }
+    .guideBody{ min-height:156px; }
   }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
@@ -365,20 +365,28 @@
 
         <div class="guideTitle soft">วิธีใช้งาน</div>
         <div class="guideBody soft">
-          <div class="space-y-5">
+          <div class="space-y-3">
             <div class="guideStep">
               <span class="guideNo">1</span>
               <div>
                 <p class="text-xs font-bold text-slate-700">เลือกชั้น</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">กดชั้น 3 หรือชั้น 4</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">กดชั้น 3 หรือชั้น 4 เพื่อแสดงไลน์การผลิตในชั้นนั้น</p>
               </div>
             </div>
 
             <div class="guideStep">
               <span class="guideNo">2</span>
               <div>
-                <p class="text-xs font-bold text-slate-700">คลิก LINE</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">เปิดรายละเอียดด้านล่าง</p>
+                <p class="text-xs font-bold text-slate-700">ดูข้อมูลแบบย่อ</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">วางเมาส์บน LINE เพื่อดูภาพรวมการผลิต</p>
+              </div>
+            </div>
+
+            <div class="guideStep">
+              <span class="guideNo">3</span>
+              <div>
+                <p class="text-xs font-bold text-slate-700">ดูรายละเอียดเพิ่มเติม</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">คลิก LINE ที่ต้องการเพื่อเปิดข้อมูลทั้งหมด</p>
               </div>
             </div>
           </div>
