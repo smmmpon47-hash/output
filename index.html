@@ -25,7 +25,14 @@
 
   /* ---------- floor plan ---------- */
   .planHeader,
-  .planStage{ max-width:860px; margin-left:auto; margin-right:auto; }
+  .planGrid{ max-width:1080px; margin-left:auto; margin-right:auto; }
+  .planGrid{
+    display:grid;
+    grid-template-columns:minmax(0,820px) minmax(220px,1fr);
+    gap:16px;
+    align-items:stretch;
+  }
+  .planStage{ min-width:0; }
   .planWrap{
     position:relative;
     width:100%;
@@ -45,42 +52,40 @@
   }
   .planImg.is-switching{ opacity:.35; }
 
-  .guideBar{
-    display:grid;
-    grid-template-columns:minmax(190px,.85fr) repeat(3,minmax(0,1fr));
-    gap:10px;
-    margin-top:12px;
-    padding:10px;
+  .planAside{
+    padding:16px;
     border:1px solid #E2E8F0;
     border-radius:18px;
     background:#F8FAFC;
-  }
-  .guideIntro,
-  .guideStep{
-    min-height:76px;
-    border-radius:14px;
-  }
-  .guideIntro{
-    padding:12px 14px;
-    color:#fff;
-    background:linear-gradient(135deg,#0F172A 0%,#243B63 100%);
     display:flex;
     flex-direction:column;
     justify-content:center;
+    gap:16px;
   }
-  .guideStep{
-    padding:12px;
-    background:#fff;
-    border:1px solid #E8EDF4;
+  .legendList{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 12px;
+  }
+  .legendItem{
     display:flex;
     align-items:center;
+    gap:6px;
+    font-size:10px;
+    font-weight:600;
+    color:#64748B;
+  }
+  .legendDot{ width:8px; height:8px; flex:0 0 8px; border-radius:999px; }
+  .guideStep{
+    display:flex;
+    align-items:flex-start;
     gap:10px;
   }
   .guideNo{
-    width:30px;
-    height:30px;
-    flex:0 0 30px;
-    border-radius:10px;
+    width:24px;
+    height:24px;
+    flex:0 0 24px;
+    border-radius:999px;
     display:flex;
     align-items:center;
     justify-content:center;
@@ -147,13 +152,11 @@
   .hide{ display:none !important; }
 
   @media (max-width:900px){
-    .guideBar{ grid-template-columns:repeat(3,minmax(0,1fr)); }
-    .guideIntro{ grid-column:1 / -1; min-height:auto; flex-direction:row; align-items:center; justify-content:space-between; gap:12px; }
+    .planGrid{ grid-template-columns:1fr; }
+    .planAside{ display:grid; grid-template-columns:.8fr 1.2fr; align-items:start; }
   }
   @media (max-width:640px){
-    .guideBar{ grid-template-columns:1fr; }
-    .guideIntro{ grid-column:auto; }
-    .guideStep{ min-height:66px; }
+    .planAside{ display:flex; }
   }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
@@ -277,8 +280,9 @@
       </div>
     </div>
 
-    <div class="planStage">
-      <div id="planWrap" class="planWrap">
+    <div class="planGrid">
+      <div class="planStage">
+        <div id="planWrap" class="planWrap">
         <img id="planImg" class="planImg" alt="ผังโรงงาน">
         <div id="hotspots"></div>
         <div id="planTip">
@@ -297,41 +301,48 @@
           </div>
           <p class="text-[10px] text-slate-400 mt-2">คลิกเพื่อดูรายละเอียดไลน์</p>
         </div>
-      </div>
-
-      <div class="guideBar" aria-label="วิธีใช้งานผังไลน์การผลิต">
-        <div class="guideIntro">
-          <div>
-            <p class="text-[10px] uppercase tracking-[0.16em] text-white/55 font-semibold">Quick guide</p>
-            <p class="text-sm font-extrabold mt-0.5">วิธีใช้งานผัง</p>
-          </div>
-          <p class="text-[10px] text-white/55 mt-1">เลือก • ชี้ • คลิก</p>
-        </div>
-
-        <div class="guideStep">
-          <span class="guideNo">1</span>
-          <div>
-            <p class="text-xs font-bold text-slate-700">เลือกชั้น</p>
-            <p class="text-[10px] text-slate-400 mt-0.5">สลับชั้น 3 หรือชั้น 4 ด้านบน</p>
-          </div>
-        </div>
-
-        <div class="guideStep">
-          <span class="guideNo">2</span>
-          <div>
-            <p class="text-xs font-bold text-slate-700">ชี้ที่ LINE</p>
-            <p class="text-[10px] text-slate-400 mt-0.5">ดูยอดย่อจากกรอบสีเหลือง</p>
-          </div>
-        </div>
-
-        <div class="guideStep">
-          <span class="guideNo">3</span>
-          <div>
-            <p class="text-xs font-bold text-slate-700">คลิกเพื่อดูต่อ</p>
-            <p class="text-[10px] text-slate-400 mt-0.5">เปิดรายละเอียดไลน์ด้านล่าง</p>
-          </div>
         </div>
       </div>
+
+      <aside class="planAside" aria-label="สัญลักษณ์และวิธีใช้งานผังไลน์การผลิต">
+        <div>
+          <p class="text-sm font-extrabold text-slate-800">สัญลักษณ์สี</p>
+          <div class="legendList mt-3">
+            <span class="legendItem"><span class="legendDot bg-emerald-500"></span>ผลิตปกติ</span>
+            <span class="legendItem"><span class="legendDot bg-amber-500"></span>ใกล้เป้า</span>
+            <span class="legendItem"><span class="legendDot bg-rose-500"></span>ต่ำกว่าเป้า</span>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-200 pt-4">
+          <p class="text-sm font-extrabold text-slate-800">วิธีใช้งาน</p>
+          <div class="mt-3 space-y-3">
+            <div class="guideStep">
+              <span class="guideNo">1</span>
+              <div>
+                <p class="text-xs font-bold text-slate-700">เลือกชั้น</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">กดชั้น 3 หรือชั้น 4</p>
+              </div>
+            </div>
+
+            <div class="guideStep">
+              <span class="guideNo">2</span>
+              <div>
+                <p class="text-xs font-bold text-slate-700">ชี้ที่ LINE</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">ดูยอดผลิตแบบย่อ</p>
+              </div>
+            </div>
+
+            <div class="guideStep">
+              <span class="guideNo">3</span>
+              <div>
+                <p class="text-xs font-bold text-slate-700">คลิก LINE</p>
+                <p class="text-[10px] text-slate-400 mt-0.5">เปิดรายละเอียดด้านล่าง</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
     </div>
   </section>
 
