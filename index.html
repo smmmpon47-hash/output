@@ -26,7 +26,8 @@
   /* ---------- floor plan ---------- */
   .floorSection{ max-width:1120px; margin-left:auto; margin-right:auto; }
   .planHeader,
-  .planGrid{ max-width:1080px; margin-left:auto; margin-right:auto; }
+  .planGrid,
+  .floorSwitchRow{ max-width:1080px; margin-left:auto; margin-right:auto; }
   .planGrid{
     display:grid;
     grid-template-columns:minmax(0,820px) minmax(220px,1fr);
@@ -77,20 +78,6 @@
     justify-content:center;
     gap:16px;
   }
-  .legendList{
-    display:flex;
-    flex-wrap:wrap;
-    gap:8px 12px;
-  }
-  .legendItem{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    font-size:10px;
-    font-weight:600;
-    color:#64748B;
-  }
-  .legendDot{ width:8px; height:8px; flex:0 0 8px; border-radius:999px; }
   .guideStep{
     display:flex;
     align-items:flex-start;
@@ -291,12 +278,15 @@
       </div>
     </div>
 
+    <div class="floorSwitchRow">
+      <div class="floorSwitch" aria-label="เลือกชั้นของผังโรงงาน">
+        <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active px-4 py-2 rounded-xl text-sm font-bold">ชั้น 3</button>
+        <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab px-4 py-2 rounded-xl text-sm font-bold text-slate-500">ชั้น 4</button>
+      </div>
+    </div>
+
     <div class="planGrid">
       <div class="planStage">
-        <div class="floorSwitch" aria-label="เลือกชั้นของผังโรงงาน">
-          <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active px-4 py-2 rounded-xl text-sm font-bold">ชั้น 3</button>
-          <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab px-4 py-2 rounded-xl text-sm font-bold text-slate-500">ชั้น 4</button>
-        </div>
         <div id="planWrap" class="planWrap">
           <div id="planCanvas" class="planCanvas">
             <img id="planImg" class="planImg" alt="ผังโรงงาน">
@@ -325,15 +315,6 @@
         <div>
           <p class="text-sm font-extrabold text-slate-800">ไลน์ในชั้นนี้</p>
           <div id="floorLineShortcuts" class="flex flex-wrap gap-2 mt-3"></div>
-        </div>
-
-        <div class="border-t border-slate-200 pt-4">
-          <p class="text-sm font-extrabold text-slate-800">สัญลักษณ์สถานะไลน์</p>
-          <div class="legendList mt-3">
-            <span class="legendItem"><span class="legendDot bg-emerald-500"></span>ผลิตปกติ</span>
-            <span class="legendItem"><span class="legendDot bg-amber-500"></span>ใกล้เป้า</span>
-            <span class="legendItem"><span class="legendDot bg-rose-500"></span>ต่ำกว่าเป้า</span>
-          </div>
         </div>
 
         <div class="border-t border-slate-200 pt-4">
