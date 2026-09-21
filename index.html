@@ -227,26 +227,19 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
-        <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2">
+        <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 h-[48px]">
           <span class="text-sm">📅</span>
           <div class="leading-tight">
             <p id="hdDate" class="text-xs font-semibold">-</p>
             <p id="hdDay" class="text-[10px] text-white/55">-</p>
           </div>
         </div>
-        <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2">
+        <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 h-[48px]">
           <span class="text-sm">🕒</span>
           <p id="hdClock" class="text-sm font-bold tabular-nums">--:--:--</p>
         </div>
-        <div class="flex items-center gap-2 bg-emerald-500/15 border border-emerald-400/40 rounded-2xl px-3 py-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <div class="leading-tight">
-            <p class="text-[11px] font-bold text-emerald-300">LIVE</p>
-            <p id="lastUpdatedText" class="text-[10px] text-white/55">กำลังโหลด...</p>
-          </div>
-        </div>
-        <button onclick="openLotSearch()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 py-2.5 text-sm transition" title="ค้นหา LOT">🔍</button>
-        <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2">
+        <button onclick="openLotSearch()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px]" title="ค้นหา LOT">🔍</button>
+        <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 h-[48px]">
           <span class="text-sm">👤</span>
           <span id="displayName" class="text-xs font-semibold">กำลังเชื่อมต่อ LINE...</span>
         </div>
@@ -259,17 +252,35 @@
     <div class="card soft p-5">
       <div class="flex flex-wrap justify-between items-center gap-3 mb-4">
         <div>
-          <h2 class="font-bold text-slate-800">สรุปยอดผลิตภาพรวมรายวัน</h2>
-          <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">กำลังโหลดข้อมูล...</p>
+          <h2 class="font-bold text-slate-800">Daily Summary</h2>
+          <p id="selectedDateText" class="text-xs text-indigo-600 font-semibold mt-0.5">Loading data...</p>
         </div>
-        <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl w-full sm:w-auto">
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-500 w-8 shrink-0">จาก</span>
-            <input type="date" id="datePicker" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-400">
+
+        <div class="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto">
+          <div id="dailyChartModeTabs" class="inline-flex items-center p-1 bg-slate-100 border border-slate-200 rounded-xl">
+            <button type="button" data-mode="MIX" onclick="setDailyChartMode('MIX')"
+                    class="dailyChartModeBtn px-3 py-1.5 rounded-lg text-[10px] font-extrabold transition">
+              MIX
+            </button>
+            <button type="button" data-mode="ACTUAL" onclick="setDailyChartMode('ACTUAL')"
+                    class="dailyChartModeBtn px-3 py-1.5 rounded-lg text-[10px] font-extrabold transition">
+              ACTUAL
+            </button>
+            <button type="button" data-mode="GAP" onclick="setDailyChartMode('GAP')"
+                    class="dailyChartModeBtn px-3 py-1.5 rounded-lg text-[10px] font-extrabold transition">
+              GAP
+            </button>
           </div>
-          <div class="flex items-center gap-2">
-            <span class="text-xs font-semibold text-slate-500 w-8 shrink-0">ถึง</span>
-            <input type="date" id="datePickerTo" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-400">
+
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-500 w-9 shrink-0">From</span>
+              <input type="date" id="datePicker" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-400">
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-semibold text-slate-500 w-6 shrink-0">To</span>
+              <input type="date" id="datePickerTo" onchange="onDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-400">
+            </div>
           </div>
         </div>
       </div>
@@ -601,6 +612,8 @@ const FLOOR_PLANS = {
 const LINE_FLOOR = { B:3, C:3, D:4, E:4, F:4 };
 
 let chartInstance = null;
+let dailyChartMode = 'MIX';
+let dailyChartLines = [];
 let hourlyChartInstance = null;
 let cumulativeChartInstance = null;
 let globalLinesData = [];
@@ -740,8 +753,8 @@ async function fetchDashboardData(selectedDate, endDate){
 
   try{
     el('selectedDateText').innerText = isRange
-      ? `กำลังโหลดข้อมูลช่วง ${selectedDate} ถึง ${endDate}`
-      : `กำลังโหลดข้อมูลวันที่ ${selectedDate}`;
+      ? `Loading data: ${selectedDate} to ${endDate}`
+      : `Data date: ${selectedDate}`;
 
     const url = isRange
       ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
@@ -764,8 +777,8 @@ async function fetchDashboardData(selectedDate, endDate){
       if (currentLine) renderLineDetail(currentLine);
 
       el('selectedDateText').innerText = isRange
-        ? `ข้อมูลสะสม ${data.date || selectedDate} ถึง ${data.dateTo || endDate}`
-        : `ข้อมูลประจำวันที่ ${data.date || selectedDate}`;
+        ? `Cumulative data: ${data.date || selectedDate} to ${data.dateTo || endDate}`
+        : `Data date: ${data.date || selectedDate}`;
     } else {
       globalLinesData = [];
       showEmptyState();
@@ -774,7 +787,7 @@ async function fetchDashboardData(selectedDate, endDate){
 
   } catch(err){
     console.error("Fetch Error:", err);
-    el('selectedDateText').innerText = 'ดึงข้อมูลไม่สำเร็จ กดเลือกวันที่อีกครั้งเพื่อลองใหม่';
+    el('selectedDateText').innerText = 'Unable to load data. Please select the date again.';
     updateLastUpdatedText(false);
   } finally {
     dashboardFetchInProgress = false;
@@ -837,6 +850,7 @@ function showEmptyState(){
   ['kpiActual','kpiTarget','kpiPct'].forEach(id => el(id).innerText = '-');
   el('kpiBar').style.width = '0%';
   if (chartInstance) chartInstance.destroy();
+  dailyChartLines = [];
   renderHotspots();
   closeDetail();
 }
@@ -855,7 +869,26 @@ function renderKPI(lines){
   el('kpiBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
 }
 
-function renderDailyChart(lines){
+function setDailyChartMode(mode){
+  const allowed = ['MIX','ACTUAL','GAP'];
+  dailyChartMode = allowed.includes(mode) ? mode : 'MIX';
+
+  document.querySelectorAll('.dailyChartModeBtn').forEach(btn => {
+    const active = btn.dataset.mode === dailyChartMode;
+    btn.classList.toggle('bg-slate-900', active);
+    btn.classList.toggle('text-white', active);
+    btn.classList.toggle('shadow-sm', active);
+    btn.classList.toggle('text-slate-500', !active);
+    btn.classList.toggle('hover:text-slate-800', !active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+
+  if (dailyChartLines.length) renderDailyChart(dailyChartLines, false);
+}
+
+function renderDailyChart(lines, rememberLines = true){
+  if (rememberLines) dailyChartLines = Array.isArray(lines) ? lines : [];
+
   const ctx = el('factoryChart').getContext('2d');
   if (chartInstance) chartInstance.destroy();
 
@@ -864,34 +897,89 @@ function renderDailyChart(lines){
   const targetData = lines.map(d => num(d.target) || (num(d.target1)+num(d.target2)));
   const remaining  = targetData.map((t,i) => Math.max(0, t - actualData[i]));
 
+  let datasets = [];
+  let stacked = false;
+
+  if (dailyChartMode === 'ACTUAL'){
+    datasets = [{
+      label:'Actual',
+      data:actualData,
+      backgroundColor:'#10B981',
+      borderRadius:8
+    }];
+  } else if (dailyChartMode === 'GAP'){
+    datasets = [{
+      label:'Target Gap',
+      data:remaining,
+      backgroundColor:'#EF4444',
+      borderRadius:8
+    }];
+  } else {
+    stacked = true;
+    datasets = [
+      {
+        label:'Actual',
+        data:actualData,
+        backgroundColor:'#10B981',
+        borderRadius:{topLeft:0,topRight:0,bottomLeft:8,bottomRight:8}
+      },
+      {
+        label:'Target Gap',
+        data:remaining,
+        backgroundColor:'#EF4444',
+        borderRadius:{topLeft:8,topRight:8,bottomLeft:0,bottomRight:0}
+      }
+    ];
+  }
+
   chartInstance = new Chart(ctx, {
     type:'bar',
-    data:{ labels, datasets:[
-      { label:'ผลิตได้', data:actualData, backgroundColor:'#10B981',
-        borderRadius:{topLeft:0,topRight:0,bottomLeft:8,bottomRight:8} },
-      { label:'ส่วนที่ยังขาดเป้า', data:remaining, backgroundColor:'#EF4444',
-        borderRadius:{topLeft:8,topRight:8,bottomLeft:0,bottomRight:0} }
-    ]},
+    data:{ labels, datasets },
     options:{
-      responsive:true, maintainAspectRatio:false,
+      responsive:true,
+      maintainAspectRatio:false,
       onClick:(evt, items) => {
         if (!items.length) return;
         const code = String(lines[items[0].index].line || '').toUpperCase();
         if (code) openLine(code);
       },
       plugins:{
-        legend:{ position:'top', labels:{ font:{family:'Kanit', size:11}, usePointStyle:true } },
-        datalabels:{ anchor:'center', align:'center', color:'#fff',
+        legend:{
+          position:'top',
+          labels:{ font:{family:'Kanit', size:11}, usePointStyle:true }
+        },
+        datalabels:{
+          anchor:'center',
+          align:'center',
+          color:'#fff',
           font:{ weight:'bold', size:11, family:'Kanit' },
-          formatter:v => v > 0 ? v.toLocaleString() : '' },
-        tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'}, footerFont:{family:'Kanit'},
-          callbacks:{ footer:it => `เป้ารวม ${targetData[it[0].dataIndex].toLocaleString()} ชิ้น` } }
+          formatter:v => v > 0 ? v.toLocaleString() : ''
+        },
+        tooltip:{
+          bodyFont:{family:'Kanit'},
+          titleFont:{family:'Kanit'},
+          footerFont:{family:'Kanit'},
+          callbacks:{
+            footer:it => `Target ${targetData[it[0].dataIndex].toLocaleString()} pcs`
+          }
+        }
       },
       scales:{
-        x:{ stacked:true, grid:{display:false}, ticks:{ font:{family:'Kanit', size:11} } },
-        y:{ stacked:true, beginAtZero:true, grid:{color:'#F1F5F9'}, ticks:{ font:{family:'Kanit', size:10} } }
+        x:{ stacked, grid:{display:false}, ticks:{ font:{family:'Kanit', size:11} } },
+        y:{ stacked, beginAtZero:true, grid:{color:'#F1F5F9'}, ticks:{ font:{family:'Kanit', size:10} } }
       }
     }
+  });
+
+  // sync visual active state after first render
+  document.querySelectorAll('.dailyChartModeBtn').forEach(btn => {
+    const active = btn.dataset.mode === dailyChartMode;
+    btn.classList.toggle('bg-slate-900', active);
+    btn.classList.toggle('text-white', active);
+    btn.classList.toggle('shadow-sm', active);
+    btn.classList.toggle('text-slate-500', !active);
+    btn.classList.toggle('hover:text-slate-800', !active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
 }
 
@@ -936,10 +1024,9 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live)
   const barColor = 'bg-amber-500';
 
   // หมายเหตุบนการ์ดต้องตรง LOT ของการ์ดนั้นเท่านั้น
-  // ป้องกัน note ของ LOT ใหม่ไปโผล่ซ้ำบน LOT เก่าใน LINE เดียวกัน
   const cardLot = String(lotName || '').trim().toUpperCase();
   const remarksList = normalizeRemarks(remarks).filter(r => {
-    if (!cardLot) return true; // กรณีดูช่วงวันที่/การ์ดรวม คงพฤติกรรมเดิม
+    if (!cardLot) return true;
     const remarkLot = String(r.lot || '').trim().toUpperCase();
     return remarkLot && remarkLot === cardLot;
   });
