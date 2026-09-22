@@ -699,12 +699,13 @@ const CHANGE_CHECK_MS = 30000;
 let changeWatchTimer = null;
 let lastDashboardVersion = "";
 let dashboardFetchInProgress = false;
+let dashboardQuickFetchInProgress = false;
 let currentDashboardIsRange = false;
 
 const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v21_';
 const DASHBOARD_CACHE_INDEX_KEY = 'production_dashboard_cache_v21_index';
 const DASHBOARD_CACHE_MAX_ENTRIES = 14;
-const DASHBOARD_LOADING_MIN_MS = 320;
+const DASHBOARD_LOADING_MIN_MS = 7000;
 
 /* =======================================================
    HELPERS
@@ -823,6 +824,81 @@ function renderCachedDashboard(selectedDate, endDate){
   if (!cached) return false;
   return renderDashboardPayload(cached.data, selectedDate, endDate, { fromCache:true });
 }
+
+function prepareDashboardDetailsLoading(){
+  globalLinesData = [];
+  currentLine = '';
+  el('lineDetail').classList.add('hide');
+
+  const cards = el('cardsContainer');
+  if (cards){
+    cards.innerHTML = `
+      <div class="col-span-full card soft p-5 text-center">
+        <div class="inline-flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+          กำลังโหลดรายละเอียด LINE และ LOT...
+        </div>
+      </div>`;
+  }
+
+  renderHotspots();
+}
+
+function renderDashboardQuickPayload(data, selectedDate, endDate){
+  const isRange = endDate && endDate !== selectedDate;
+  if (!data || !Array.isArray(data.lines) || !data.lines.length) return false;
+
+  // First paint: KPI + Daily Summary ก่อน
+  // ไม่ overwrite globalLinesData เพราะ LOT/Hourly/Remark ยังมาไม่ครบ
+  renderKPI(data.lines);
+  renderDailyChart(data.lines);
+
+  el('selectedDateText').innerText = isRange
+    ? `Cumulative data: ${data.date || selectedDate} to ${data.dateTo || endDate} • loading details...`
+    : `Data date: ${data.date || selectedDate} • loading details...`;
+
+  return true;
+}
+
+async function fetchDashboardQuick(selectedDate, endDate, options = {}){
+  if (dashboardQuickFetchInProgress) return { ok:false, skipped:true };
+
+  dashboardQuickFetchInProgress = true;
+  const isRange = endDate && endDate !== selectedDate;
+
+  try{
+    const url = isRange
+      ? `${GAS_API_URL}?action=getDailySummaryQuick&date=${selectedDate}&dateTo=${endDate}`
+      : `${GAS_API_URL}?action=getDailySummaryQuick&date=${selectedDate}`;
+
+    const res = await fetch(url, {
+      method:"GET",
+      redirect:"follow",
+      cache:"no-store"
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const rawText = await res.text();
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(e){ throw new Error("Quick API ไม่ได้ส่งข้อมูล JSON กลับมา"); }
+
+    const shouldRender = options.render !== false;
+    const rendered = shouldRender
+      ? renderDashboardQuickPayload(data, selectedDate, endDate)
+      : true;
+
+    return { ok:rendered, data };
+
+  } catch(err){
+    console.warn('Dashboard quick load failed:', err);
+    return { ok:false, error:err };
+
+  } finally {
+    dashboardQuickFetchInProgress = false;
+  }
+}
+
 
 function startClock(){
   const tick = () => {
@@ -1031,17 +1107,55 @@ async function onDateChange(){
   const loadingStartedAt = showDashboardLoading(s, t);
   const hadCache = renderCachedDashboard(s, t);
 
-  try{
-    await fetchDashboardData(s, t, {
-      preserveCachedOnError: hadCache,
-      keepStatusText: hadCache
+  // มี browser cache แล้ว: เก็บ Loading ไว้ประมาณ 7 วิให้ UX นิ่ง
+  // และเริ่ม refresh ของจริงทันทีแบบไม่รอ
+  if (hadCache){
+    const fullPromise = fetchDashboardData(s, t, {
+      preserveCachedOnError: true,
+      keepStatusText: true
     });
+
+    await hideDashboardLoading(loadingStartedAt);
+    await fullPromise;
 
     if (shouldWatchLiveChanges()) await syncDashboardVersionBaseline();
     else updateLastUpdatedText(true);
-  } finally {
-    await hideDashboardLoading(loadingStartedAt);
+    return;
   }
+
+  // ไม่มี cache: ไม่ให้ข้อมูลวันก่อนค้างอยู่
+  prepareDashboardDetailsLoading();
+
+  // สำคัญ: Quick + Full เริ่มพร้อมกัน
+  // ไม่ทำแบบ V22 ที่รอ Quick เสร็จแล้วค่อยเริ่ม Full
+  let fullFinished = false;
+
+  const fullPromise = fetchDashboardData(s, t, {
+    preserveCachedOnError: false,
+    keepStatusText: true
+  }).then(result => {
+    fullFinished = true;
+    return result;
+  });
+
+  const quickPromise = fetchDashboardQuick(s, t, { render:false });
+
+  // Quick มักมาก่อน แต่ยังไม่เปิดทันที
+  // รอให้ Loading อยู่ครบประมาณ 7 วิ ตาม UX ที่ต้องการ
+  const quick = await quickPromise;
+
+  await hideDashboardLoading(loadingStartedAt);
+
+  // ถ้า Full ยังไม่มา ใช้ Quick แสดง KPI + Daily Summary ก่อน
+  // ถ้า Full มาแล้ว ไม่ให้ Quick ย้อนทับข้อมูลเต็ม
+  if (!fullFinished && quick.ok){
+    renderDashboardQuickPayload(quick.data, s, t);
+  }
+
+  await fullPromise;
+
+  if (shouldWatchLiveChanges()) await syncDashboardVersionBaseline();
+  else updateLastUpdatedText(true);
 }
 function showEmptyState(){
   el('cardsContainer').innerHTML = `
@@ -1834,18 +1948,39 @@ async function main(){
   switchFloor(3);
   initLiffProfile();
 
-  // ถ้ามี cache ของวันนี้ ให้ขึ้นก่อนทันที
   const hadStartupCache = renderCachedDashboard(today, '');
 
-  // ให้ browser มีโอกาสวาด cache ก่อน แล้วค่อย refresh ของจริงเงียบ ๆ
   if (hadStartupCache){
+    // cache ขึ้นก่อนทันที แล้ว refresh full ของจริง
     await new Promise(resolve => requestAnimationFrame(() => resolve()));
-  }
 
-  await fetchDashboardData(today, '', {
-    preserveCachedOnError: hadStartupCache,
-    keepStatusText: hadStartupCache
-  });
+    await fetchDashboardData(today, '', {
+      preserveCachedOnError: true,
+      keepStatusText: true
+    });
+  } else {
+    // ไม่มี cache: Quick + Full เริ่มพร้อมกัน
+    prepareDashboardDetailsLoading();
+
+    let fullFinished = false;
+
+    const fullPromise = fetchDashboardData(today, '', {
+      preserveCachedOnError: false,
+      keepStatusText: true
+    }).then(result => {
+      fullFinished = true;
+      return result;
+    });
+
+    const quick = await fetchDashboardQuick(today, '', { render:false });
+
+    // หน้าเปิดครั้งแรกไม่บังคับ 7 วิ เพราะ overlay ใช้ตอนเปลี่ยนวันที่เป็นหลัก
+    if (!fullFinished && quick.ok){
+      renderDashboardQuickPayload(quick.data, today, '');
+    }
+
+    await fullPromise;
+  }
 
   syncDashboardVersionBaseline()
     .catch(err => console.warn('baseline failed:', err))
