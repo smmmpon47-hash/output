@@ -1824,6 +1824,10 @@ function renderEtonReport(report, isLatestFallback){
   renderEtonReportBody();
 }
 
+function cleanEtonProcessName(value){
+  return String(value ?? '').replace(/\s*รวม\s*$/u, '').trim();
+}
+
 function renderEtonReportBody(){
   const report = etonCurrentReport;
   if (!report || !Array.isArray(report.rows) || !report.rows.length) return;
@@ -1836,7 +1840,7 @@ function renderEtonReportBody(){
   const gap = num(lowest.output) - target;
   const gapPct = target > 0 ? gap/target*100 : 0;
 
-  el('etonBottleneck').innerText = lowest.process || `Process ${lowest.process_no || '-'}`;
+  el('etonBottleneck').innerText = cleanEtonProcessName(lowest.process) || `Process ${lowest.process_no || '-'}`;
   el('etonLowestOutput').innerText = `${fmt(lowest.output)} ตัว`;
   el('etonTarget').innerText = `${fmt(target)} ตัว`;
   el('etonGap').innerText = `${gap>=0?'+':''}${fmt(gap)} ตัว`;
@@ -1845,7 +1849,7 @@ function renderEtonReportBody(){
 
   if (prev){
     const transition = num(lowest.output) - num(prev.output);
-    el('etonTransitionNote').innerText = `ก่อน ${lowest.process || '-'}: ${prev.process || '-'} ${fmt(prev.output)} ตัว • ต่าง ${transition>=0?'+':''}${fmt(transition)} ตัว`;
+    el('etonTransitionNote').innerText = `ก่อน ${cleanEtonProcessName(lowest.process) || '-'}: ${cleanEtonProcessName(prev.process) || '-'} ${fmt(prev.output)} ตัว • ต่าง ${transition>=0?'+':''}${fmt(transition)} ตัว`;
   }else{
     el('etonTransitionNote').innerText = 'Possible Bottleneck = ขั้นตอนที่มี Output ต่ำสุดในรายงาน ETON';
   }
@@ -1867,7 +1871,7 @@ function renderEtonReportBody(){
     const g = num(r.output)-num(r.target);
     return `<tr class="border-b border-slate-100 last:border-0 ${isLow?'bg-rose-50/70':''}">
       <td class="px-3 py-2 font-semibold ${isLow?'text-rose-600':'text-slate-500'}">${esc(r.process_no || '-')}</td>
-      <td class="py-2 font-semibold ${isLow?'text-rose-700':'text-slate-700'}">${esc(r.process || '-')}</td>
+      <td class="py-2 font-semibold ${isLow?'text-rose-700':'text-slate-700'}">${esc(cleanEtonProcessName(r.process) || '-')}</td>
       <td class="py-2 text-right font-bold ${isLow?'text-rose-700':'text-slate-700'}">${fmt(r.output)}</td>
       <td class="px-3 py-2 text-right font-bold ${g>=0?'text-emerald-600':'text-rose-500'}">${g>=0?'+':''}${fmt(g)}</td>
     </tr>`;
@@ -1882,7 +1886,7 @@ function updateEtonProcessChart(rows, lowest){
   if (etonChartInstance) etonChartInstance.destroy();
 
   const lowKey = `${lowest.process_order}|${lowest.process_no}`;
-  const labels = rows.map(r => r.process || r.process_no || '-');
+  const labels = rows.map(r => cleanEtonProcessName(r.process) || r.process_no || '-');
   const outputs = rows.map(r => num(r.output));
   const targets = rows.map(r => num(r.target));
   const colors = rows.map(r => `${r.process_order}|${r.process_no}` === lowKey ? 'rgba(239,68,68,0.82)' : 'rgba(59,130,246,0.72)');
