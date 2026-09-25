@@ -591,6 +591,106 @@
         </div>
       </div>
     </div>
+
+    <!-- ======================= ETON PROCESS ANALYSIS ======================= -->
+    <div id="etonSection" class="mt-4 hide">
+      <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div class="flex flex-wrap items-start justify-between gap-3 px-4 py-4 border-b border-slate-100">
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <h3 class="text-sm font-extrabold text-slate-800">Process Performance (ETON)</h3>
+              <span class="text-[9px] font-extrabold tracking-wide px-2 py-1 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">DAILY SNAPSHOT</span>
+            </div>
+            <p class="text-[11px] text-slate-400 mt-1">ดู Output รายขั้นตอน เพื่อหาจุดที่งานอาจเริ่มช้า</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="etonReportMeta" class="text-[10px] font-semibold text-slate-400">-</span>
+            <span id="etonStatusBadge" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">กำลังโหลด</span>
+          </div>
+        </div>
+
+        <div id="etonLoadingState" class="px-4 py-8 text-center">
+          <div class="inline-flex items-center gap-2 text-xs font-semibold text-slate-400">
+            <span class="w-2 h-2 rounded-full bg-indigo-400 animate-pulse"></span>
+            กำลังโหลดข้อมูล ETON...
+          </div>
+        </div>
+
+        <div id="etonEmptyState" class="hide px-4 py-7">
+          <div class="bg-slate-50 border border-slate-100 rounded-2xl px-4 py-5 text-center">
+            <p id="etonEmptyTitle" class="text-sm font-bold text-slate-700">ยังไม่มี ETON Report ของวันที่เลือก</p>
+            <p id="etonEmptyNote" class="text-[11px] text-slate-400 mt-1">-</p>
+            <button id="etonShowLatestBtn" onclick="showLatestEtonReport()" class="hide mt-3 bg-slate-800 hover:bg-slate-900 text-white text-[11px] font-bold px-4 py-2 rounded-xl transition">ดูรายงานล่าสุด</button>
+          </div>
+        </div>
+
+        <div id="etonDataState" class="hide p-4">
+          <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
+            <div class="bg-rose-50 border border-rose-100 rounded-2xl p-3">
+              <p class="text-[10px] font-semibold text-rose-500">Possible Bottleneck</p>
+              <p id="etonBottleneck" class="text-sm font-extrabold text-rose-700 mt-1 truncate">-</p>
+              <p class="text-[9px] text-rose-400 mt-0.5">Output ต่ำสุดในรายการ</p>
+            </div>
+            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3">
+              <p class="text-[10px] font-semibold text-slate-400">Output</p>
+              <p id="etonLowestOutput" class="text-lg font-extrabold text-slate-800 mt-0.5">-</p>
+            </div>
+            <div class="bg-indigo-50 border border-indigo-100 rounded-2xl p-3">
+              <p class="text-[10px] font-semibold text-indigo-500">Target</p>
+              <p id="etonTarget" class="text-lg font-extrabold text-indigo-700 mt-0.5">-</p>
+            </div>
+            <div class="bg-rose-50 border border-rose-100 rounded-2xl p-3">
+              <p class="text-[10px] font-semibold text-rose-500">Gap to Target</p>
+              <p id="etonGap" class="text-lg font-extrabold text-rose-700 mt-0.5">-</p>
+              <p id="etonGapPct" class="text-[9px] text-rose-400 mt-0.5">-</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 xl:grid-cols-[0.88fr_1.65fr] gap-4 mt-4">
+            <div class="bg-slate-50/70 border border-slate-100 rounded-2xl overflow-hidden">
+              <div class="flex items-center justify-between gap-2 px-3 py-3 border-b border-slate-100">
+                <div>
+                  <p class="text-xs font-bold text-slate-700">Process List</p>
+                  <p id="etonProcessMeta" class="text-[10px] text-slate-400">-</p>
+                </div>
+              </div>
+              <div class="max-h-72 overflow-auto">
+                <table class="w-full text-[10px]">
+                  <thead class="sticky top-0 bg-slate-50 text-slate-400 border-b border-slate-200">
+                    <tr>
+                      <th class="text-left font-semibold px-3 py-2">No.</th>
+                      <th class="text-left font-semibold py-2">ขั้นตอน</th>
+                      <th class="text-right font-semibold py-2">Output</th>
+                      <th class="text-right font-semibold px-3 py-2">Gap</th>
+                    </tr>
+                  </thead>
+                  <tbody id="etonProcessTable"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="bg-slate-50/70 border border-slate-100 rounded-2xl p-4">
+              <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div>
+                  <h4 class="text-xs font-bold text-slate-700">กราฟ Output รายขั้นตอน</h4>
+                  <p class="text-[10px] text-slate-400">แถบแดง = Output ต่ำสุด • เส้น = Target ของแต่ละขั้นตอน</p>
+                </div>
+                <div class="flex gap-1 bg-white border border-slate-200 rounded-xl p-1">
+                  <button id="etonOrderBtn" onclick="setEtonSortMode('PROCESS')" class="px-2.5 py-1.5 rounded-lg text-[9px] font-bold bg-slate-800 text-white">PROCESS ORDER</button>
+                  <button id="etonLowBtn" onclick="setEtonSortMode('LOWEST')" class="px-2.5 py-1.5 rounded-lg text-[9px] font-bold text-slate-500 hover:bg-slate-100">LOWEST FIRST</button>
+                </div>
+              </div>
+              <div class="h-72 relative"><canvas id="etonProcessChart"></canvas></div>
+            </div>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400">
+            <p id="etonTransitionNote">-</p>
+            <p class="font-medium">ETON เป็นข้อมูล snapshot จากรายงานช่าง ไม่ใช่ข้อมูล realtime</p>
+          </div>
+        </div>
+      </div>
+    </div>
   </section>
 
 </div>
@@ -664,6 +764,8 @@ Chart.register(ChartDataLabels);
    CONFIG  (ของเดิม ไม่ต้องแก้)
    ======================================================= */
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec";
+// ETON Importer Web App /exec URL (separate project; does not touch Production)
+const ETON_API_URL = "https://script.google.com/macros/s/AKfycbxaZJdIAeQPMg47LkdLVGkNI2eSXQBMutMtBW4aJvMzt5i0gBKENj_fBHc7UCR0Iu8F/exec";
 const LIFF_ID = "2011181755-bLeCO8Hs";
 
 /* ผังไลน์: ตำแหน่งกรอบ (หน่วยเป็น % ของรูป) */
@@ -691,6 +793,11 @@ let dailyChartMode = 'MIX';
 let dailyChartLines = [];
 let hourlyChartInstance = null;
 let cumulativeChartInstance = null;
+let etonChartInstance = null;
+let etonSortMode = 'PROCESS';
+let etonCurrentReport = null;
+let etonLatestReport = null;
+let etonRequestSeq = 0;
 let globalLinesData = [];
 let currentFloor = 3;
 let currentLine = "";
@@ -1488,6 +1595,11 @@ function openLine(code){
 
 function closeDetail(){
   currentLine = '';
+  etonRequestSeq++;
+  etonCurrentReport = null;
+  etonLatestReport = null;
+  if (etonChartInstance){ etonChartInstance.destroy(); etonChartInstance = null; }
+  el('etonSection').classList.add('hide');
   el('lineDetail').classList.add('hide');
   renderHotspots();
 }
@@ -1510,6 +1622,7 @@ function renderLineDetail(code){
     el('dtLotTable').innerHTML = `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มีข้อมูลของไลน์นี้</td></tr>`;
     el('dtRemarks').innerHTML = `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
     updateHourlyChart(code);
+    renderEtonSection(code);
     return;
   }
 
@@ -1569,6 +1682,268 @@ function renderLineDetail(code){
     : `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
 
   updateHourlyChart(code);
+  renderEtonSection(code);
+}
+
+/* =======================================================
+   ETON PROCESS ANALYSIS (separate API; B/C/D only)
+   ======================================================= */
+function etonApiReady(){
+  return ETON_API_URL && !ETON_API_URL.includes('PASTE_ETON_WEB_APP_URL_HERE');
+}
+
+function formatEtonDate(iso){
+  const m = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(iso || '-');
+}
+
+function formatEtonImportedAt(value){
+  if (!value) return '';
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+}
+
+function setEtonUiState(state){
+  el('etonLoadingState').classList.toggle('hide', state !== 'loading');
+  el('etonEmptyState').classList.toggle('hide', state !== 'empty');
+  el('etonDataState').classList.toggle('hide', state !== 'data');
+}
+
+function resetEtonDataView(){
+  etonCurrentReport = null;
+  etonLatestReport = null;
+  etonSortMode = 'PROCESS';
+  if (etonChartInstance){ etonChartInstance.destroy(); etonChartInstance = null; }
+  const chart = el('etonProcessChart');
+  if (chart){ const ctx = chart.getContext('2d'); if (ctx) ctx.clearRect(0,0,chart.width,chart.height); }
+}
+
+async function renderEtonSection(code){
+  const section = el('etonSection');
+  const line = String(code || '').toUpperCase();
+
+  if (!['B','C','D'].includes(line)){
+    section.classList.add('hide');
+    return;
+  }
+
+  section.classList.remove('hide');
+  resetEtonDataView();
+
+  if (currentDashboardIsRange){
+    setEtonUiState('empty');
+    el('etonStatusBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500';
+    el('etonStatusBadge').innerText = 'เลือกวันเดียว';
+    el('etonReportMeta').innerText = `LINE ${line}`;
+    el('etonEmptyTitle').innerText = 'ETON Analysis ใช้กับข้อมูลแบบวันเดียว';
+    el('etonEmptyNote').innerText = 'เลือก From และ To เป็นวันเดียวกันเพื่อดู Process Performance';
+    el('etonShowLatestBtn').classList.add('hide');
+    return;
+  }
+
+  const selectedDate = el('datePicker').value;
+  const requestId = ++etonRequestSeq;
+  setEtonUiState('loading');
+  el('etonStatusBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500';
+  el('etonStatusBadge').innerText = 'กำลังโหลด';
+  el('etonReportMeta').innerText = `LINE ${line} • ${formatEtonDate(selectedDate)}`;
+
+  if (!etonApiReady()){
+    setEtonUiState('empty');
+    el('etonStatusBadge').innerText = 'ยังไม่ได้เชื่อม API';
+    el('etonEmptyTitle').innerText = 'ยังไม่ได้ใส่ ETON Web App URL';
+    el('etonEmptyNote').innerText = 'Deploy ETON Importer เป็น Web App แล้วนำ /exec URL มาใส่ที่ ETON_API_URL';
+    el('etonShowLatestBtn').classList.add('hide');
+    return;
+  }
+
+  try{
+    const url = `${ETON_API_URL}?action=getEtonReport&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(line)}&_=${Date.now()}`;
+    const res = await fetch(url,{method:'GET',redirect:'follow',cache:'no-store'});
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (requestId !== etonRequestSeq || currentLine !== line) return;
+    if (!data || data.ok === false) throw new Error(data && data.error ? data.error : 'Invalid ETON response');
+
+    etonLatestReport = data.latest || null;
+
+    if (data.available && data.report){
+      renderEtonReport(data.report, false);
+      return;
+    }
+
+    setEtonUiState('empty');
+    el('etonStatusBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-100';
+    el('etonStatusBadge').innerText = 'รอรายงาน';
+    el('etonEmptyTitle').innerText = `ยังไม่มี ETON Report วันที่ ${formatEtonDate(selectedDate)}`;
+
+    if (etonLatestReport){
+      el('etonEmptyNote').innerText = `รายงานล่าสุด: ${formatEtonDate(etonLatestReport.report_date)} • LINE ${line}`;
+      el('etonShowLatestBtn').classList.remove('hide');
+    }else{
+      el('etonEmptyNote').innerText = 'เมื่อช่างโยน Excel เข้า Drive แล้ว ระบบจะนำข้อมูลมาแสดงในส่วนนี้';
+      el('etonShowLatestBtn').classList.add('hide');
+    }
+
+  }catch(err){
+    if (requestId !== etonRequestSeq) return;
+    console.warn('ETON load failed:',err);
+    setEtonUiState('empty');
+    el('etonStatusBadge').className = 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-rose-50 text-rose-600 border border-rose-100';
+    el('etonStatusBadge').innerText = 'โหลดไม่สำเร็จ';
+    el('etonEmptyTitle').innerText = 'เชื่อมต่อ ETON ไม่สำเร็จ';
+    el('etonEmptyNote').innerText = 'Production Dashboard ส่วนอื่นยังใช้งานได้ตามปกติ';
+    el('etonShowLatestBtn').classList.add('hide');
+  }
+}
+
+function showLatestEtonReport(){
+  if (!etonLatestReport) return;
+  renderEtonReport(etonLatestReport, true);
+}
+
+function setEtonSortMode(mode){
+  etonSortMode = mode === 'LOWEST' ? 'LOWEST' : 'PROCESS';
+  if (etonCurrentReport) renderEtonReportBody();
+}
+
+function renderEtonReport(report, isLatestFallback){
+  etonCurrentReport = report;
+  etonSortMode = 'PROCESS';
+  setEtonUiState('data');
+
+  const imported = formatEtonImportedAt(report.imported_at);
+  el('etonReportMeta').innerText = `${formatEtonDate(report.report_date)} • รุ่น ${report.model || '-'}${imported ? ' • Imported ' + imported : ''}`;
+  el('etonStatusBadge').className = isLatestFallback
+    ? 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-100'
+    : 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100';
+  el('etonStatusBadge').innerText = isLatestFallback ? 'รายงานล่าสุด' : 'พร้อมใช้งาน';
+
+  renderEtonReportBody();
+}
+
+function renderEtonReportBody(){
+  const report = etonCurrentReport;
+  if (!report || !Array.isArray(report.rows) || !report.rows.length) return;
+
+  const sourceRows = report.rows.slice();
+  const lowest = sourceRows.reduce((a,b) => num(b.output) < num(a.output) ? b : a, sourceRows[0]);
+  const lowestIndexInProcess = sourceRows.findIndex(r => r === lowest);
+  const prev = lowestIndexInProcess > 0 ? sourceRows[lowestIndexInProcess-1] : null;
+  const target = num(lowest.target);
+  const gap = num(lowest.output) - target;
+  const gapPct = target > 0 ? gap/target*100 : 0;
+
+  el('etonBottleneck').innerText = lowest.process || `Process ${lowest.process_no || '-'}`;
+  el('etonLowestOutput').innerText = `${fmt(lowest.output)} ตัว`;
+  el('etonTarget').innerText = `${fmt(target)} ตัว`;
+  el('etonGap').innerText = `${gap>=0?'+':''}${fmt(gap)} ตัว`;
+  el('etonGapPct').innerText = target > 0 ? `${gapPct.toFixed(0)}% เทียบ Target` : '-';
+  el('etonProcessMeta').innerText = `${sourceRows.length} ขั้นตอน • รุ่น ${report.model || '-'}`;
+
+  if (prev){
+    const transition = num(lowest.output) - num(prev.output);
+    el('etonTransitionNote').innerText = `ก่อน ${lowest.process || '-'}: ${prev.process || '-'} ${fmt(prev.output)} ตัว • ต่าง ${transition>=0?'+':''}${fmt(transition)} ตัว`;
+  }else{
+    el('etonTransitionNote').innerText = 'Possible Bottleneck = ขั้นตอนที่มี Output ต่ำสุดในรายงาน ETON';
+  }
+
+  const rows = sourceRows.slice().sort((a,b) => {
+    if (etonSortMode === 'LOWEST') return num(a.output) - num(b.output) || num(a.process_order)-num(b.process_order);
+    return num(a.process_order) - num(b.process_order);
+  });
+
+  el('etonOrderBtn').className = etonSortMode === 'PROCESS'
+    ? 'px-2.5 py-1.5 rounded-lg text-[9px] font-bold bg-slate-800 text-white'
+    : 'px-2.5 py-1.5 rounded-lg text-[9px] font-bold text-slate-500 hover:bg-slate-100';
+  el('etonLowBtn').className = etonSortMode === 'LOWEST'
+    ? 'px-2.5 py-1.5 rounded-lg text-[9px] font-bold bg-slate-800 text-white'
+    : 'px-2.5 py-1.5 rounded-lg text-[9px] font-bold text-slate-500 hover:bg-slate-100';
+
+  el('etonProcessTable').innerHTML = rows.map(r => {
+    const isLow = r.process_order === lowest.process_order && r.process_no === lowest.process_no;
+    const g = num(r.output)-num(r.target);
+    return `<tr class="border-b border-slate-100 last:border-0 ${isLow?'bg-rose-50/70':''}">
+      <td class="px-3 py-2 font-semibold ${isLow?'text-rose-600':'text-slate-500'}">${esc(r.process_no || '-')}</td>
+      <td class="py-2 font-semibold ${isLow?'text-rose-700':'text-slate-700'}">${esc(r.process || '-')}</td>
+      <td class="py-2 text-right font-bold ${isLow?'text-rose-700':'text-slate-700'}">${fmt(r.output)}</td>
+      <td class="px-3 py-2 text-right font-bold ${g>=0?'text-emerald-600':'text-rose-500'}">${g>=0?'+':''}${fmt(g)}</td>
+    </tr>`;
+  }).join('');
+
+  updateEtonProcessChart(rows, lowest);
+}
+
+function updateEtonProcessChart(rows, lowest){
+  const canvas = el('etonProcessChart');
+  if (!canvas) return;
+  if (etonChartInstance) etonChartInstance.destroy();
+
+  const lowKey = `${lowest.process_order}|${lowest.process_no}`;
+  const labels = rows.map(r => r.process || r.process_no || '-');
+  const outputs = rows.map(r => num(r.output));
+  const targets = rows.map(r => num(r.target));
+  const colors = rows.map(r => `${r.process_order}|${r.process_no}` === lowKey ? 'rgba(239,68,68,0.82)' : 'rgba(59,130,246,0.72)');
+
+  etonChartInstance = new Chart(canvas.getContext('2d'),{
+    data:{
+      labels,
+      datasets:[
+        {
+          type:'bar',
+          label:'Output',
+          data:outputs,
+          backgroundColor:colors,
+          borderRadius:5,
+          maxBarThickness:28,
+          order:2
+        },
+        {
+          type:'line',
+          label:'Target',
+          data:targets,
+          borderColor:'rgba(239,68,68,0.78)',
+          backgroundColor:'rgba(239,68,68,0.78)',
+          borderWidth:2,
+          pointRadius:2,
+          pointHoverRadius:4,
+          tension:0,
+          order:1
+        }
+      ]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      animation:{duration:350},
+      layout:{padding:{top:6}},
+      plugins:{
+        legend:{display:true,labels:{boxWidth:9,boxHeight:9,usePointStyle:true,font:{family:'Kanit',size:10}}},
+        datalabels:{display:false},
+        tooltip:{
+          callbacks:{
+            afterLabel:(ctx) => {
+              const r = rows[ctx.dataIndex];
+              return ctx.dataset.label === 'Output' ? `Gap: ${(num(r.output)-num(r.target)).toLocaleString()} ตัว` : '';
+            }
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{display:false},
+          ticks:{font:{family:'Kanit',size:9},maxRotation:48,minRotation:48,autoSkip:false}
+        },
+        y:{
+          beginAtZero:true,
+          grid:{color:'rgba(148,163,184,0.12)'},
+          ticks:{font:{family:'Kanit',size:9}}
+        }
+      }
+    }
+  });
 }
 
 /* ---------- hourly chart (ตรรกะเดิม) ---------- */
