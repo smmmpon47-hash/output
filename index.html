@@ -625,6 +625,11 @@
         </div>
 
         <div id="etonDataState" class="hide p-4">
+          <div id="etonModelSwitcher" class="hide mb-3 flex flex-wrap items-center gap-2 bg-slate-50 border border-slate-100 rounded-2xl px-3 py-2.5">
+            <span class="text-[10px] font-bold text-slate-500 mr-1">รุ่นในวันนี้</span>
+            <div id="etonModelTabs" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
           <div class="grid grid-cols-2 xl:grid-cols-4 gap-3">
             <div class="bg-rose-50 border border-rose-100 rounded-2xl p-3">
               <p class="text-[10px] font-semibold text-rose-500">Possible Bottleneck</p>
@@ -796,7 +801,11 @@ let cumulativeChartInstance = null;
 let etonChartInstance = null;
 let etonSortMode = 'PROCESS';
 let etonCurrentReport = null;
+let etonReports = [];
 let etonLatestReport = null;
+let etonLatestReports = [];
+let etonSelectedReportIndex = 0;
+let etonLatestFallbackActive = false;
 let etonRequestSeq = 0;
 let globalLinesData = [];
 let currentFloor = 3;
@@ -1725,11 +1734,19 @@ function setEtonUiState(state){
 
 function resetEtonDataView(){
   etonCurrentReport = null;
+  etonReports = [];
   etonLatestReport = null;
+  etonLatestReports = [];
+  etonSelectedReportIndex = 0;
+  etonLatestFallbackActive = false;
   etonSortMode = 'PROCESS';
   if (etonChartInstance){ etonChartInstance.destroy(); etonChartInstance = null; }
   const chart = el('etonProcessChart');
   if (chart){ const ctx = chart.getContext('2d'); if (ctx) ctx.clearRect(0,0,chart.width,chart.height); }
+  const switcher = el('etonModelSwitcher');
+  if (switcher) switcher.classList.add('hide');
+  const tabs = el('etonModelTabs');
+  if (tabs) tabs.innerHTML = '';
 }
 
 async function renderEtonSection(code){
@@ -1750,7 +1767,7 @@ async function renderEtonSection(code){
     el('etonStatusBadge').innerText = 'เลือกวันเดียว';
     el('etonReportMeta').innerText = `LINE ${line}`;
     el('etonEmptyTitle').innerText = 'ETON Analysis ใช้กับข้อมูลแบบวันเดียว';
-    el('etonEmptyNote').innerText = 'เลือก From และ To เป็นวันเดียวกันเพื่อดู Process Performance';
+    el('etonEmptyNote').innerText = 'เลือก From วันเดียวและปล่อย To ว่าง หรือเลือก From/To เป็นวันเดียวกัน';
     el('etonShowLatestBtn').classList.add('hide');
     return;
   }
@@ -1780,10 +1797,17 @@ async function renderEtonSection(code){
     if (requestId !== etonRequestSeq || currentLine !== line) return;
     if (!data || data.ok === false) throw new Error(data && data.error ? data.error : 'Invalid ETON response');
 
-    etonLatestReport = data.latest || null;
+    etonLatestReports = Array.isArray(data.latest_reports) && data.latest_reports.length
+      ? data.latest_reports
+      : (data.latest ? [data.latest] : []);
+    etonLatestReport = etonLatestReports[0] || null;
 
-    if (data.available && data.report){
-      renderEtonReport(data.report, false);
+    const reports = Array.isArray(data.reports) && data.reports.length
+      ? data.reports
+      : (data.report ? [data.report] : []);
+
+    if (data.available && reports.length){
+      renderEtonReports(reports, false);
       return;
     }
 
@@ -1792,8 +1816,8 @@ async function renderEtonSection(code){
     el('etonStatusBadge').innerText = 'รอรายงาน';
     el('etonEmptyTitle').innerText = `ยังไม่มี ETON Report วันที่ ${formatEtonDate(selectedDate)}`;
 
-    if (etonLatestReport){
-      el('etonEmptyNote').innerText = `รายงานล่าสุด: ${formatEtonDate(etonLatestReport.report_date)} • LINE ${line}`;
+    if (etonLatestReports.length){
+      el('etonEmptyNote').innerText = `รายงานล่าสุด: ${formatEtonDate(etonLatestReports[0].report_date)} • LINE ${line} • ${etonLatestReports.length} รุ่น`;
       el('etonShowLatestBtn').classList.remove('hide');
     }else{
       el('etonEmptyNote').innerText = 'เมื่อช่างโยน Excel เข้า Drive แล้ว ระบบจะนำข้อมูลมาแสดงในส่วนนี้';
@@ -1813,8 +1837,9 @@ async function renderEtonSection(code){
 }
 
 function showLatestEtonReport(){
-  if (!etonLatestReport) return;
-  renderEtonReport(etonLatestReport, true);
+  if (!etonLatestReports.length && etonLatestReport) etonLatestReports = [etonLatestReport];
+  if (!etonLatestReports.length) return;
+  renderEtonReports(etonLatestReports, true);
 }
 
 function setEtonSortMode(mode){
@@ -1822,19 +1847,99 @@ function setEtonSortMode(mode){
   if (etonCurrentReport) renderEtonReportBody();
 }
 
-function renderEtonReport(report, isLatestFallback){
+function normalizeEtonModelToken(value){
+  return String(value ?? '').trim().toLowerCase().replace(/\s+/g,'');
+}
+
+function etonModelDigits(value){
+  return String(value ?? '').replace(/\D/g,'');
+}
+
+function findDefaultEtonReportIndex(reports){
+  if (!Array.isArray(reports) || !reports.length) return 0;
+
+  // Prefer the model currently shown in LINE Detail when it exists in ETON.
+  const activeModel = String(el('dtModel')?.innerText || '').trim();
+  const activeToken = normalizeEtonModelToken(activeModel);
+  const activeDigits = etonModelDigits(activeModel);
+
+  let idx = reports.findIndex(r => normalizeEtonModelToken(r.model) === activeToken && activeToken);
+  if (idx >= 0) return idx;
+
+  if (activeDigits){
+    idx = reports.findIndex(r => etonModelDigits(r.model) === activeDigits);
+    if (idx >= 0) return idx;
+  }
+
+  // Technician report blocks are stacked in production order; if no model match,
+  // show the last block because it is normally the later/current model of the day.
+  return Math.max(0, reports.length - 1);
+}
+
+function renderEtonReports(reports, isLatestFallback){
+  const valid = (Array.isArray(reports) ? reports : [])
+    .filter(r => r && Array.isArray(r.rows) && r.rows.length);
+  if (!valid.length) return;
+
+  etonReports = valid;
+  etonLatestFallbackActive = !!isLatestFallback;
+  etonSelectedReportIndex = findDefaultEtonReportIndex(valid);
+  renderSelectedEtonReport();
+}
+
+function selectEtonModel(index){
+  const i = Number(index);
+  if (!Number.isInteger(i) || i < 0 || i >= etonReports.length) return;
+  etonSelectedReportIndex = i;
+  renderSelectedEtonReport();
+}
+
+function renderEtonModelTabs(){
+  const switcher = el('etonModelSwitcher');
+  const tabs = el('etonModelTabs');
+  if (!switcher || !tabs) return;
+
+  if (etonReports.length <= 1){
+    switcher.classList.add('hide');
+    tabs.innerHTML = '';
+    return;
+  }
+
+  switcher.classList.remove('hide');
+  tabs.innerHTML = etonReports.map((r,i) => {
+    const active = i === etonSelectedReportIndex;
+    const cls = active
+      ? 'px-3 py-1.5 rounded-xl text-[10px] font-extrabold bg-slate-800 text-white shadow-sm'
+      : 'px-3 py-1.5 rounded-xl text-[10px] font-bold bg-white border border-slate-200 text-slate-600 hover:bg-slate-100';
+    const title = r.prun ? `PRUN ${r.prun}` : '';
+    return `<button type="button" class="${cls}" title="${esc(title)}" onclick="selectEtonModel(${i})">รุ่น ${esc(r.model || '-')}</button>`;
+  }).join('');
+}
+
+function renderSelectedEtonReport(){
+  const report = etonReports[etonSelectedReportIndex] || etonReports[0];
+  if (!report) return;
+
   etonCurrentReport = report;
   etonSortMode = 'PROCESS';
   setEtonUiState('data');
+  renderEtonModelTabs();
 
   const imported = formatEtonImportedAt(report.imported_at);
-  el('etonReportMeta').innerText = `${formatEtonDate(report.report_date)} • รุ่น ${report.model || '-'}${imported ? ' • Imported ' + imported : ''}`;
-  el('etonStatusBadge').className = isLatestFallback
+  const modelCountText = etonReports.length > 1 ? ` • ${etonReports.length} รุ่น` : '';
+  el('etonReportMeta').innerText = `${formatEtonDate(report.report_date)} • รุ่น ${report.model || '-'}${modelCountText}${imported ? ' • Imported ' + imported : ''}`;
+  el('etonStatusBadge').className = etonLatestFallbackActive
     ? 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-50 text-amber-600 border border-amber-100'
     : 'text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100';
-  el('etonStatusBadge').innerText = isLatestFallback ? 'รายงานล่าสุด' : 'พร้อมใช้งาน';
+  el('etonStatusBadge').innerText = etonLatestFallbackActive ? 'รายงานล่าสุด' : 'พร้อมใช้งาน';
 
   renderEtonReportBody();
+}
+
+// Backward-compatible wrapper for any old call path.
+function renderEtonReport(report, isLatestFallback){
+  if (!report) return;
+  renderEtonReports([report], isLatestFallback);
 }
 
 function cleanEtonProcessName(value){
