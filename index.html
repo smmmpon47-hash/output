@@ -507,6 +507,7 @@
         <p class="text-[10px] font-semibold text-slate-400">เวลาทำงานวันนี้</p>
         <p id="dtHours" class="text-lg font-extrabold text-slate-800 mt-0.5">-</p>
         <p id="dtSlotRange" class="text-[10px] text-slate-400">-</p>
+        <p id="dtManpower" class="text-[10px] font-semibold text-indigo-500 mt-1">กำลังคน -</p>
       </div>
     </div>
 
@@ -1412,18 +1413,22 @@ function renderCards(lines, isRange){
     if (isRange){
       const tg = num(item.target) || (num(item.target1)+num(item.target2)+num(item.target3));
       const ac = num(item.actual) || (num(item.actual1)+num(item.actual2)+num(item.actual3));
-      c.innerHTML += createCardHtml(lineName,'','',tg,ac,item.remarks,null);
+      c.innerHTML += createCardHtml(lineName,'','',tg,ac,item.remarks,null,null);
       return;
     }
     getLotPlan(item).forEach((lotInfo, idx) => {
       if (idx > 0 && !lotInfo.lot) return;
-      c.innerHTML += createCardHtml(lineName, lotInfo.model, lotInfo.lot, lotInfo.target, lotInfo.actual, item.remarks, getLotLiveMetrics(lotInfo));
+      c.innerHTML += createCardHtml(lineName, lotInfo.model, lotInfo.lot, lotInfo.target, lotInfo.actual, item.remarks, getLotLiveMetrics(lotInfo), item.manpower);
     });
   });
 }
 
-function createCardHtml(line, modelName, lotName, target, actual, remarks, live){
+function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower){
   target = num(target); actual = num(actual);
+  const manpowerValue =
+    (manpower === null || manpower === undefined || manpower === '')
+      ? null
+      : Math.max(0, Math.round(num(manpower)));
 
   const dayGap = actual - target;
   const dayGapPct = target > 0 ? Math.round(dayGap/target*100) : 0;
@@ -1472,6 +1477,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live)
         <div class="space-y-2 text-xs pt-0.5">
           <div class="font-semibold text-slate-500">ผลิตจริง/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
           <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
+          ${manpowerValue !== null ? `<div class="font-semibold text-slate-500">กำลังคน <span class="ml-1 font-extrabold text-indigo-600">${manpowerValue.toLocaleString()} คน</span></div>` : ''}
         </div>
       </div>
 
@@ -1641,6 +1647,7 @@ function renderLineDetail(code){
 
   if (!item){
     ['dtModel','dtLot','dtStatus','dtStatusNote','dtTarget','dtActual','dtGap','dtGapPct','dtHours','dtSlotRange'].forEach(id => el(id).innerText = '-');
+    el('dtManpower').innerText = 'กำลังคน -';
     el('dtLotTable').innerHTML = `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มีข้อมูลของไลน์นี้</td></tr>`;
     el('dtRemarks').innerHTML = `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
     updateHourlyChart(code);
@@ -1667,6 +1674,13 @@ function renderLineDetail(code){
 
   const totalHours = num(item.total_working_hours) || 8;
   el('dtHours').innerText = `${totalHours} ชม.`;
+
+  const detailManpower =
+    (item.manpower === null || item.manpower === undefined || item.manpower === '')
+      ? null
+      : Math.max(0, Math.round(num(item.manpower)));
+  el('dtManpower').innerText =
+    detailManpower === null ? 'กำลังคน -' : `กำลังคน ${detailManpower.toLocaleString()} คน`;
 
   const breakSlot = getBreakSlotForDashboardLine(code);
   const slots = Object.keys(item.hourly_data || {});
