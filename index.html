@@ -244,19 +244,35 @@
     border-radius:999px;
     background:#EEF2F7;
   }
-  .dashboardLoadingBar::after{
-    content:"";
+  .dashboardLoadingBarFill{
     position:absolute;
     inset:0 auto 0 0;
-    width:42%;
+    width:0%;
     border-radius:inherit;
+    overflow:hidden;
     background:linear-gradient(90deg,#6366F1,#38BDF8);
-    animation:dashboardLoadingSlide 1.05s ease-in-out infinite;
+    transition:width .28s cubic-bezier(0.22,1,0.36,1);
+  }
+  .dashboardLoadingBarFill::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    transform:translateX(-120%);
+    background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);
+    animation:dashboardLoadingShine 1.15s ease-in-out infinite;
+  }
+  .dashboardLoadingPercent{
+    min-width:40px;
+    text-align:right;
+    font-size:12px;
+    font-weight:800;
+    color:#4F46E5;
+    font-variant-numeric:tabular-nums;
   }
   @keyframes dashboardSpin{ to{ transform:rotate(360deg); } }
-  @keyframes dashboardLoadingSlide{
-    0%{ transform:translateX(-115%); }
-    100%{ transform:translateX(340%); }
+  @keyframes dashboardLoadingShine{
+    0%{ transform:translateX(-120%); }
+    100%{ transform:translateX(120%); }
   }
 
   @media (max-width:900px){
@@ -707,12 +723,15 @@
   <div class="dashboardLoadingCard">
     <div class="flex items-center gap-4">
       <div class="dashboardSpinner shrink-0"></div>
-      <div class="min-w-0">
-        <p class="text-sm font-extrabold text-slate-800">กำลังโหลดข้อมูลการผลิต</p>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center justify-between gap-3">
+          <p class="text-sm font-extrabold text-slate-800">กำลังโหลดข้อมูลการผลิต</p>
+          <span id="dashboardLoadingPercent" class="dashboardLoadingPercent">0%</span>
+        </div>
         <p id="dashboardLoadingDate" class="text-[11px] text-slate-400 mt-1">กรุณารอสักครู่...</p>
       </div>
     </div>
-    <div class="dashboardLoadingBar"></div>
+    <div class="dashboardLoadingBar"><div id="dashboardLoadingBarFill" class="dashboardLoadingBarFill"></div></div>
     <p class="text-[10px] text-slate-400 mt-3">กำลังอัปเดต Dashboard ให้เป็นข้อมูลล่าสุด</p>
   </div>
 </div>
@@ -813,11 +832,18 @@ let currentFloor = 3;
 let currentLine = "";
 
 const CHANGE_CHECK_MS = 30000;
+const DASHBOARD_FETCH_TIMEOUT_MS = 15000;
+const DASHBOARD_FETCH_RETRIES = 3;
 let changeWatchTimer = null;
 let lastDashboardVersion = "";
 let dashboardFetchInProgress = false;
+let dashboardFetchPromise = null;
+let dashboardFetchKey = '';
 let dashboardQuickFetchInProgress = false;
 let currentDashboardIsRange = false;
+let lastDashboardPayloadSignature = '';
+let dashboardLoadingProgress = 0;
+let dashboardLoadingProgressTimer = null;
 
 const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v21_';
 const DASHBOARD_CACHE_INDEX_KEY = 'production_dashboard_cache_v21_index';
@@ -881,6 +907,32 @@ function writeDashboardCache(selectedDate, endDate, data){
   }
 }
 
+function setDashboardLoadingProgress(value){
+  dashboardLoadingProgress = Math.max(0, Math.min(100, Math.round(Number(value) || 0)));
+  const pct = el('dashboardLoadingPercent');
+  const fill = el('dashboardLoadingBarFill');
+  if (pct) pct.innerText = `${dashboardLoadingProgress}%`;
+  if (fill) fill.style.width = `${dashboardLoadingProgress}%`;
+}
+
+function startDashboardLoadingProgress(){
+  if (dashboardLoadingProgressTimer) clearInterval(dashboardLoadingProgressTimer);
+  setDashboardLoadingProgress(6);
+  dashboardLoadingProgressTimer = setInterval(() => {
+    if (dashboardLoadingProgress >= 94) return;
+    const remaining = 94 - dashboardLoadingProgress;
+    const step = Math.max(1, Math.ceil(remaining * 0.08));
+    setDashboardLoadingProgress(dashboardLoadingProgress + step);
+  }, 320);
+}
+
+function stopDashboardLoadingProgress(){
+  if (dashboardLoadingProgressTimer){
+    clearInterval(dashboardLoadingProgressTimer);
+    dashboardLoadingProgressTimer = null;
+  }
+}
+
 function showDashboardLoading(selectedDate, endDate){
   const overlay = el('dashboardLoadingOverlay');
   if (!overlay) return 0;
@@ -892,6 +944,7 @@ function showDashboardLoading(selectedDate, endDate){
       : `${selectedDate}`;
   }
 
+  startDashboardLoadingProgress();
   overlay.classList.add('show');
   return performance.now();
 }
@@ -904,6 +957,9 @@ async function hideDashboardLoading(startedAt){
   const wait = Math.max(0, DASHBOARD_LOADING_MIN_MS - elapsed);
   if (wait > 0) await new Promise(resolve => setTimeout(resolve, wait));
 
+  stopDashboardLoadingProgress();
+  setDashboardLoadingProgress(100);
+  await new Promise(resolve => setTimeout(resolve, 220));
   overlay.classList.remove('show');
 }
 
@@ -939,7 +995,12 @@ function renderDashboardPayload(data, selectedDate, endDate, options = {}){
 function renderCachedDashboard(selectedDate, endDate){
   const cached = readDashboardCache(selectedDate, endDate);
   if (!cached) return false;
-  return renderDashboardPayload(cached.data, selectedDate, endDate, { fromCache:true });
+  const rendered = renderDashboardPayload(cached.data, selectedDate, endDate, { fromCache:true });
+  if (rendered){
+    const signature = getDashboardPayloadSignature(cached.data);
+    if (signature) lastDashboardPayloadSignature = signature;
+  }
+  return rendered;
 }
 
 function prepareDashboardDetailsLoading(){
@@ -1125,56 +1186,146 @@ function getLineStatus(item){
 /* =======================================================
    FETCH (คงตรรกะเดิม)
    ======================================================= */
-async function fetchDashboardData(selectedDate, endDate, options = {}){
-  if (dashboardFetchInProgress) return { ok:false, skipped:true };
-
-  dashboardFetchInProgress = true;
-  const isRange = endDate && endDate !== selectedDate;
-  currentDashboardIsRange = Boolean(isRange);
+async function fetchDashboardJsonWithTimeout(url, timeoutMs = DASHBOARD_FETCH_TIMEOUT_MS){
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
 
   try{
-    if (!options.keepStatusText){
-      el('selectedDateText').innerText = isRange
-        ? `Loading data: ${selectedDate} to ${endDate}`
-        : `Data date: ${selectedDate}`;
-    }
-
-    const url = isRange
-      ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}`
-      : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}`;
-
-    const res = await fetch(url, { method:"GET", redirect:"follow", cache:"no-store" });
+    const res = await fetch(url, {
+      method:"GET",
+      redirect:"follow",
+      cache:"no-store",
+      signal:controller.signal
+    });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    setDashboardLoadingProgress(Math.max(dashboardLoadingProgress, 64));
 
     const rawText = await res.text();
     let data;
     try { data = JSON.parse(rawText); }
     catch(e){ throw new Error("API ไม่ได้ส่งข้อมูล JSON กลับมา"); }
 
-    renderDashboardPayload(data, selectedDate, endDate, { fromCache:false });
-    writeDashboardCache(selectedDate, endDate, data);
-    updateLastUpdatedText(true);
-
-    return { ok:true, data };
-
-  } catch(err){
-    console.error("Fetch Error:", err);
-
-    if (options.preserveCachedOnError){
-      const isRangeNow = endDate && endDate !== selectedDate;
-      el('selectedDateText').innerText = isRangeNow
-        ? `Cached data: ${selectedDate} to ${endDate} • connection failed`
-        : `Cached data: ${selectedDate} • connection failed`;
-    } else {
-      el('selectedDateText').innerText = 'Unable to load data. Please select the date again.';
+    if (!data || !Array.isArray(data.lines)){
+      throw new Error("Dashboard payload ไม่สมบูรณ์");
     }
 
-    updateLastUpdatedText(false);
-    return { ok:false, error:err };
-
+    setDashboardLoadingProgress(Math.max(dashboardLoadingProgress, 82));
+    return data;
+  } catch(err){
+    if (err && err.name === 'AbortError') throw new Error('Dashboard API timeout');
+    throw err;
   } finally {
-    dashboardFetchInProgress = false;
+    clearTimeout(timer);
   }
+}
+
+function getDashboardPayloadSignature(data){
+  try{ return JSON.stringify((data && Array.isArray(data.lines)) ? data.lines : []); }
+  catch(_){ return ''; }
+}
+
+async function fetchDashboardData(selectedDate, endDate, options = {}){
+  const requestKey = `${selectedDate || ''}|${endDate || selectedDate || ''}`;
+
+  // ถ้าคำขอเดิมกำลังวิ่งอยู่ ให้รอผลเดิมแทนการยิงซ้ำ
+  if (dashboardFetchInProgress && dashboardFetchPromise && dashboardFetchKey === requestKey){
+    return dashboardFetchPromise;
+  }
+
+  // ถ้าผู้ใช้เปลี่ยนวันระหว่างมี request เก่า ให้รอ request เก่าจบแล้วโหลดวันที่ใหม่ต่อทันที
+  if (dashboardFetchInProgress && dashboardFetchPromise && dashboardFetchKey !== requestKey){
+    try{ await dashboardFetchPromise; }catch(_){}
+    return fetchDashboardData(selectedDate, endDate, options);
+  }
+
+  dashboardFetchInProgress = true;
+  dashboardFetchKey = requestKey;
+  const isRange = endDate && endDate !== selectedDate;
+  currentDashboardIsRange = Boolean(isRange);
+
+  dashboardFetchPromise = (async () => {
+    let lastError = null;
+
+    try{
+      if (!options.keepStatusText){
+        el('selectedDateText').innerText = isRange
+          ? `Loading data: ${selectedDate} to ${endDate}`
+          : `Data date: ${selectedDate}`;
+      }
+
+      for (let attempt = 1; attempt <= DASHBOARD_FETCH_RETRIES; attempt++){
+        try{
+          setDashboardLoadingProgress(Math.max(dashboardLoadingProgress, 18 + (attempt - 1) * 8));
+
+          // cache-buster ป้องกัน browser / redirect cache ถือ payload เก่า
+          const nonce = Date.now();
+          const url = isRange
+            ? `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&dateTo=${endDate}&_=${nonce}`
+            : `${GAS_API_URL}?action=getDailySummary&date=${selectedDate}&_=${nonce}`;
+
+          const data = await fetchDashboardJsonWithTimeout(url);
+
+          // ระหว่าง silent refresh ถ้า API ส่ง [] ชั่วคราว อย่าเอาหน้าว่างมาทับข้อมูลที่มีอยู่
+          if (data.lines.length === 0 && options.preserveCachedOnError){
+            throw new Error('Dashboard API returned empty payload during refresh');
+          }
+
+          const signature = getDashboardPayloadSignature(data);
+          const sameAsCurrent = Boolean(
+            options.silentRefresh &&
+            signature &&
+            lastDashboardPayloadSignature &&
+            signature === lastDashboardPayloadSignature
+          );
+
+          if (!sameAsCurrent){
+            renderDashboardPayload(data, selectedDate, endDate, { fromCache:false });
+            setDashboardLoadingProgress(Math.max(dashboardLoadingProgress, 94));
+          }
+
+          if (signature) lastDashboardPayloadSignature = signature;
+          writeDashboardCache(selectedDate, endDate, data);
+          updateLastUpdatedText(true);
+
+          return { ok:true, data, unchanged:sameAsCurrent };
+
+        } catch(err){
+          lastError = err;
+          console.warn(`Dashboard load attempt ${attempt}/${DASHBOARD_FETCH_RETRIES} failed:`, err);
+
+          if (attempt < DASHBOARD_FETCH_RETRIES){
+            const delayMs = 650 * attempt;
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          }
+        }
+      }
+
+      throw lastError || new Error('Dashboard load failed');
+
+    } catch(err){
+      console.error("Fetch Error:", err);
+
+      if (options.preserveCachedOnError){
+        const isRangeNow = endDate && endDate !== selectedDate;
+        el('selectedDateText').innerText = isRangeNow
+          ? `Cached data: ${selectedDate} to ${endDate} • connection failed`
+          : `Cached data: ${selectedDate} • connection failed`;
+      } else {
+        el('selectedDateText').innerText = 'Unable to load data. Please select the date again.';
+      }
+
+      updateLastUpdatedText(false);
+      return { ok:false, error:err };
+
+    } finally {
+      dashboardFetchInProgress = false;
+      dashboardFetchPromise = null;
+      dashboardFetchKey = '';
+    }
+  })();
+
+  return dashboardFetchPromise;
 }
 
 function updateLastUpdatedText(success){
@@ -1206,13 +1357,15 @@ async function checkForDashboardChange(){
   if (document.visibilityState !== 'visible') return;
   if (dashboardFetchInProgress) return;
 
-  const v = await getDashboardVersion();
-  if (!v) return;
-  if (!lastDashboardVersion){ lastDashboardVersion = v; return; }
-  if (v === lastDashboardVersion) return;
-
-  lastDashboardVersion = v;
-  await fetchDashboardData(el('datePicker').value, el('datePickerTo').value);
+  // โหลดข้อมูลจริงแบบ silent ทุก 30 วินาที
+  // ไม่พึ่งเฉพาะ version token เพื่อให้ยอดที่เพิ่งกรอกเข้ามาขึ้นเองโดยไม่ต้อง F5
+  const s = el('datePicker').value;
+  const t = el('datePickerTo').value || s;
+  await fetchDashboardData(s, t, {
+    preserveCachedOnError:true,
+    keepStatusText:true,
+    silentRefresh:true
+  });
 }
 function startChangeWatch(){
   if (changeWatchTimer) clearInterval(changeWatchTimer);
@@ -2446,7 +2599,8 @@ async function main(){
 
     await fetchDashboardData(today, today, {
       preserveCachedOnError: true,
-      keepStatusText: true
+      keepStatusText: true,
+      silentRefresh: true
     });
   } else {
     // ครั้งแรก/ไม่มี cache: ให้ Loading อยู่จน Full data ครบ
