@@ -2321,47 +2321,47 @@ const hourlyBreakBandPlugin = {
 const hourlyRepairContextPlugin = {
   id:'hourlyRepairContext',
 
-  beforeDatasetsDraw(chart, args, opts){
-    const slots = (opts && opts.slots) || {};
-    const labels = chart.data.labels || [];
-    const x = chart.scales.x;
-    const area = chart.chartArea;
-    if (!x || !area || !labels.length) return;
+  afterEvent(chart, args, opts){
+    const evt = args && args.event;
+    const hitboxes = chart.$repairHitboxes || [];
+    let nextHover = -1;
 
-    const ctx = chart.ctx;
-    ctx.save();
+    if (evt && evt.type !== 'mouseout'){
+      const ex = Number(evt.x);
+      const ey = Number(evt.y);
+      for (let i = 0; i < hitboxes.length; i++){
+        const b = hitboxes[i];
+        if (ex >= b.left && ex <= b.right && ey >= b.top && ey <= b.bottom){
+          nextHover = b.index;
+          break;
+        }
+      }
+    }
 
-    labels.forEach((slot, i) => {
-      const info = slots[slot] || {};
-      const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
-      if (minutes <= 0) return;
+    if (chart.$repairHoverIndex !== nextHover){
+      chart.$repairHoverIndex = nextHover;
+      args.changed = true;
+    }
 
-      const center = x.getPixelForValue(i);
-      const prev = i > 0 ? x.getPixelForValue(i - 1) : center;
-      const next = i < labels.length - 1 ? x.getPixelForValue(i + 1) : center;
-      const left = center - (i > 0 ? (center - prev) / 2 : 18);
-      const right = center + (i < labels.length - 1 ? (next - center) / 2 : 18);
-
-      ctx.fillStyle = 'rgba(14,165,233,0.055)';
-      ctx.fillRect(left + 1, area.top, Math.max(0, right - left - 2), area.bottom - area.top);
-    });
-
-    ctx.restore();
+    if (chart.canvas){
+      chart.canvas.style.cursor = nextHover >= 0 ? 'pointer' : '';
+    }
   },
 
-  afterDatasetsDraw(chart, args, opts){
+  afterDraw(chart, args, opts){
     const slots = (opts && opts.slots) || {};
     const labels = chart.data.labels || [];
-    const breakIndex = Number(opts && opts.breakIndex);
     const x = chart.scales.x;
-    const area = chart.chartArea;
-    if (!x || !area || !labels.length) return;
+    if (!x || !labels.length) return;
 
     const ctx = chart.ctx;
+    const y = chart.height - 16;
+    const hitboxes = [];
+
     ctx.save();
     ctx.font = '700 9px Kanit';
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
+    ctx.textBaseline = 'middle';
 
     labels.forEach((slot, i) => {
       const info = slots[slot] || {};
@@ -2370,37 +2370,101 @@ const hourlyRepairContextPlugin = {
 
       const center = x.getPixelForValue(i);
       const label = `🔧 ${minutes}m`;
-      const y = area.top + (i === breakIndex ? 22 : 6);
-
       const metrics = ctx.measureText(label);
-      const pillW = metrics.width + 10;
-      const pillH = 16;
-
-      ctx.fillStyle = 'rgba(239,248,255,0.96)';
-      ctx.strokeStyle = 'rgba(14,165,233,0.18)';
-      ctx.lineWidth = 1;
-
-      const px = center - pillW / 2;
-      const py = y - 2;
-      const r = 8;
-
-      ctx.beginPath();
-      ctx.moveTo(px + r, py);
-      ctx.lineTo(px + pillW - r, py);
-      ctx.quadraticCurveTo(px + pillW, py, px + pillW, py + r);
-      ctx.lineTo(px + pillW, py + pillH - r);
-      ctx.quadraticCurveTo(px + pillW, py + pillH, px + pillW - r, py + pillH);
-      ctx.lineTo(px + r, py + pillH);
-      ctx.quadraticCurveTo(px, py + pillH, px, py + pillH - r);
-      ctx.lineTo(px, py + r);
-      ctx.quadraticCurveTo(px, py, px + r, py);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
+      const w = metrics.width + 8;
+      const h = 16;
 
       ctx.fillStyle = '#0369A1';
       ctx.fillText(label, center, y);
+
+      hitboxes.push({
+        index:i,
+        slot:slot,
+        left:center - w/2,
+        right:center + w/2,
+        top:y - h/2,
+        bottom:y + h/2
+      });
     });
+
+    chart.$repairHitboxes = hitboxes;
+
+    const hoverIndex = Number(chart.$repairHoverIndex);
+    if (Number.isInteger(hoverIndex) && hoverIndex >= 0 && hoverIndex < labels.length){
+      const slot = labels[hoverIndex];
+      const info = slots[slot] || {};
+      const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
+      if (minutes > 0){
+        const jobs = Array.isArray(info.jobs) ? info.jobs : [];
+        const machines = [];
+        const jobIds = [];
+        const types = [];
+
+        jobs.forEach(job => {
+          const machine = String(job.machineName || job.machineCode || '').trim();
+          const jobId = String(job.jobId || '').trim();
+          const repairType = String(job.repairType || '').trim();
+
+          if (machine && !machines.includes(machine)) machines.push(machine);
+          if (jobId && !jobIds.includes(jobId)) jobIds.push(jobId);
+          if (repairType && !types.includes(repairType)) types.push(repairType);
+        });
+
+        const detailLines = [
+          `${slot.replace(/\./g, ':')} • ซ่อม ${minutes} นาที`,
+          jobs.length ? `${jobs.length} งาน${jobIds.length ? ' • ' + jobIds.join(', ') : ''}` : '1 งาน'
+        ];
+
+        if (machines.length){
+          detailLines.push(`เครื่อง: ${machines.join(', ')}`);
+        }
+        if (types.length){
+          detailLines.push(`ประเภท: ${types.join(', ')}`);
+        }
+
+        ctx.font = '600 10px Kanit';
+        const maxTextW = Math.max(...detailLines.map(line => ctx.measureText(line).width));
+        const boxW = Math.min(Math.max(150, maxTextW + 24), Math.max(150, chart.width - 20));
+        const lineH = 17;
+        const boxH = 18 + detailLines.length * lineH;
+        const center = x.getPixelForValue(hoverIndex);
+        let boxX = center - boxW / 2;
+        boxX = Math.max(8, Math.min(chart.width - boxW - 8, boxX));
+        const boxY = Math.max(8, chart.chartArea.bottom - boxH - 10);
+        const r = 10;
+
+        ctx.shadowColor = 'rgba(15,23,42,0.10)';
+        ctx.shadowBlur = 12;
+        ctx.shadowOffsetY = 4;
+        ctx.fillStyle = 'rgba(255,255,255,0.98)';
+        ctx.strokeStyle = 'rgba(148,163,184,0.25)';
+        ctx.lineWidth = 1;
+
+        ctx.beginPath();
+        ctx.moveTo(boxX + r, boxY);
+        ctx.lineTo(boxX + boxW - r, boxY);
+        ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
+        ctx.lineTo(boxX + boxW, boxY + boxH - r);
+        ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
+        ctx.lineTo(boxX + r, boxY + boxH);
+        ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
+        ctx.lineTo(boxX, boxY + r);
+        ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowColor = 'transparent';
+        ctx.stroke();
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+
+        detailLines.forEach((line, idx) => {
+          ctx.font = idx === 0 ? '700 10px Kanit' : '500 9px Kanit';
+          ctx.fillStyle = idx === 0 ? '#0F172A' : '#64748B';
+          ctx.fillText(line, boxX + 12, boxY + 10 + idx * lineH);
+        });
+      }
+    }
 
     ctx.restore();
   }
@@ -2479,6 +2543,8 @@ function updateHourlyChart(selectedLine){
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ bottom:28 } },
+      interaction:{ mode:'nearest', intersect:false },
       plugins:{
         hourlyBreakBand:{ breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1 },
         hourlyRepairContext:{
