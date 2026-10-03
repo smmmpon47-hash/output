@@ -528,17 +528,6 @@
           </div>
           <div class="h-60 relative"><canvas id="hourlyChart"></canvas></div>
 
-          <!-- REPAIR HOURLY CONTEXT V1 -->
-          <div id="repairHourlyContext" class="hidden mt-3 pt-3 border-t border-slate-200/80">
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <div class="flex items-center gap-2 min-w-0">
-                <span class="shrink-0 text-[9px] font-extrabold tracking-wide px-2 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100">REPAIR</span>
-                <p id="repairHourlyContextMeta" class="text-[10px] text-slate-400">บริบทงานซ่อมในช่วงเวลาผลิต</p>
-              </div>
-              <span id="repairHourlySummary" class="text-[10px] font-bold text-slate-500"></span>
-            </div>
-            <div id="repairHourlyContextList" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2"></div>
-          </div>
         </div>
 
         <div class="bg-slate-50/70 border border-slate-100 rounded-2xl p-4">
@@ -834,6 +823,7 @@ let globalLinesData = [];
 let currentFloor = 3;
 let currentLine = "";
 let repairHourlyRequestSeq = 0;
+const repairHourlyContextCache = {};
 
 const CHANGE_CHECK_MS = 30000;
 const DASHBOARD_FETCH_TIMEOUT_MS = 20000;
@@ -1724,7 +1714,6 @@ function closeDetail(){
   currentLine = '';
   etonRequestSeq++;
   repairHourlyRequestSeq++;
-  resetRepairHourlyContext();
   etonCurrentReport = null;
   etonLatestReport = null;
   if (etonChartInstance){ etonChartInstance.destroy(); etonChartInstance = null; }
@@ -1825,116 +1814,32 @@ function renderLineDetail(code){
 }
 
 /* =======================================================
-   REPAIR HOURLY CONTEXT (read-only)
+   REPAIR HOURLY CONTEXT (read-only, rendered inside chart)
    ======================================================= */
-function resetRepairHourlyContext(message = ''){
-  const wrap = el('repairHourlyContext');
-  const list = el('repairHourlyContextList');
-  const meta = el('repairHourlyContextMeta');
-  const summary = el('repairHourlySummary');
-  if (!wrap || !list || !meta || !summary) return;
-
-  if (!message){
-    wrap.classList.add('hidden');
-    list.innerHTML = '';
-    meta.innerText = 'บริบทงานซ่อมในช่วงเวลาผลิต';
-    summary.innerText = '';
-    return;
-  }
-
-  wrap.classList.remove('hidden');
-  list.innerHTML = `<div class="sm:col-span-2 xl:col-span-3 text-[10px] text-slate-400 py-1">${esc(message)}</div>`;
-  meta.innerText = 'บริบทงานซ่อมในช่วงเวลาผลิต';
-  summary.innerText = '';
+function getRepairHourlyCacheKey(dateStr, lineCode){
+  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  return `${String(dateStr || '').trim()}|${code}`;
 }
 
-function renderRepairHourlyContext(data, lineCode){
-  const wrap = el('repairHourlyContext');
-  const list = el('repairHourlyContextList');
-  const meta = el('repairHourlyContextMeta');
-  const summary = el('repairHourlySummary');
-  if (!wrap || !list || !meta || !summary) return;
-
-  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
-  const lineData =
-    (data && data.lines && data.lines[code]) ||
-    (data && String(data.line || '').toUpperCase() === code ? { slots:data.slots || {}, totalRepairMinutes:0, jobCount:0 } : null);
-
-  const slots = lineData && lineData.slots ? lineData.slots : {};
-  const entries = Object.keys(slots)
-    .map(slot => ({ slot, info:slots[slot] || {} }))
-    .filter(x => num(x.info.repairMinutes) > 0);
-
-  wrap.classList.remove('hidden');
-  meta.innerText = 'เวลาซ่อมจริงที่เกิดในแต่ละช่วงของกราฟ';
-
-  if (!entries.length){
-    summary.innerText = 'ไม่มีช่วงซ่อม';
-    list.innerHTML = `<div class="sm:col-span-2 xl:col-span-3 flex items-center gap-2 rounded-xl border border-slate-100 bg-white/70 px-3 py-2 text-[10px] text-slate-400">
-      <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
-      ไม่พบเวลาซ่อมจริงของ LINE ${esc(code)} ในวันที่เลือก
-    </div>`;
-    return;
-  }
-
-  const totalMinutes = num(lineData.totalRepairMinutes);
-  const totalJobs = num(lineData.jobCount);
-  summary.innerText = `${totalJobs.toLocaleString()} งาน • ${totalMinutes.toLocaleString()} นาที`;
-
-  list.innerHTML = entries.map(({slot, info}) => {
-    const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
-    const jobs = Array.isArray(info.jobs) ? info.jobs : [];
-    const machineNames = [];
-    jobs.forEach(job => {
-      const machine = String(job.machineName || job.machineCode || '').trim();
-      if (machine && !machineNames.includes(machine)) machineNames.push(machine);
-    });
-
-    const machineText = machineNames.length
-      ? machineNames.slice(0,2).join(', ') + (machineNames.length > 2 ? ` +${machineNames.length-2}` : '')
-      : 'ไม่ระบุเครื่อง';
-
-    const jobText = jobs.length > 1 ? `${jobs.length} งาน` : '1 งาน';
-
-    return `<div class="rounded-xl border border-sky-100 bg-white/80 px-3 py-2.5" title="${esc(machineNames.join(', ') || machineText)}">
-      <div class="flex items-center justify-between gap-3">
-        <span class="text-[10px] font-extrabold text-slate-600 tabular-nums">${esc(slot)}</span>
-        <span class="shrink-0 text-[11px] font-extrabold text-sky-700">🔧 ${minutes.toLocaleString()} นาที</span>
-      </div>
-      <p class="text-[9px] text-slate-400 mt-1 truncate">${esc(jobText)} • ${esc(machineText)}</p>
-    </div>`;
-  }).join('');
+function getRepairHourlyLineContext(lineCode){
+  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
+  if (!selectedDate) return null;
+  return repairHourlyContextCache[getRepairHourlyCacheKey(selectedDate, lineCode)] || null;
 }
 
 async function loadRepairHourlyContext(lineCode){
   const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
   const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
 
-  if (!code || !selectedDate){
-    resetRepairHourlyContext();
-    return;
-  }
+  if (!code || !selectedDate || currentDashboardIsRange) return;
 
-  if (currentDashboardIsRange){
-    resetRepairHourlyContext('Repair Context แสดงเมื่อเลือกวันเดียว');
+  const cacheKey = getRepairHourlyCacheKey(selectedDate, code);
+  if (repairHourlyContextCache[cacheKey]){
+    if (currentLine === code) updateHourlyChart(code);
     return;
   }
 
   const seq = ++repairHourlyRequestSeq;
-  const wrap = el('repairHourlyContext');
-  const list = el('repairHourlyContextList');
-  const meta = el('repairHourlyContextMeta');
-  const summary = el('repairHourlySummary');
-
-  if (wrap && list && meta && summary){
-    wrap.classList.remove('hidden');
-    meta.innerText = 'กำลังโหลดบริบทงานซ่อม...';
-    summary.innerText = '';
-    list.innerHTML = `<div class="sm:col-span-2 xl:col-span-3 inline-flex items-center gap-2 text-[10px] text-slate-400 py-1">
-      <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
-      กำลังตรวจสอบเวลาซ่อมของ LINE ${esc(code)}
-    </div>`;
-  }
 
   try{
     const url = `${GAS_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
@@ -1953,12 +1858,30 @@ async function loadRepairHourlyContext(lineCode){
       throw new Error((data && data.message) || 'โหลด Repair Context ไม่สำเร็จ');
     }
 
-    renderRepairHourlyContext(data, code);
+    const lineData =
+      (data.lines && data.lines[code]) ||
+      (String(data.line || '').toUpperCase() === code
+        ? {
+            line: code,
+            slots: data.slots || {},
+            totalRepairMinutes: 0,
+            jobCount: 0
+          }
+        : null);
+
+    repairHourlyContextCache[cacheKey] = lineData || {
+      line: code,
+      slots: {},
+      totalRepairMinutes: 0,
+      jobCount: 0
+    };
+
+    if (currentLine === code) updateHourlyChart(code);
 
   }catch(err){
     if (seq !== repairHourlyRequestSeq || currentLine !== code) return;
     console.warn('Repair hourly context:', err);
-    resetRepairHourlyContext('ยังโหลดข้อมูลซ่อมไม่ได้ — ข้อมูล Production ด้านบนยังใช้งานได้ตามปกติ');
+    // Production chart remains usable even when Repair context is unavailable.
   }
 }
 
@@ -2395,6 +2318,94 @@ const hourlyBreakBandPlugin = {
   }
 };
 
+const hourlyRepairContextPlugin = {
+  id:'hourlyRepairContext',
+
+  beforeDatasetsDraw(chart, args, opts){
+    const slots = (opts && opts.slots) || {};
+    const labels = chart.data.labels || [];
+    const x = chart.scales.x;
+    const area = chart.chartArea;
+    if (!x || !area || !labels.length) return;
+
+    const ctx = chart.ctx;
+    ctx.save();
+
+    labels.forEach((slot, i) => {
+      const info = slots[slot] || {};
+      const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
+      if (minutes <= 0) return;
+
+      const center = x.getPixelForValue(i);
+      const prev = i > 0 ? x.getPixelForValue(i - 1) : center;
+      const next = i < labels.length - 1 ? x.getPixelForValue(i + 1) : center;
+      const left = center - (i > 0 ? (center - prev) / 2 : 18);
+      const right = center + (i < labels.length - 1 ? (next - center) / 2 : 18);
+
+      ctx.fillStyle = 'rgba(14,165,233,0.055)';
+      ctx.fillRect(left + 1, area.top, Math.max(0, right - left - 2), area.bottom - area.top);
+    });
+
+    ctx.restore();
+  },
+
+  afterDatasetsDraw(chart, args, opts){
+    const slots = (opts && opts.slots) || {};
+    const labels = chart.data.labels || [];
+    const breakIndex = Number(opts && opts.breakIndex);
+    const x = chart.scales.x;
+    const area = chart.chartArea;
+    if (!x || !area || !labels.length) return;
+
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.font = '700 9px Kanit';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+
+    labels.forEach((slot, i) => {
+      const info = slots[slot] || {};
+      const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
+      if (minutes <= 0) return;
+
+      const center = x.getPixelForValue(i);
+      const label = `🔧 ${minutes}m`;
+      const y = area.top + (i === breakIndex ? 22 : 6);
+
+      const metrics = ctx.measureText(label);
+      const pillW = metrics.width + 10;
+      const pillH = 16;
+
+      ctx.fillStyle = 'rgba(239,248,255,0.96)';
+      ctx.strokeStyle = 'rgba(14,165,233,0.18)';
+      ctx.lineWidth = 1;
+
+      const px = center - pillW / 2;
+      const py = y - 2;
+      const r = 8;
+
+      ctx.beginPath();
+      ctx.moveTo(px + r, py);
+      ctx.lineTo(px + pillW - r, py);
+      ctx.quadraticCurveTo(px + pillW, py, px + pillW, py + r);
+      ctx.lineTo(px + pillW, py + pillH - r);
+      ctx.quadraticCurveTo(px + pillW, py + pillH, px + pillW - r, py + pillH);
+      ctx.lineTo(px + r, py + pillH);
+      ctx.quadraticCurveTo(px, py + pillH, px, py + pillH - r);
+      ctx.lineTo(px, py + r);
+      ctx.quadraticCurveTo(px, py, px + r, py);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#0369A1';
+      ctx.fillText(label, center, y);
+    });
+
+    ctx.restore();
+  }
+};
+
 function updateHourlyChart(selectedLine){
   const canvas = el('hourlyChart');
   if (!canvas) return;
@@ -2405,6 +2416,8 @@ function updateHourlyChart(selectedLine){
   const hourlyDataObj = lineObj.hourly_data || {};
   const timeSlots = Object.keys(hourlyDataObj);
   const hourlyActuals = Object.values(hourlyDataObj);
+  const repairContext = currentDashboardIsRange ? null : getRepairHourlyLineContext(selectedLine);
+  const repairSlots = repairContext && repairContext.slots ? repairContext.slots : {};
 
   const target = num(lineObj.target) || (num(lineObj.target1)+num(lineObj.target2)+num(lineObj.target3));
   const totalHours = num(lineObj.total_working_hours) || 8;
@@ -2452,7 +2465,7 @@ function updateHourlyChart(selectedLine){
 
   hourlyChartInstance = new Chart(ctx, {
     type:'bar',
-    plugins:[hourlyBreakBandPlugin],
+    plugins:[hourlyBreakBandPlugin, hourlyRepairContextPlugin],
     data:{ labels:timeSlots, datasets:[
       { type:'line', label:(hrs2>0||hrs3>0) ? 'เป้าต่อชั่วโมง (แยกตาม LOT)' : `เป้าต่อชั่วโมง (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
         data:targetLine, borderColor:'#6366F1', borderWidth:2, borderDash:[5,5], fill:false,
@@ -2468,10 +2481,40 @@ function updateHourlyChart(selectedLine){
       responsive:true, maintainAspectRatio:false,
       plugins:{
         hourlyBreakBand:{ breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1 },
+        hourlyRepairContext:{
+          slots: repairSlots,
+          breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1
+        },
         legend:{ position:'top', labels:{ font:{family:'Kanit', size:10}, usePointStyle:true } },
         datalabels:{ anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:10, family:'Kanit'},
           formatter:v => v > 0 ? v : '' },
-        tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'} }
+        tooltip:{
+          bodyFont:{family:'Kanit'},
+          titleFont:{family:'Kanit'},
+          callbacks:{
+            afterBody:(items) => {
+              if (!items || !items.length) return [];
+              const idx = items[0].dataIndex;
+              const slot = timeSlots[idx];
+              const info = repairSlots[slot] || {};
+              const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
+              if (minutes <= 0) return [];
+
+              const jobs = Array.isArray(info.jobs) ? info.jobs : [];
+              const machines = [];
+              jobs.forEach(job => {
+                const name = String(job.machineName || job.machineCode || '').trim();
+                if (name && !machines.includes(name)) machines.push(name);
+              });
+
+              const lines = [
+                `ซ่อมในช่วงนี้: ${minutes} นาที${jobs.length ? ` • ${jobs.length} งาน` : ''}`
+              ];
+              if (machines.length) lines.push(`เครื่อง: ${machines.join(', ')}`);
+              return lines;
+            }
+          }
+        }
       },
       scales:{
         x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:60, minRotation:45, font:{size:9, family:'Kanit'} } },
