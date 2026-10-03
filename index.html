@@ -397,6 +397,117 @@
   }
 
 
+  /* ---------- compact Repair timeline under Hourly chart ---------- */
+  .repairTimelineWrap{
+    margin-top:7px;
+    padding-top:7px;
+    border-top:1px solid rgba(226,232,240,.82);
+  }
+  .repairTimelineHead{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    min-height:14px;
+    margin-bottom:4px;
+  }
+  .repairTimelineHead::before{
+    content:"";
+    width:5px;
+    height:5px;
+    flex:0 0 auto;
+    border-radius:999px;
+    background:#0EA5E9;
+    box-shadow:0 0 0 3px rgba(14,165,233,.08);
+  }
+  .repairTimelineLabel{
+    font-size:8px;
+    line-height:1;
+    font-weight:800;
+    letter-spacing:.11em;
+    color:#94A3B8;
+  }
+  .repairTimelineViewport{
+    position:relative;
+    min-height:20px;
+  }
+  .repairTimelineTrack{
+    position:absolute;
+    top:0;
+    bottom:0;
+    overflow:visible;
+  }
+  .repairTimelineAxis{
+    position:absolute;
+    left:0;
+    right:0;
+    top:7px;
+    height:1px;
+    background:#E2E8F0;
+  }
+  .repairTimelineTick{
+    position:absolute;
+    top:4px;
+    bottom:3px;
+    width:1px;
+    background:rgba(203,213,225,.58);
+    transform:translateX(-.5px);
+    pointer-events:none;
+  }
+  .repairTimelineBar{
+    position:absolute;
+    min-width:4px;
+    height:10px;
+    border:1px solid rgba(14,165,233,.40);
+    border-radius:999px;
+    background:#DDF3FE;
+    box-shadow:0 2px 7px -5px rgba(2,132,199,.58);
+    cursor:default;
+    transition:background .12s ease,border-color .12s ease,box-shadow .12s ease,transform .12s ease;
+    overflow:hidden;
+  }
+  .repairTimelineBar:hover{
+    background:#BAE6FD;
+    border-color:rgba(2,132,199,.58);
+    box-shadow:0 5px 12px -7px rgba(2,132,199,.72);
+    transform:translateY(-1px);
+    z-index:4;
+  }
+  .repairTimelineBarText{
+    display:block;
+    padding:0 4px;
+    font-size:7px;
+    line-height:8px;
+    font-weight:800;
+    color:#0369A1;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    text-align:center;
+    pointer-events:none;
+  }
+  .repairTimelineTooltip{
+    position:absolute;
+    z-index:45;
+    width:max-content;
+    max-width:min(340px,calc(100vw - 48px));
+    padding:9px 11px;
+    border:1px solid rgba(226,232,240,.98);
+    border-radius:12px;
+    background:rgba(255,255,255,.995);
+    box-shadow:0 16px 36px -18px rgba(15,23,42,.42);
+    pointer-events:none;
+    opacity:0;
+    visibility:hidden;
+    transform:translateY(3px);
+    transition:opacity .12s ease,transform .12s ease,visibility .12s ease;
+  }
+  .repairTimelineTooltip.show{
+    opacity:1;
+    visibility:visible;
+    transform:translateY(0);
+  }
+
+
   @media (max-width:900px){
     .floorLayout{ grid-template-columns:1fr; }
     .guideColumn{ grid-template-rows:auto; }
@@ -676,6 +787,15 @@
             </div>
           </div>
           <div class="h-60 relative"><canvas id="hourlyChart"></canvas></div>
+          <div id="repairTimelineWrap" class="repairTimelineWrap hide" aria-label="Repair timeline">
+            <div class="repairTimelineHead">
+              <span class="repairTimelineLabel">REPAIR TIMELINE</span>
+            </div>
+            <div id="repairTimelineViewport" class="repairTimelineViewport">
+              <div id="repairTimelineTrack" class="repairTimelineTrack"></div>
+              <div id="repairTimelineTooltip" class="repairTimelineTooltip"></div>
+            </div>
+          </div>
 
         </div>
 
@@ -972,6 +1092,7 @@ let globalLinesData = [];
 let currentFloor = 3;
 let currentLine = "";
 let repairHourlyRequestSeq = 0;
+let repairSummaryRenderSeq = 0;
 let repairTimelineRenderSeq = 0;
 const repairHourlyContextCache = {};
 const repairHourlyContextFetchedAt = {};
@@ -2554,7 +2675,7 @@ function toggleRepairSummaryPopover(){
 }
 
 async function renderRepairSummary(selectedLine, timeSlots, repairContext){
-  const seq = ++repairTimelineRenderSeq;
+  const seq = ++repairSummaryRenderSeq;
   const code = String(selectedLine || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
   const control = el('repairSummaryControl');
   const chipText = el('repairSummaryChipText');
@@ -2584,7 +2705,7 @@ async function renderRepairSummary(selectedLine, timeSlots, repairContext){
     }
   }));
 
-  if (seq !== repairTimelineRenderSeq || currentLine !== code) return;
+  if (seq !== repairSummaryRenderSeq || currentLine !== code) return;
 
   const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
   const today = getTodayStr();
@@ -2915,10 +3036,9 @@ async function renderRepairTimeline(selectedLine, timeSlots, repairContext, char
   const wrap = el('repairTimelineWrap');
   const viewport = el('repairTimelineViewport');
   const track = el('repairTimelineTrack');
-  const summary = el('repairTimelineSummary');
 
-  if (!wrap || !viewport || !track || !summary || currentDashboardIsRange || !repairContext || !timeSlots || !timeSlots.length){
-    hideRepairSummary();
+  if (!wrap || !viewport || !track || currentDashboardIsRange || !repairContext || !timeSlots || !timeSlots.length){
+    hideRepairTimeline();
     return;
   }
 
@@ -3007,7 +3127,7 @@ async function renderRepairTimeline(selectedLine, timeSlots, repairContext, char
   });
 
   const laneCount = Math.max(1, laneEnds.length);
-  viewport.style.height = (22 + (laneCount - 1) * 17) + 'px';
+  viewport.style.height = (18 + (laneCount - 1) * 14) + 'px';
   wrap.classList.remove('hide');
   syncRepairTimelineTrackToChart(chart);
 
@@ -3022,8 +3142,6 @@ async function renderRepairTimeline(selectedLine, timeSlots, repairContext, char
   }
 
   const totalRange = rangeEnd - rangeStart;
-  const totalSeconds = jobs.reduce((sum,job) => sum + job.totalSeconds, 0);
-  summary.innerText = `${jobs.length} JOB • ซ่อมจริง ${repairFormatDuration(totalSeconds)}`;
 
   jobs.forEach(job => {
     const leftPct = ((job.clippedStart - rangeStart) / totalRange) * 100;
@@ -3032,7 +3150,7 @@ async function renderRepairTimeline(selectedLine, timeSlots, repairContext, char
     bar.className = 'repairTimelineBar';
     bar.style.left = Math.max(0, leftPct) + '%';
     bar.style.width = Math.max(0.2, widthPct) + '%';
-    bar.style.top = (2 + job.lane * 17) + 'px';
+    bar.style.top = (2 + job.lane * 14) + 'px';
 
     const label = document.createElement('span');
     label.className = 'repairTimelineBarText';
@@ -3098,6 +3216,7 @@ function updateHourlyChart(selectedLine){
     el('pulseSubtitle').innerText = 'ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้';
     el('pulseLineBadge').innerText = 'LINE ' + selectedLine;
     if (cumulativeChartInstance){ cumulativeChartInstance.destroy(); cumulativeChartInstance = null; }
+    hideRepairSummary();
     hideRepairTimeline();
     return;
   }
@@ -3141,6 +3260,7 @@ function updateHourlyChart(selectedLine){
   });
 
   renderRepairSummary(selectedLine, timeSlots, repairContext);
+  renderRepairTimeline(selectedLine, timeSlots, repairContext, hourlyChartInstance);
 }
 
 /* ---------- pulse (ตรรกะเดิม) ---------- */
