@@ -527,6 +527,18 @@
             <p id="hourlyTargetSubtitle" class="text-[11px] text-slate-400">-</p>
           </div>
           <div class="h-60 relative"><canvas id="hourlyChart"></canvas></div>
+
+          <!-- REPAIR HOURLY CONTEXT V1 -->
+          <div id="repairHourlyContext" class="hidden mt-3 pt-3 border-t border-slate-200/80">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="shrink-0 text-[9px] font-extrabold tracking-wide px-2 py-1 rounded-full bg-sky-50 text-sky-700 border border-sky-100">REPAIR</span>
+                <p id="repairHourlyContextMeta" class="text-[10px] text-slate-400">บริบทงานซ่อมในช่วงเวลาผลิต</p>
+              </div>
+              <span id="repairHourlySummary" class="text-[10px] font-bold text-slate-500"></span>
+            </div>
+            <div id="repairHourlyContextList" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2"></div>
+          </div>
         </div>
 
         <div class="bg-slate-50/70 border border-slate-100 rounded-2xl p-4">
@@ -821,6 +833,7 @@ let etonRequestSeq = 0;
 let globalLinesData = [];
 let currentFloor = 3;
 let currentLine = "";
+let repairHourlyRequestSeq = 0;
 
 const CHANGE_CHECK_MS = 30000;
 const DASHBOARD_FETCH_TIMEOUT_MS = 20000;
@@ -1710,6 +1723,8 @@ function openLine(code){
 function closeDetail(){
   currentLine = '';
   etonRequestSeq++;
+  repairHourlyRequestSeq++;
+  resetRepairHourlyContext();
   etonCurrentReport = null;
   etonLatestReport = null;
   if (etonChartInstance){ etonChartInstance.destroy(); etonChartInstance = null; }
@@ -1737,6 +1752,7 @@ function renderLineDetail(code){
     el('dtLotTable').innerHTML = `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มีข้อมูลของไลน์นี้</td></tr>`;
     el('dtRemarks').innerHTML = `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
     updateHourlyChart(code);
+    loadRepairHourlyContext(code);
     renderEtonSection(code);
     return;
   }
@@ -1804,7 +1820,146 @@ function renderLineDetail(code){
     : `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
 
   updateHourlyChart(code);
+  loadRepairHourlyContext(code);
   renderEtonSection(code);
+}
+
+/* =======================================================
+   REPAIR HOURLY CONTEXT (read-only)
+   ======================================================= */
+function resetRepairHourlyContext(message = ''){
+  const wrap = el('repairHourlyContext');
+  const list = el('repairHourlyContextList');
+  const meta = el('repairHourlyContextMeta');
+  const summary = el('repairHourlySummary');
+  if (!wrap || !list || !meta || !summary) return;
+
+  if (!message){
+    wrap.classList.add('hidden');
+    list.innerHTML = '';
+    meta.innerText = 'บริบทงานซ่อมในช่วงเวลาผลิต';
+    summary.innerText = '';
+    return;
+  }
+
+  wrap.classList.remove('hidden');
+  list.innerHTML = `<div class="sm:col-span-2 xl:col-span-3 text-[10px] text-slate-400 py-1">${esc(message)}</div>`;
+  meta.innerText = 'บริบทงานซ่อมในช่วงเวลาผลิต';
+  summary.innerText = '';
+}
+
+function renderRepairHourlyContext(data, lineCode){
+  const wrap = el('repairHourlyContext');
+  const list = el('repairHourlyContextList');
+  const meta = el('repairHourlyContextMeta');
+  const summary = el('repairHourlySummary');
+  if (!wrap || !list || !meta || !summary) return;
+
+  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  const lineData =
+    (data && data.lines && data.lines[code]) ||
+    (data && String(data.line || '').toUpperCase() === code ? { slots:data.slots || {}, totalRepairMinutes:0, jobCount:0 } : null);
+
+  const slots = lineData && lineData.slots ? lineData.slots : {};
+  const entries = Object.keys(slots)
+    .map(slot => ({ slot, info:slots[slot] || {} }))
+    .filter(x => num(x.info.repairMinutes) > 0);
+
+  wrap.classList.remove('hidden');
+  meta.innerText = 'เวลาซ่อมจริงที่เกิดในแต่ละช่วงของกราฟ';
+
+  if (!entries.length){
+    summary.innerText = 'ไม่มีช่วงซ่อม';
+    list.innerHTML = `<div class="sm:col-span-2 xl:col-span-3 flex items-center gap-2 rounded-xl border border-slate-100 bg-white/70 px-3 py-2 text-[10px] text-slate-400">
+      <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+      ไม่พบเวลาซ่อมจริงของ LINE ${esc(code)} ในวันที่เลือก
+    </div>`;
+    return;
+  }
+
+  const totalMinutes = num(lineData.totalRepairMinutes);
+  const totalJobs = num(lineData.jobCount);
+  summary.innerText = `${totalJobs.toLocaleString()} งาน • ${totalMinutes.toLocaleString()} นาที`;
+
+  list.innerHTML = entries.map(({slot, info}) => {
+    const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
+    const jobs = Array.isArray(info.jobs) ? info.jobs : [];
+    const machineNames = [];
+    jobs.forEach(job => {
+      const machine = String(job.machineName || job.machineCode || '').trim();
+      if (machine && !machineNames.includes(machine)) machineNames.push(machine);
+    });
+
+    const machineText = machineNames.length
+      ? machineNames.slice(0,2).join(', ') + (machineNames.length > 2 ? ` +${machineNames.length-2}` : '')
+      : 'ไม่ระบุเครื่อง';
+
+    const jobText = jobs.length > 1 ? `${jobs.length} งาน` : '1 งาน';
+
+    return `<div class="rounded-xl border border-sky-100 bg-white/80 px-3 py-2.5" title="${esc(machineNames.join(', ') || machineText)}">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-[10px] font-extrabold text-slate-600 tabular-nums">${esc(slot)}</span>
+        <span class="shrink-0 text-[11px] font-extrabold text-sky-700">🔧 ${minutes.toLocaleString()} นาที</span>
+      </div>
+      <p class="text-[9px] text-slate-400 mt-1 truncate">${esc(jobText)} • ${esc(machineText)}</p>
+    </div>`;
+  }).join('');
+}
+
+async function loadRepairHourlyContext(lineCode){
+  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
+
+  if (!code || !selectedDate){
+    resetRepairHourlyContext();
+    return;
+  }
+
+  if (currentDashboardIsRange){
+    resetRepairHourlyContext('Repair Context แสดงเมื่อเลือกวันเดียว');
+    return;
+  }
+
+  const seq = ++repairHourlyRequestSeq;
+  const wrap = el('repairHourlyContext');
+  const list = el('repairHourlyContextList');
+  const meta = el('repairHourlyContextMeta');
+  const summary = el('repairHourlySummary');
+
+  if (wrap && list && meta && summary){
+    wrap.classList.remove('hidden');
+    meta.innerText = 'กำลังโหลดบริบทงานซ่อม...';
+    summary.innerText = '';
+    list.innerHTML = `<div class="sm:col-span-2 xl:col-span-3 inline-flex items-center gap-2 text-[10px] text-slate-400 py-1">
+      <span class="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse"></span>
+      กำลังตรวจสอบเวลาซ่อมของ LINE ${esc(code)}
+    </div>`;
+  }
+
+  try{
+    const url = `${GAS_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
+    const rawText = await fetchTextWithRetry(url, {
+      attempts: 2,
+      timeoutMs: 15000
+    });
+
+    if (seq !== repairHourlyRequestSeq || currentLine !== code) return;
+
+    let data;
+    try { data = JSON.parse(rawText); }
+    catch(_){ throw new Error('Repair API ไม่ได้ส่ง JSON กลับมา'); }
+
+    if (!data || data.status !== 'success'){
+      throw new Error((data && data.message) || 'โหลด Repair Context ไม่สำเร็จ');
+    }
+
+    renderRepairHourlyContext(data, code);
+
+  }catch(err){
+    if (seq !== repairHourlyRequestSeq || currentLine !== code) return;
+    console.warn('Repair hourly context:', err);
+    resetRepairHourlyContext('ยังโหลดข้อมูลซ่อมไม่ได้ — ข้อมูล Production ด้านบนยังใช้งานได้ตามปกติ');
+  }
 }
 
 /* =======================================================
