@@ -2324,27 +2324,28 @@ const hourlyRepairContextPlugin = {
   afterEvent(chart, args, opts){
     const evt = args && args.event;
     const hitboxes = chart.$repairHitboxes || [];
-    let nextHover = -1;
+    let nextHover = '';
 
     if (evt && evt.type !== 'mouseout'){
       const ex = Number(evt.x);
       const ey = Number(evt.y);
+
       for (let i = 0; i < hitboxes.length; i++){
         const b = hitboxes[i];
         if (ex >= b.left && ex <= b.right && ey >= b.top && ey <= b.bottom){
-          nextHover = b.index;
+          nextHover = b.jobKey;
           break;
         }
       }
     }
 
-    if (chart.$repairHoverIndex !== nextHover){
-      chart.$repairHoverIndex = nextHover;
+    if (chart.$repairHoverJobKey !== nextHover){
+      chart.$repairHoverJobKey = nextHover;
       args.changed = true;
     }
 
     if (chart.canvas){
-      chart.canvas.style.cursor = nextHover >= 0 ? 'pointer' : '';
+      chart.canvas.style.cursor = nextHover ? 'pointer' : '';
     }
   },
 
@@ -2354,116 +2355,263 @@ const hourlyRepairContextPlugin = {
     const x = chart.scales.x;
     if (!x || !labels.length) return;
 
-    const ctx = chart.ctx;
-    const y = chart.height - 16;
-    const hitboxes = [];
+    const centers = labels.map((_, i) => x.getPixelForValue(i));
+    const defaultStep = labels.length > 1
+      ? Math.max(24, Math.abs(centers[1] - centers[0]))
+      : Math.max(48, chart.chartArea.width);
 
-    ctx.save();
-    ctx.font = '700 9px Kanit';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    const getStepAt = i => {
+      if (labels.length <= 1) return defaultStep;
+      if (i <= 0) return Math.abs(centers[1] - centers[0]) || defaultStep;
+      if (i >= labels.length - 1) return Math.abs(centers[i] - centers[i - 1]) || defaultStep;
+      return Math.abs(centers[i + 1] - centers[i - 1]) / 2 || defaultStep;
+    };
 
-    labels.forEach((slot, i) => {
+    // รวม slot ที่เป็น JOB เดียวกันให้เหลือ event เดียวบน timeline
+    const jobsMap = {};
+
+    labels.forEach((slot, slotIndex) => {
       const info = slots[slot] || {};
-      const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
-      if (minutes <= 0) return;
+      const jobs = Array.isArray(info.jobs) ? info.jobs : [];
 
-      const center = x.getPixelForValue(i);
-      const label = `🔧 ${minutes}m`;
-      const metrics = ctx.measureText(label);
-      const w = metrics.width + 8;
-      const h = 16;
+      jobs.forEach((job, jobIndex) => {
+        const jobId = String(job.jobId || '').trim();
+        const fallbackKey = [
+          String(job.machineCode || job.machineName || '').trim(),
+          slot,
+          jobIndex
+        ].join('|');
+        const jobKey = jobId || fallbackKey;
 
-      ctx.fillStyle = '#0369A1';
-      ctx.fillText(label, center, y);
+        if (!jobsMap[jobKey]){
+          jobsMap[jobKey] = {
+            jobKey,
+            jobId,
+            machineCode:String(job.machineCode || '').trim(),
+            machineName:String(job.machineName || '').trim(),
+            repairType:String(job.repairType || '').trim(),
+            status:String(job.status || '').trim(),
+            entries:[]
+          };
+        }
 
-      hitboxes.push({
-        index:i,
-        slot:slot,
-        left:center - w/2,
-        right:center + w/2,
-        top:y - h/2,
-        bottom:y + h/2
+        const seconds = Math.max(
+          0,
+          Number(job.overlapSeconds) ||
+          Math.round(num(job.overlapMinutes) * 60)
+        );
+
+        jobsMap[jobKey].entries.push({
+          slot,
+          slotIndex,
+          seconds,
+          minutes: seconds > 0 ? Math.max(1, Math.round(seconds / 60)) : 0
+        });
       });
     });
 
-    chart.$repairHitboxes = hitboxes;
+    const jobs = Object.values(jobsMap)
+      .map(job => {
+        job.entries.sort((a,b) => a.slotIndex - b.slotIndex);
+        job.totalSeconds = job.entries.reduce((sum,e) => sum + e.seconds, 0);
+        job.totalMinutes = job.totalSeconds > 0
+          ? Math.max(1, Math.round(job.totalSeconds / 60))
+          : 0;
+        return job;
+      })
+      .filter(job => job.totalSeconds > 0);
 
-    const hoverIndex = Number(chart.$repairHoverIndex);
-    if (Number.isInteger(hoverIndex) && hoverIndex >= 0 && hoverIndex < labels.length){
-      const slot = labels[hoverIndex];
-      const info = slots[slot] || {};
-      const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
-      if (minutes > 0){
-        const jobs = Array.isArray(info.jobs) ? info.jobs : [];
-        const machines = [];
-        const jobIds = [];
-        const types = [];
+    if (!jobs.length){
+      chart.$repairHitboxes = [];
+      chart.$repairTimelineJobs = {};
+      return;
+    }
 
-        jobs.forEach(job => {
-          const machine = String(job.machineName || job.machineCode || '').trim();
-          const jobId = String(job.jobId || '').trim();
-          const repairType = String(job.repairType || '').trim();
+    // คำนวณตำแหน่ง event:
+    // - ถ้าอยู่ slot เดียว: วางกลาง slot (เพราะ API V1 ยังไม่ส่ง timestamp ต้น/จบละเอียด)
+    // - ถ้าข้าม slot: ใช้ minute overlap ฝั่งซ้าย/ขวา วาดพาดข้าม boundary เป็น JOB เดียว
+    jobs.forEach(job => {
+      const first = job.entries[0];
+      const last = job.entries[job.entries.length - 1];
 
-          if (machine && !machines.includes(machine)) machines.push(machine);
-          if (jobId && !jobIds.includes(jobId)) jobIds.push(jobId);
-          if (repairType && !types.includes(repairType)) types.push(repairType);
-        });
+      if (first.slotIndex === last.slotIndex){
+        const step = getStepAt(first.slotIndex);
+        const durationRatio = Math.min(1, job.totalSeconds / 3600);
+        const visualW = Math.max(34, Math.min(step * 0.82, step * Math.max(0.28, durationRatio)));
+        const center = centers[first.slotIndex];
 
-        const detailLines = [
-          `${slot.replace(/\./g, ':')} • ซ่อม ${minutes} นาที`,
-          jobs.length ? `${jobs.length} งาน${jobIds.length ? ' • ' + jobIds.join(', ') : ''}` : '1 งาน'
-        ];
+        job.startX = center - visualW / 2;
+        job.endX = center + visualW / 2;
+      } else {
+        const firstStep = getStepAt(first.slotIndex);
+        const lastStep = getStepAt(last.slotIndex);
 
-        if (machines.length){
-          detailLines.push(`เครื่อง: ${machines.join(', ')}`);
+        const firstRightBoundary = centers[first.slotIndex] + firstStep / 2;
+        const lastLeftBoundary = centers[last.slotIndex] - lastStep / 2;
+
+        const firstRatio = Math.min(1, first.seconds / 3600);
+        const lastRatio = Math.min(1, last.seconds / 3600);
+
+        job.startX = firstRightBoundary - firstStep * firstRatio;
+        job.endX = lastLeftBoundary + lastStep * lastRatio;
+
+        if (job.endX - job.startX < 34){
+          const mid = (job.startX + job.endX) / 2;
+          job.startX = mid - 17;
+          job.endX = mid + 17;
         }
-        if (types.length){
-          detailLines.push(`ประเภท: ${types.join(', ')}`);
-        }
-
-        ctx.font = '600 10px Kanit';
-        const maxTextW = Math.max(...detailLines.map(line => ctx.measureText(line).width));
-        const boxW = Math.min(Math.max(150, maxTextW + 24), Math.max(150, chart.width - 20));
-        const lineH = 17;
-        const boxH = 18 + detailLines.length * lineH;
-        const center = x.getPixelForValue(hoverIndex);
-        let boxX = center - boxW / 2;
-        boxX = Math.max(8, Math.min(chart.width - boxW - 8, boxX));
-        const boxY = Math.max(8, chart.chartArea.bottom - boxH - 10);
-        const r = 10;
-
-        ctx.shadowColor = 'rgba(15,23,42,0.10)';
-        ctx.shadowBlur = 12;
-        ctx.shadowOffsetY = 4;
-        ctx.fillStyle = 'rgba(255,255,255,0.98)';
-        ctx.strokeStyle = 'rgba(148,163,184,0.25)';
-        ctx.lineWidth = 1;
-
-        ctx.beginPath();
-        ctx.moveTo(boxX + r, boxY);
-        ctx.lineTo(boxX + boxW - r, boxY);
-        ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
-        ctx.lineTo(boxX + boxW, boxY + boxH - r);
-        ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
-        ctx.lineTo(boxX + r, boxY + boxH);
-        ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
-        ctx.lineTo(boxX, boxY + r);
-        ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
-        ctx.closePath();
-        ctx.fill();
-        ctx.shadowColor = 'transparent';
-        ctx.stroke();
-
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-
-        detailLines.forEach((line, idx) => {
-          ctx.font = idx === 0 ? '700 10px Kanit' : '500 9px Kanit';
-          ctx.fillStyle = idx === 0 ? '#0F172A' : '#64748B';
-          ctx.fillText(line, boxX + 12, boxY + 10 + idx * lineH);
-        });
       }
+
+      job.startX = Math.max(chart.chartArea.left, job.startX);
+      job.endX = Math.min(chart.chartArea.right, job.endX);
+    });
+
+    // จัด lane กัน pill ชนกัน
+    const laneEnds = [];
+    jobs
+      .slice()
+      .sort((a,b) => a.startX - b.startX)
+      .forEach(job => {
+        let lane = 0;
+        while (lane < laneEnds.length && job.startX <= laneEnds[lane] + 6) lane++;
+        if (lane === laneEnds.length) laneEnds.push(job.endX);
+        else laneEnds[lane] = job.endX;
+        job.lane = lane;
+      });
+
+    const ctx = chart.ctx;
+    const laneH = 18;
+    const baseY = chart.height - 18;
+    const hitboxes = [];
+    const jobLookup = {};
+
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // label ซ้ายของ timeline
+    ctx.font = '700 8px Kanit';
+    ctx.fillStyle = '#94A3B8';
+    ctx.textAlign = 'left';
+    ctx.fillText('REPAIR', chart.chartArea.left, baseY - 2);
+    ctx.textAlign = 'center';
+
+    jobs.forEach(job => {
+      const y = baseY - (job.lane * laneH);
+      const left = job.startX;
+      const right = job.endX;
+      const width = Math.max(1, right - left);
+      const h = 13;
+      const top = y - h / 2;
+      const radius = Math.min(6, h / 2);
+
+      ctx.fillStyle = 'rgba(224,242,254,0.95)';
+      ctx.strokeStyle = 'rgba(14,165,233,0.26)';
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      ctx.moveTo(left + radius, top);
+      ctx.lineTo(right - radius, top);
+      ctx.quadraticCurveTo(right, top, right, top + radius);
+      ctx.lineTo(right, top + h - radius);
+      ctx.quadraticCurveTo(right, top + h, right - radius, top + h);
+      ctx.lineTo(left + radius, top + h);
+      ctx.quadraticCurveTo(left, top + h, left, top + h - radius);
+      ctx.lineTo(left, top + radius);
+      ctx.quadraticCurveTo(left, top, left + radius, top);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      const label = `🔧 ${job.totalMinutes}m`;
+      ctx.font = '700 8px Kanit';
+      const textW = ctx.measureText(label).width;
+
+      if (width >= textW + 6){
+        ctx.fillStyle = '#0369A1';
+        ctx.fillText(label, (left + right) / 2, y + 0.5);
+      } else {
+        ctx.fillStyle = '#0369A1';
+        ctx.font = '700 9px Kanit';
+        ctx.fillText('🔧', (left + right) / 2, y + 0.5);
+      }
+
+      hitboxes.push({
+        jobKey:job.jobKey,
+        left:left - 3,
+        right:right + 3,
+        top:top - 3,
+        bottom:top + h + 3
+      });
+      jobLookup[job.jobKey] = job;
+    });
+
+    chart.$repairHitboxes = hitboxes;
+    chart.$repairTimelineJobs = jobLookup;
+
+    const hoverKey = String(chart.$repairHoverJobKey || '');
+    const hovered = hoverKey ? jobLookup[hoverKey] : null;
+
+    if (hovered){
+      const breakdown = hovered.entries.map(e =>
+        `${e.slot.replace(/\./g, ':')} = ${e.minutes} นาที`
+      );
+
+      const machine =
+        hovered.machineName ||
+        hovered.machineCode ||
+        'ไม่ระบุเครื่อง';
+
+      const detailLines = [
+        `${hovered.jobId || 'Repair'} • รวม ${hovered.totalMinutes} นาที`,
+        `เครื่อง: ${machine}`,
+        ...(hovered.repairType ? [`ประเภท: ${hovered.repairType}`] : []),
+        ...(breakdown.length > 1 ? ['กระทบแต่ละช่วง: ' + breakdown.join(' • ')] : [breakdown[0]])
+      ].filter(Boolean);
+
+      ctx.font = '600 10px Kanit';
+      const maxTextW = Math.max(...detailLines.map(line => ctx.measureText(line).width));
+      const boxW = Math.min(Math.max(185, maxTextW + 24), Math.max(185, chart.width - 20));
+      const lineH = 17;
+      const boxH = 18 + detailLines.length * lineH;
+      const center = (hovered.startX + hovered.endX) / 2;
+
+      let boxX = center - boxW / 2;
+      boxX = Math.max(8, Math.min(chart.width - boxW - 8, boxX));
+      const boxY = Math.max(8, chart.chartArea.bottom - boxH - 8);
+      const r = 10;
+
+      ctx.shadowColor = 'rgba(15,23,42,0.10)';
+      ctx.shadowBlur = 12;
+      ctx.shadowOffsetY = 4;
+      ctx.fillStyle = 'rgba(255,255,255,0.985)';
+      ctx.strokeStyle = 'rgba(148,163,184,0.28)';
+      ctx.lineWidth = 1;
+
+      ctx.beginPath();
+      ctx.moveTo(boxX + r, boxY);
+      ctx.lineTo(boxX + boxW - r, boxY);
+      ctx.quadraticCurveTo(boxX + boxW, boxY, boxX + boxW, boxY + r);
+      ctx.lineTo(boxX + boxW, boxY + boxH - r);
+      ctx.quadraticCurveTo(boxX + boxW, boxY + boxH, boxX + boxW - r, boxY + boxH);
+      ctx.lineTo(boxX + r, boxY + boxH);
+      ctx.quadraticCurveTo(boxX, boxY + boxH, boxX, boxY + boxH - r);
+      ctx.lineTo(boxX, boxY + r);
+      ctx.quadraticCurveTo(boxX, boxY, boxX + r, boxY);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.shadowColor = 'transparent';
+      ctx.stroke();
+
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      detailLines.forEach((line, idx) => {
+        ctx.font = idx === 0 ? '700 10px Kanit' : '500 9px Kanit';
+        ctx.fillStyle = idx === 0 ? '#0F172A' : '#64748B';
+        ctx.fillText(line, boxX + 12, boxY + 10 + idx * lineH);
+      });
     }
 
     ctx.restore();
@@ -2543,7 +2691,7 @@ function updateHourlyChart(selectedLine){
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ bottom:28 } },
+      layout:{ padding:{ bottom:46 } },
       interaction:{ mode:'nearest', intersect:false },
       plugins:{
         hourlyBreakBand:{ breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1 },
