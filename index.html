@@ -2542,44 +2542,8 @@ const hourlyRepairHoverPlugin = {
   },
 
   afterDatasetsDraw(chart, args, opts){
-    const slotMap = opts && opts.slotMap && typeof opts.slotMap === 'object' ? opts.slotMap : {};
-    const activeSlots = Array.isArray(opts && opts.activeSlots) ? opts.activeSlots : [];
-    const labels = chart.data.labels || [];
-    const x = chart.scales.x;
-    const area = chart.chartArea;
-    if (!x || !area || !labels.length) return;
-
-    const active = new Set(activeSlots);
-    const ctx = chart.ctx;
-    ctx.save();
-
-    labels.forEach((slot, i) => {
-      const info = slotMap[slot];
-      const minutes = repairSlotMinutes(info);
-      if (!info || minutes <= 0) return;
-
-      const center = x.getPixelForValue(i);
-      const isLiveNow = repairSlotIsLiveNow(slot, info);
-      const isActive = active.has(slot);
-
-      // One tiny marker only. Detail stays in the normal Chart.js tooltip.
-      ctx.beginPath();
-      ctx.arc(center, area.bottom - 6, isActive ? 3.2 : 2.6, 0, Math.PI * 2);
-      ctx.fillStyle = isLiveNow
-        ? '#F97316'
-        : (isActive ? '#0284C7' : '#0EA5E9');
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(center, area.bottom - 6, isActive ? 5.2 : 4.4, 0, Math.PI * 2);
-      ctx.strokeStyle = isLiveNow
-        ? 'rgba(249,115,22,0.18)'
-        : 'rgba(14,165,233,0.14)';
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    });
-
-    ctx.restore();
+    // Repair is indicated on the X-axis label with a wrench icon.
+    // No extra dot or badge is drawn over the production chart.
   }
 };
 
@@ -3072,7 +3036,20 @@ function updateHourlyChart(selectedLine){
         }
       },
       scales:{
-        x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:60, minRotation:45, font:{size:9, family:'Kanit'} } },
+        x:{
+          grid:{display:false},
+          ticks:{
+            autoSkip:false,
+            maxRotation:60,
+            minRotation:45,
+            font:{size:9, family:'Kanit'},
+            callback:function(value){
+              const slot = String(this.getLabelForValue(value) || '').trim();
+              const info = repairSlots && repairSlots[slot] ? repairSlots[slot] : null;
+              return info && repairSlotMinutes(info) > 0 ? `${slot}  🔧` : slot;
+            }
+          }
+        },
         y:{ beginAtZero:true, grid:{color:'#F1F5F9'}, ticks:{ font:{size:10, family:'Kanit'} } }
       }
     }
