@@ -306,6 +306,15 @@
     box-shadow:0 0 0 3px rgba(14,165,233,.10);
     flex:0 0 auto;
   }
+  .repairSummaryControl.is-live .repairSummaryChip{
+    background:#FFF7ED;
+    border-color:#FED7AA;
+    color:#C2410C;
+  }
+  .repairSummaryControl.is-live .repairSummaryDot{
+    background:#F97316;
+    box-shadow:0 0 0 3px rgba(249,115,22,.12);
+  }
   .repairSummaryPopover{
     position:absolute;
     z-index:40;
@@ -2539,7 +2548,7 @@ const hourlyRepairHoverPlugin = {
 
     labels.forEach((slot, i) => {
       const info = slotMap[slot];
-      const minutes = Math.max(0, Math.round(num(info && info.repairMinutes)));
+      const minutes = repairSlotMinutes(info);
       if (!info || minutes <= 0) return;
 
       const center = x.getPixelForValue(i);
@@ -2549,11 +2558,16 @@ const hourlyRepairHoverPlugin = {
       const right = center + (i < labels.length-1 ? (next-center)/2 : 18);
       const width = Math.max(0, right-left-2);
       const isActive = active.has(slot);
+      const isLiveNow = repairSlotIsLiveNow(slot, info);
 
-      ctx.fillStyle = isActive ? 'rgba(14,165,233,0.13)' : 'rgba(14,165,233,0.065)';
+      ctx.fillStyle = isLiveNow
+        ? 'rgba(249,115,22,0.070)'
+        : (isActive ? 'rgba(14,165,233,0.13)' : 'rgba(14,165,233,0.065)');
       ctx.fillRect(left + 1, area.top, width, area.bottom-area.top);
 
-      ctx.fillStyle = isActive ? 'rgba(2,132,199,0.95)' : 'rgba(14,165,233,0.72)';
+      ctx.fillStyle = isLiveNow
+        ? 'rgba(249,115,22,0.72)'
+        : (isActive ? 'rgba(2,132,199,0.95)' : 'rgba(14,165,233,0.72)');
       ctx.fillRect(left + 1, area.bottom - 3, width, 3);
     });
 
@@ -2590,7 +2604,7 @@ const hourlyRepairHoverPlugin = {
 
     labels.forEach((slot, i) => {
       const info = slotMap[slot];
-      const minutes = Math.max(0, Math.round(num(info && info.repairMinutes)));
+      const minutes = repairSlotMinutes(info);
       if (!info || minutes <= 0) return;
 
       const center = x.getPixelForValue(i);
@@ -2608,26 +2622,40 @@ const hourlyRepairHoverPlugin = {
       });
 
       const jobCount = Math.max(1, uniqueJobs.length || Number(info.jobCount) || 0);
-      const badgeText = jobCount > 1 ? `ซ่อม ${jobCount}` : 'ซ่อม';
+      const isLiveNow = repairSlotIsLiveNow(slot, info);
+      const badgeText = isLiveNow
+        ? `กำลังซ่อม · ${minutes}น.`
+        : (jobCount > 1 ? `${jobCount}งาน · ${minutes}น.` : `ซ่อม ${minutes}น.`);
 
       ctx.font = '700 8px Kanit';
       const textWidth = ctx.measureText(badgeText).width;
-      const badgeWidth = Math.max(27, Math.ceil(textWidth)+12);
+      const maxBadgeWidth = Math.max(30, (right-left)-8);
+      const badgeWidth = Math.min(maxBadgeWidth, Math.max(34, Math.ceil(textWidth)+12));
       const badgeHeight = 14;
       const badgeLeft = Math.max(left+4, Math.min(right-badgeWidth-4, center-badgeWidth/2));
       const badgeTop = area.top + 7;
 
       drawRoundRect(badgeLeft, badgeTop, badgeWidth, badgeHeight, 7);
-      ctx.fillStyle = isActive ? 'rgba(224,242,254,1)' : 'rgba(240,249,255,0.98)';
+      ctx.fillStyle = isLiveNow
+        ? 'rgba(255,247,237,0.99)'
+        : (isActive ? 'rgba(224,242,254,1)' : 'rgba(240,249,255,0.98)');
       ctx.fill();
-      ctx.strokeStyle = isActive ? 'rgba(2,132,199,0.72)' : 'rgba(14,165,233,0.34)';
+      ctx.strokeStyle = isLiveNow
+        ? 'rgba(249,115,22,0.62)'
+        : (isActive ? 'rgba(2,132,199,0.72)' : 'rgba(14,165,233,0.34)');
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      ctx.fillStyle = '#0369A1';
+      ctx.fillStyle = isLiveNow ? '#C2410C' : '#0369A1';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(badgeText, badgeLeft + badgeWidth/2, badgeTop + badgeHeight/2 + 0.5);
+
+      if (textWidth + 12 <= maxBadgeWidth){
+        ctx.fillText(badgeText, badgeLeft + badgeWidth/2, badgeTop + badgeHeight/2 + 0.5);
+      }else{
+        const compactText = isLiveNow ? `${minutes}น.` : (jobCount > 1 ? `${jobCount}งาน` : `${minutes}น.`);
+        ctx.fillText(compactText, badgeLeft + badgeWidth/2, badgeTop + badgeHeight/2 + 0.5);
+      }
     });
 
     ctx.restore();
@@ -2646,6 +2674,54 @@ function repairFormatDurationShort(seconds){
   return `${m}น.`;
 }
 
+function repairSlotSeconds(info){
+  if (!info) return 0;
+
+  const directSeconds = Math.max(0, Number(info.repairSeconds) || 0);
+  if (directSeconds > 0) return directSeconds;
+
+  const directMinutes = Math.max(0, Number(info.repairMinutes) || 0);
+  if (directMinutes > 0) return directMinutes * 60;
+
+  const jobs = Array.isArray(info.jobs) ? info.jobs : [];
+  return jobs.reduce((sum,job) => sum + Math.max(
+    0,
+    Number(job.overlapSeconds) || Math.round(num(job.overlapMinutes) * 60)
+  ), 0);
+}
+
+function repairSlotMinutes(info){
+  const seconds = repairSlotSeconds(info);
+  return seconds > 0 ? Math.max(1, Math.round(seconds / 60)) : 0;
+}
+
+function repairJobIsActive(status){
+  return ['กำลังซ่อม','กำลังดำเนินการ'].includes(String(status || '').trim());
+}
+
+function repairSlotIsLiveNow(slot, info){
+  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
+  if (!selectedDate || selectedDate !== getTodayStr() || !info) return false;
+
+  const jobs = Array.isArray(info.jobs) ? info.jobs : [];
+  if (!jobs.some(job => repairJobIsActive(job.status))) return false;
+
+  const parts = String(slot || '').split('-');
+  if (parts.length !== 2) return false;
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const parseClock = value => {
+    const m = String(value || '').trim().replace('.',':').match(/^(\d{1,2}):(\d{2})$/);
+    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+  };
+
+  const start = parseClock(parts[0]);
+  const end = parseClock(parts[1]);
+  if (start === null || end === null) return false;
+  return nowMinutes >= start && nowMinutes < end;
+}
+
 function repairTooltipLinesForSlot(slot, repairSlots){
   const info = repairSlots && repairSlots[slot] ? repairSlots[slot] : null;
   if (!info) return [];
@@ -2658,9 +2734,10 @@ function repairTooltipLinesForSlot(slot, repairSlots){
   });
 
   const lines = [];
-  const minutes = Math.max(0, Math.round(num(info.repairMinutes)));
+  const minutes = repairSlotMinutes(info);
   if (minutes > 0){
-    lines.push(`Repair ช่วงนี้: ${minutes} นาที${uniqueJobIds.length ? ` • ${uniqueJobIds.length} งาน` : ''}`);
+    const liveNow = repairSlotIsLiveNow(slot, info);
+    lines.push(`${liveNow ? 'กำลังซ่อม' : 'Repair ช่วงนี้'}: ${minutes} นาที${uniqueJobIds.length ? ` • ${uniqueJobIds.length} งาน` : ''}`);
   }
 
   uniqueJobIds.slice(0,3).forEach(jobId => {
@@ -2679,15 +2756,20 @@ function repairTooltipLinesForSlot(slot, repairSlots){
     const finishText = cached && cached.finishTime ? repairTimePart(cached.finishTime).slice(0,5) : '';
     const timeText = startText ? (finishText ? ` ${startText}-${finishText}` : ` ${startText}-...`) : '';
 
-    const overlapSeconds = jobs
-      .filter(j => String(j.jobId || '').trim() === jobId)
-      .reduce((sum,j) => sum + Math.max(
-        0,
-        Number(j.overlapSeconds) || Math.round(num(j.overlapMinutes) * 60)
-      ), 0);
+    const jobRows = jobs.filter(j => String(j.jobId || '').trim() === jobId);
+    const overlapSeconds = jobRows.reduce((sum,j) => sum + Math.max(
+      0,
+      Number(j.overlapSeconds) || Math.round(num(j.overlapMinutes) * 60)
+    ), 0);
+    const rawStatus = String(
+      (cached && cached.status) ||
+      (jobRows[0] && jobRows[0].status) ||
+      ''
+    ).trim();
+    const statusText = repairJobIsActive(rawStatus) ? ' • กำลังซ่อม' : '';
 
     lines.push(
-      `• ${jobId}${timeText}${overlapSeconds ? ` • ${repairFormatDurationShort(overlapSeconds)}` : ''}${machine ? ` • ${machine}` : ''}`
+      `• ${jobId}${timeText}${overlapSeconds ? ` • ${repairFormatDurationShort(overlapSeconds)}` : ''}${machine ? ` • ${machine}` : ''}${statusText}`
     );
   });
 
@@ -2706,9 +2788,13 @@ function hideRepairSummary(){
   if (control){
     control.classList.add('hide');
     control.classList.remove('is-open');
+    control.classList.remove('is-live');
   }
   if (list) list.innerHTML = '';
-  if (chip) chip.setAttribute('aria-expanded','false');
+  if (chip){
+    chip.setAttribute('aria-expanded','false');
+    chip.title = '';
+  }
   setRepairChartHighlight([]);
 }
 
@@ -2754,8 +2840,11 @@ async function renderRepairSummary(selectedLine, timeSlots, repairContext){
   }
 
   const totalSeconds = baseJobs.reduce((sum,job) => sum + Math.max(0, Number(job.totalSeconds) || 0), 0);
+  const hintedLiveJobs = baseJobs.filter(job => repairJobIsActive(job.status)).length;
   chipText.innerText = `Repair · ${baseJobs.length} งาน · ${repairFormatDurationShort(totalSeconds)}`;
-  meta.innerText = `LINE ${code} · ซ่อมจริงรวม ${repairFormatDuration(totalSeconds)}`;
+  meta.innerText = `LINE ${code} · ซ่อมจริงรวม ${repairFormatDuration(totalSeconds)}${hintedLiveJobs ? ` · กำลังซ่อม ${hintedLiveJobs} งาน` : ''}`;
+  control.classList.toggle('is-live', hintedLiveJobs > 0);
+  chip.title = hintedLiveJobs ? `กำลังซ่อม ${hintedLiveJobs} งาน` : '';
   list.innerHTML = baseJobs.map(job => {
     const machine = job.machineName
       ? (job.machineCode ? `${job.machineCode} · ${job.machineName}` : job.machineName)
@@ -2815,6 +2904,11 @@ async function renderRepairSummary(selectedLine, timeSlots, repairContext){
       isRunning:runningNow
     };
   }).sort((a,b) => (a.startMs || 0) - (b.startMs || 0));
+
+  const liveJobs = jobs.filter(job => job.isRunning).length;
+  control.classList.toggle('is-live', liveJobs > 0);
+  chip.title = liveJobs ? `กำลังซ่อม ${liveJobs} งาน` : '';
+  meta.innerText = `LINE ${code} · ซ่อมจริงรวม ${repairFormatDuration(totalSeconds)}${liveJobs ? ` · กำลังซ่อม ${liveJobs} งาน` : ''}`;
 
   list.innerHTML = jobs.map((job, idx) => {
     const startText = job.startMs ? repairFormatClock(job.startMs) : '-';
