@@ -288,15 +288,8 @@
     font-weight:800;
     white-space:nowrap;
     box-shadow:0 1px 2px rgba(15,23,42,.03);
-    transition:background .14s ease,border-color .14s ease,box-shadow .14s ease,transform .14s ease;
-  }
-  .repairSummaryChip:hover,
-  .repairSummaryChip:focus-visible{
-    background:#E0F2FE;
-    border-color:rgba(125,211,252,.98);
-    box-shadow:0 7px 18px -14px rgba(2,132,199,.55);
-    transform:translateY(-1px);
-    outline:none;
+    cursor:default;
+    pointer-events:none;
   }
   .repairSummaryDot{
     width:6px;
@@ -315,32 +308,8 @@
     background:#F97316;
     box-shadow:0 0 0 3px rgba(249,115,22,.12);
   }
-  .repairSummaryPopover{
-    position:absolute;
-    z-index:40;
-    top:calc(100% + 8px);
-    right:0;
-    width:min(370px,calc(100vw - 48px));
-    padding:7px;
-    border:1px solid rgba(226,232,240,.96);
-    border-radius:16px;
-    background:rgba(255,255,255,.99);
-    box-shadow:0 20px 48px -24px rgba(15,23,42,.34);
-    opacity:0;
-    visibility:hidden;
-    transform:translateY(-3px) scale(.99);
-    transform-origin:top right;
-    pointer-events:none;
-    transition:opacity .14s ease,visibility .14s ease,transform .14s ease;
-  }
-  .repairSummaryControl:hover .repairSummaryPopover,
-  .repairSummaryControl:focus-within .repairSummaryPopover,
-  .repairSummaryControl.is-open .repairSummaryPopover{
-    opacity:1;
-    visibility:visible;
-    transform:translateY(0) scale(1);
-    pointer-events:auto;
-  }
+  .repairSummaryPopover{ display:none !important; }
+
   .repairSummaryHead{
     display:flex;
     align-items:center;
@@ -2560,15 +2529,17 @@ const hourlyRepairHoverPlugin = {
       const isActive = active.has(slot);
       const isLiveNow = repairSlotIsLiveNow(slot, info);
 
+      // Very light slot tint: context only, not another visual block.
       ctx.fillStyle = isLiveNow
-        ? 'rgba(249,115,22,0.070)'
-        : (isActive ? 'rgba(14,165,233,0.13)' : 'rgba(14,165,233,0.065)');
+        ? 'rgba(249,115,22,0.035)'
+        : (isActive ? 'rgba(14,165,233,0.055)' : 'rgba(14,165,233,0.025)');
       ctx.fillRect(left + 1, area.top, width, area.bottom-area.top);
 
+      // Thin marker at the bottom of the hour slot.
       ctx.fillStyle = isLiveNow
         ? 'rgba(249,115,22,0.72)'
-        : (isActive ? 'rgba(2,132,199,0.95)' : 'rgba(14,165,233,0.72)');
-      ctx.fillRect(left + 1, area.bottom - 3, width, 3);
+        : (isActive ? 'rgba(2,132,199,0.88)' : 'rgba(14,165,233,0.58)');
+      ctx.fillRect(left + 4, area.bottom - 2, Math.max(0,width-6), 2);
     });
 
     ctx.restore();
@@ -2576,30 +2547,12 @@ const hourlyRepairHoverPlugin = {
 
   afterDatasetsDraw(chart, args, opts){
     const slotMap = opts && opts.slotMap && typeof opts.slotMap === 'object' ? opts.slotMap : {};
-    const activeSlots = Array.isArray(opts && opts.activeSlots) ? opts.activeSlots : [];
     const labels = chart.data.labels || [];
     const x = chart.scales.x;
     const area = chart.chartArea;
     if (!x || !area || !labels.length) return;
 
-    const active = new Set(activeSlots);
     const ctx = chart.ctx;
-
-    const drawRoundRect = (left, top, width, height, radius) => {
-      const r = Math.max(0, Math.min(radius, width/2, height/2));
-      ctx.beginPath();
-      ctx.moveTo(left+r, top);
-      ctx.lineTo(left+width-r, top);
-      ctx.quadraticCurveTo(left+width, top, left+width, top+r);
-      ctx.lineTo(left+width, top+height-r);
-      ctx.quadraticCurveTo(left+width, top+height, left+width-r, top+height);
-      ctx.lineTo(left+r, top+height);
-      ctx.quadraticCurveTo(left, top+height, left, top+height-r);
-      ctx.lineTo(left, top+r);
-      ctx.quadraticCurveTo(left, top, left+r, top);
-      ctx.closePath();
-    };
-
     ctx.save();
 
     labels.forEach((slot, i) => {
@@ -2612,7 +2565,7 @@ const hourlyRepairHoverPlugin = {
       const next = i < labels.length-1 ? x.getPixelForValue(i+1) : center;
       const left = center - (i > 0 ? (center-prev)/2 : 18);
       const right = center + (i < labels.length-1 ? (next-center)/2 : 18);
-      const isActive = active.has(slot);
+      const maxWidth = Math.max(22,(right-left)-12);
 
       const jobs = Array.isArray(info.jobs) ? info.jobs : [];
       const uniqueJobs = [];
@@ -2623,39 +2576,32 @@ const hourlyRepairHoverPlugin = {
 
       const jobCount = Math.max(1, uniqueJobs.length || Number(info.jobCount) || 0);
       const isLiveNow = repairSlotIsLiveNow(slot, info);
-      const badgeText = isLiveNow
-        ? `กำลังซ่อม · ${minutes}น.`
+      let labelText = isLiveNow
+        ? `กำลังซ่อม ${minutes}น.`
         : (jobCount > 1 ? `${jobCount}งาน · ${minutes}น.` : `ซ่อม ${minutes}น.`);
 
       ctx.font = '700 8px Kanit';
-      const textWidth = ctx.measureText(badgeText).width;
-      const maxBadgeWidth = Math.max(30, (right-left)-8);
-      const badgeWidth = Math.min(maxBadgeWidth, Math.max(34, Math.ceil(textWidth)+12));
-      const badgeHeight = 14;
-      const badgeLeft = Math.max(left+4, Math.min(right-badgeWidth-4, center-badgeWidth/2));
-      const badgeTop = area.top + 7;
+      if (ctx.measureText(labelText).width > maxWidth){
+        labelText = jobCount > 1 ? `${jobCount}งาน·${minutes}น.` : `${minutes}น.`;
+      }
 
-      drawRoundRect(badgeLeft, badgeTop, badgeWidth, badgeHeight, 7);
-      ctx.fillStyle = isLiveNow
-        ? 'rgba(255,247,237,0.99)'
-        : (isActive ? 'rgba(224,242,254,1)' : 'rgba(240,249,255,0.98)');
+      const textWidth = ctx.measureText(labelText).width;
+      const dotX = Math.max(left+4, center - textWidth/2 - 5);
+      const textX = Math.min(right-4-textWidth/2, center+2);
+      const y = area.top + 9;
+
+      ctx.beginPath();
+      ctx.arc(dotX, y+1, 2.1, 0, Math.PI*2);
+      ctx.fillStyle = isLiveNow ? '#F97316' : '#0EA5E9';
       ctx.fill();
-      ctx.strokeStyle = isLiveNow
-        ? 'rgba(249,115,22,0.62)'
-        : (isActive ? 'rgba(2,132,199,0.72)' : 'rgba(14,165,233,0.34)');
-      ctx.lineWidth = 1;
-      ctx.stroke();
 
       ctx.fillStyle = isLiveNow ? '#C2410C' : '#0369A1';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-
-      if (textWidth + 12 <= maxBadgeWidth){
-        ctx.fillText(badgeText, badgeLeft + badgeWidth/2, badgeTop + badgeHeight/2 + 0.5);
-      }else{
-        const compactText = isLiveNow ? `${minutes}น.` : (jobCount > 1 ? `${jobCount}งาน` : `${minutes}น.`);
-        ctx.fillText(compactText, badgeLeft + badgeWidth/2, badgeTop + badgeHeight/2 + 0.5);
-      }
+      ctx.shadowColor = 'rgba(255,255,255,0.96)';
+      ctx.shadowBlur = 3;
+      ctx.fillText(labelText, textX, y+1);
+      ctx.shadowBlur = 0;
     });
 
     ctx.restore();
@@ -2809,25 +2755,14 @@ function setRepairChartHighlight(slots){
   hourlyChartInstance.update('none');
 }
 
-function toggleRepairSummaryPopover(){
-  const control = el('repairSummaryControl');
-  const chip = el('repairSummaryChip');
-  if (!control || !chip) return;
-  const open = !control.classList.contains('is-open');
-  control.classList.toggle('is-open', open);
-  chip.setAttribute('aria-expanded', open ? 'true' : 'false');
-}
-
 async function renderRepairSummary(selectedLine, timeSlots, repairContext){
   const seq = ++repairSummaryRenderSeq;
   const code = String(selectedLine || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
   const control = el('repairSummaryControl');
   const chipText = el('repairSummaryChipText');
-  const meta = el('repairSummaryMeta');
-  const list = el('repairSummaryList');
   const chip = el('repairSummaryChip');
 
-  if (!control || !chipText || !meta || !list || !chip ||
+  if (!control || !chipText || !chip ||
       currentDashboardIsRange || !repairContext || !timeSlots || !timeSlots.length){
     hideRepairSummary();
     return;
@@ -2840,118 +2775,25 @@ async function renderRepairSummary(selectedLine, timeSlots, repairContext){
   }
 
   const totalSeconds = baseJobs.reduce((sum,job) => sum + Math.max(0, Number(job.totalSeconds) || 0), 0);
-  const hintedLiveJobs = baseJobs.filter(job => repairJobIsActive(job.status)).length;
+  const liveJobs = baseJobs.filter(job => repairJobIsActive(job.status)).length;
+
   chipText.innerText = `Repair · ${baseJobs.length} งาน · ${repairFormatDurationShort(totalSeconds)}`;
-  meta.innerText = `LINE ${code} · ซ่อมจริงรวม ${repairFormatDuration(totalSeconds)}${hintedLiveJobs ? ` · กำลังซ่อม ${hintedLiveJobs} งาน` : ''}`;
-  control.classList.toggle('is-live', hintedLiveJobs > 0);
-  chip.title = hintedLiveJobs ? `กำลังซ่อม ${hintedLiveJobs} งาน` : '';
-  list.innerHTML = baseJobs.map(job => {
-    const machine = job.machineName
-      ? (job.machineCode ? `${job.machineCode} · ${job.machineName}` : job.machineName)
-      : (job.machineCode || 'กำลังโหลดรายละเอียด');
-    return `<div class="repairSummaryRow">
-      <div class="repairSummaryTime">…</div>
-      <div class="repairSummaryJob">
-        <div class="repairSummaryJobId">${esc(job.jobId)}</div>
-        <div class="repairSummaryMachine">${esc(machine)}</div>
-      </div>
-      <div class="repairSummaryDuration">${esc(repairFormatDurationShort(job.totalSeconds))}</div>
-    </div>`;
-  }).join('');
-  control.classList.remove('hide');
-
-  const details = await Promise.all(baseJobs.map(async job => {
-    try{
-      const detail = await getRepairJobDetailCached(job.jobId);
-      return {job, detail};
-    }catch(err){
-      console.warn('Repair summary detail:', job.jobId, err);
-      return {job, detail:null};
-    }
-  }));
-
-  if (seq !== repairSummaryRenderSeq || currentLine !== code) return;
-
-  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
-  const today = getTodayStr();
-  const now = Date.now();
-
-  const jobs = details.map(({job, detail}) => {
-    const status = String((detail && detail.status) || job.status || '').trim();
-    const startMs = detail
-      ? repairDateTimeMs(detail.startDate, detail.startTime, selectedDate)
-      : 0;
-
-    let endMs = detail
-      ? repairDateTimeMs(detail.finishDate, detail.finishTime, selectedDate)
-      : 0;
-
-    const runningNow =
-      !endMs &&
-      selectedDate === today &&
-      ['กำลังซ่อม','กำลังดำเนินการ'].includes(status);
-
-    if (runningNow) endMs = now;
-
-    return {
-      ...job,
-      machineCode:String((detail && detail.machineCode) || job.machineCode || '').trim(),
-      machineName:String((detail && detail.machineName) || job.machineName || '').trim(),
-      repairType:String((detail && detail.repairType) || job.repairType || '').trim(),
-      status,
-      startMs,
-      endMs,
-      isRunning:runningNow
-    };
-  }).sort((a,b) => (a.startMs || 0) - (b.startMs || 0));
-
-  const liveJobs = jobs.filter(job => job.isRunning).length;
   control.classList.toggle('is-live', liveJobs > 0);
   chip.title = liveJobs ? `กำลังซ่อม ${liveJobs} งาน` : '';
-  meta.innerText = `LINE ${code} · ซ่อมจริงรวม ${repairFormatDuration(totalSeconds)}${liveJobs ? ` · กำลังซ่อม ${liveJobs} งาน` : ''}`;
-
-  list.innerHTML = jobs.map((job, idx) => {
-    const startText = job.startMs ? repairFormatClock(job.startMs) : '-';
-    const endText = job.isRunning ? 'กำลังซ่อม' : (job.endMs ? repairFormatClock(job.endMs) : '-');
-    const machine = job.machineName
-      ? (job.machineCode ? `${job.machineCode} · ${job.machineName}` : job.machineName)
-      : (job.machineCode || 'ไม่ระบุเครื่อง');
-    const duration = repairFormatDurationShort(job.totalSeconds);
-
-    return `<div class="repairSummaryRow" data-repair-index="${idx}">
-      <div class="repairSummaryTime">${esc(startText)}–${esc(endText)}</div>
-      <div class="repairSummaryJob">
-        <div class="repairSummaryJobId">${esc(job.jobId)}</div>
-        <div class="repairSummaryMachine">${esc(machine)}${job.repairType ? ' · ' + esc(job.repairType) : ''}</div>
-      </div>
-      <div class="repairSummaryDuration">${esc(duration)}</div>
-    </div>`;
-  }).join('');
-
+  chip.onclick = null;
+  control.classList.remove('is-open');
   control.classList.remove('hide');
 
-  chip.onclick = (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    toggleRepairSummaryPopover();
-  };
-
-  control.onmouseleave = () => {
-    if (!control.classList.contains('is-open')) setRepairChartHighlight([]);
-  };
-
-  list.querySelectorAll('.repairSummaryRow').forEach(row => {
-    const idx = Number(row.dataset.repairIndex);
-    const job = jobs[idx];
-    if (!job) return;
-
-    row.addEventListener('mouseenter', () => {
-      const slots = (job.entries || []).map(e => e.slot).filter(Boolean);
-      setRepairChartHighlight(slots);
+  // Load job details quietly for richer chart tooltip, without delaying or opening a large overlay.
+  baseJobs.forEach(job => {
+    getRepairJobDetailCached(job.jobId).catch(err => {
+      console.warn('Repair detail preload:', job.jobId, err);
     });
-    row.addEventListener('mouseleave', () => setRepairChartHighlight([]));
   });
+
+  if (seq !== repairSummaryRenderSeq || currentLine !== code) return;
 }
+
 
 function collectRepairTimelineJobs(repairContext, timeSlots){
   const slots = repairContext && repairContext.slots ? repairContext.slots : {};
