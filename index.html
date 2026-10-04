@@ -3046,7 +3046,7 @@ function updateHourlyChart(selectedLine){
             callback:function(value){
               const slot = String(this.getLabelForValue(value) || '').trim();
               const info = repairSlots && repairSlots[slot] ? repairSlots[slot] : null;
-              return info && repairSlotMinutes(info) > 0 ? `${slot}  🔧` : slot;
+              return info && repairSlotMinutes(info) > 0 ? `${slot}  🛠️` : slot;
             }
           }
         },
