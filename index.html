@@ -2535,11 +2535,7 @@ const hourlyRepairHoverPlugin = {
         : (isActive ? 'rgba(14,165,233,0.055)' : 'rgba(14,165,233,0.025)');
       ctx.fillRect(left + 1, area.top, width, area.bottom-area.top);
 
-      // Thin marker at the bottom of the hour slot.
-      ctx.fillStyle = isLiveNow
-        ? 'rgba(249,115,22,0.72)'
-        : (isActive ? 'rgba(2,132,199,0.88)' : 'rgba(14,165,233,0.58)');
-      ctx.fillRect(left + 4, area.bottom - 2, Math.max(0,width-6), 2);
+      // No text or rail here; the slot tint is the main context cue.
     });
 
     ctx.restore();
@@ -2547,11 +2543,13 @@ const hourlyRepairHoverPlugin = {
 
   afterDatasetsDraw(chart, args, opts){
     const slotMap = opts && opts.slotMap && typeof opts.slotMap === 'object' ? opts.slotMap : {};
+    const activeSlots = Array.isArray(opts && opts.activeSlots) ? opts.activeSlots : [];
     const labels = chart.data.labels || [];
     const x = chart.scales.x;
     const area = chart.chartArea;
     if (!x || !area || !labels.length) return;
 
+    const active = new Set(activeSlots);
     const ctx = chart.ctx;
     ctx.save();
 
@@ -2561,47 +2559,24 @@ const hourlyRepairHoverPlugin = {
       if (!info || minutes <= 0) return;
 
       const center = x.getPixelForValue(i);
-      const prev = i > 0 ? x.getPixelForValue(i-1) : center;
-      const next = i < labels.length-1 ? x.getPixelForValue(i+1) : center;
-      const left = center - (i > 0 ? (center-prev)/2 : 18);
-      const right = center + (i < labels.length-1 ? (next-center)/2 : 18);
-      const maxWidth = Math.max(22,(right-left)-12);
-
-      const jobs = Array.isArray(info.jobs) ? info.jobs : [];
-      const uniqueJobs = [];
-      jobs.forEach(job => {
-        const id = String(job.jobId || '').trim();
-        if (id && !uniqueJobs.includes(id)) uniqueJobs.push(id);
-      });
-
-      const jobCount = Math.max(1, uniqueJobs.length || Number(info.jobCount) || 0);
       const isLiveNow = repairSlotIsLiveNow(slot, info);
-      let labelText = isLiveNow
-        ? `กำลังซ่อม ${minutes}น.`
-        : (jobCount > 1 ? `${jobCount}งาน · ${minutes}น.` : `ซ่อม ${minutes}น.`);
+      const isActive = active.has(slot);
 
-      ctx.font = '700 8px Kanit';
-      if (ctx.measureText(labelText).width > maxWidth){
-        labelText = jobCount > 1 ? `${jobCount}งาน·${minutes}น.` : `${minutes}น.`;
-      }
-
-      const textWidth = ctx.measureText(labelText).width;
-      const dotX = Math.max(left+4, center - textWidth/2 - 5);
-      const textX = Math.min(right-4-textWidth/2, center+2);
-      const y = area.top + 9;
-
+      // One tiny marker only. Detail stays in the normal Chart.js tooltip.
       ctx.beginPath();
-      ctx.arc(dotX, y+1, 2.1, 0, Math.PI*2);
-      ctx.fillStyle = isLiveNow ? '#F97316' : '#0EA5E9';
+      ctx.arc(center, area.bottom - 6, isActive ? 3.2 : 2.6, 0, Math.PI * 2);
+      ctx.fillStyle = isLiveNow
+        ? '#F97316'
+        : (isActive ? '#0284C7' : '#0EA5E9');
       ctx.fill();
 
-      ctx.fillStyle = isLiveNow ? '#C2410C' : '#0369A1';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(255,255,255,0.96)';
-      ctx.shadowBlur = 3;
-      ctx.fillText(labelText, textX, y+1);
-      ctx.shadowBlur = 0;
+      ctx.beginPath();
+      ctx.arc(center, area.bottom - 6, isActive ? 5.2 : 4.4, 0, Math.PI * 2);
+      ctx.strokeStyle = isLiveNow
+        ? 'rgba(249,115,22,0.18)'
+        : 'rgba(14,165,233,0.14)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
     });
 
     ctx.restore();
