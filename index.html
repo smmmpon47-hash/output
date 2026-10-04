@@ -3022,15 +3022,28 @@ function updateHourlyChart(selectedLine){
           callbacks:{
             label:(ctx) => {
               const slot = String(ctx.label || '').trim();
-              if (repairSlots && repairSlots[slot] && repairSlotMinutes(repairSlots[slot]) > 0){
+              const slotMap = ctx.chart &&
+                ctx.chart.options &&
+                ctx.chart.options.plugins &&
+                ctx.chart.options.plugins.hourlyRepairHover
+                ? (ctx.chart.options.plugins.hourlyRepairHover.slotMap || {})
+                : {};
+              if (slotMap[slot] && repairSlotMinutes(slotMap[slot]) > 0){
                 return '';
               }
               return `${ctx.dataset.label}: ${Number(ctx.raw || 0).toLocaleString()}`;
             },
             afterBody:(items) => {
               if (!items || !items.length) return [];
-              const slot = String(items[0].label || '').trim();
-              return repairTooltipLinesForSlot(slot, repairSlots);
+              const first = items[0];
+              const slot = String(first.label || '').trim();
+              const slotMap = first.chart &&
+                first.chart.options &&
+                first.chart.options.plugins &&
+                first.chart.options.plugins.hourlyRepairHover
+                ? (first.chart.options.plugins.hourlyRepairHover.slotMap || {})
+                : {};
+              return repairTooltipLinesForSlot(slot, slotMap);
             }
           }
         }
@@ -3045,7 +3058,13 @@ function updateHourlyChart(selectedLine){
             font:{size:9, family:'Kanit'},
             callback:function(value){
               const slot = String(this.getLabelForValue(value) || '').trim();
-              const info = repairSlots && repairSlots[slot] ? repairSlots[slot] : null;
+              const slotMap = this.chart &&
+                this.chart.options &&
+                this.chart.options.plugins &&
+                this.chart.options.plugins.hourlyRepairHover
+                ? (this.chart.options.plugins.hourlyRepairHover.slotMap || {})
+                : {};
+              const info = slotMap[slot] || null;
               return info && repairSlotMinutes(info) > 0 ? `${slot}  🛠️` : slot;
             }
           }
