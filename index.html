@@ -2657,46 +2657,59 @@ function repairTooltipLinesForSlot(slot, repairSlots){
   const lines = [];
   const minutes = repairSlotMinutes(info);
   if (minutes > 0){
-    const liveNow = repairSlotIsLiveNow(slot, info);
-    lines.push(`${liveNow ? 'กำลังซ่อม' : 'Repair ช่วงนี้'}: ${minutes} นาที${uniqueJobIds.length ? ` • ${uniqueJobIds.length} งาน` : ''}`);
+    lines.push(`Repair รวมในชั่วโมงนี้: ${minutes} นาที`);
   }
 
-  uniqueJobIds.slice(0,3).forEach(jobId => {
+  if (uniqueJobIds.length){
+    lines.push('งานซ่อม:');
+  }
+
+  uniqueJobIds.forEach(jobId => {
     const cached = repairJobDetailCache[jobId] && repairJobDetailCache[jobId].data
       ? repairJobDetailCache[jobId].data
       : null;
-    const raw = jobs.find(j => String(j.jobId || '').trim() === jobId) || {};
-    const machine = String(
-      (cached && (cached.machineName || cached.machineCode)) ||
-      raw.machineName ||
-      raw.machineCode ||
-      ''
-    ).trim();
+
+    const rawRows = [];
+    Object.values(repairSlots || {}).forEach(slotInfo => {
+      const slotJobs = Array.isArray(slotInfo && slotInfo.jobs) ? slotInfo.jobs : [];
+      slotJobs.forEach(job => {
+        if (String(job.jobId || '').trim() === jobId) rawRows.push(job);
+      });
+    });
+    const raw = rawRows[0] || jobs.find(j => String(j.jobId || '').trim() === jobId) || {};
 
     const startText = cached && cached.startTime ? repairTimePart(cached.startTime).slice(0,5) : '';
     const finishText = cached && cached.finishTime ? repairTimePart(cached.finishTime).slice(0,5) : '';
-    const timeText = startText ? (finishText ? ` ${startText}-${finishText}` : ` ${startText}-...`) : '';
+    const timeText = startText
+      ? (finishText ? ` · ${startText}–${finishText}` : ` · ${startText}–...`)
+      : '';
 
-    const jobRows = jobs.filter(j => String(j.jobId || '').trim() === jobId);
-    const overlapSeconds = jobRows.reduce((sum,j) => sum + Math.max(
+    const totalJobSeconds = rawRows.reduce((sum,j) => sum + Math.max(
       0,
       Number(j.overlapSeconds) || Math.round(num(j.overlapMinutes) * 60)
     ), 0);
-    const rawStatus = String(
-      (cached && cached.status) ||
-      (jobRows[0] && jobRows[0].status) ||
+
+    const repairType = String(
+      (cached && cached.repairType) ||
+      raw.repairType ||
       ''
     ).trim();
-    const statusText = repairJobIsActive(rawStatus) ? ' • กำลังซ่อม' : '';
+
+    const repairDetail = String(
+      (cached && cached.repairDetail) ||
+      raw.repairDetail ||
+      ''
+    ).trim();
 
     lines.push(
-      `• ${jobId}${timeText}${overlapSeconds ? ` • ${repairFormatDurationShort(overlapSeconds)}` : ''}${machine ? ` • ${machine}` : ''}${statusText}`
+      `• ${jobId}${timeText}${totalJobSeconds ? ` · ${repairFormatDurationShort(totalJobSeconds)}` : ''}`
     );
-  });
 
-  if (uniqueJobIds.length > 3){
-    lines.push(`• และอีก ${uniqueJobIds.length-3} งาน`);
-  }
+    const repairedText = [repairType, repairDetail].filter(Boolean).join(' · ');
+    if (repairedText){
+      lines.push(`  ซ่อม: ${repairedText}`);
+    }
+  });
 
   return lines;
 }
@@ -3043,6 +3056,13 @@ function updateHourlyChart(selectedLine){
           bodyFont:{family:'Kanit'},
           titleFont:{family:'Kanit'},
           callbacks:{
+            label:(ctx) => {
+              const slot = String(ctx.label || '').trim();
+              if (repairSlots && repairSlots[slot] && repairSlotMinutes(repairSlots[slot]) > 0){
+                return '';
+              }
+              return `${ctx.dataset.label}: ${Number(ctx.raw || 0).toLocaleString()}`;
+            },
             afterBody:(items) => {
               if (!items || !items.length) return [];
               const slot = String(items[0].label || '').trim();
