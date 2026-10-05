@@ -539,6 +539,7 @@
               <div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                 <div id="tipBar" class="h-1.5 rounded-full bg-emerald-500" style="width:0%"></div>
               </div>
+              <p id="tipRepair" class="hide text-[10px] font-semibold text-sky-700 mt-2"></p>
               <p class="text-[10px] text-slate-400 mt-2">คลิกเพื่อดูรายละเอียดไลน์</p>
             </div>
           </div>
@@ -955,6 +956,7 @@ let repairSummaryRenderSeq = 0;
 let repairTimelineRenderSeq = 0;
 const repairHourlyContextCache = {};
 const repairHourlyContextFetchedAt = {};
+const repairFloorContextPromiseCache = {};
 const repairJobDetailCache = {};
 const repairJobDetailPromiseCache = {};
 
@@ -1778,11 +1780,149 @@ function renderHotspots(){
 
 }
 
+function getRepairFloorSummary(lineCode){
+  const context = getRepairHourlyLineContext(lineCode);
+  if (!context) return null;
+
+  const slots = context.slots || {};
+  const jobIds = new Set();
+  let totalSeconds = 0;
+  let liveJobs = 0;
+  const liveIds = new Set();
+
+  Object.values(slots).forEach(info => {
+    const jobs = Array.isArray(info && info.jobs) ? info.jobs : [];
+    jobs.forEach(job => {
+      const id = String(job.jobId || '').trim();
+      if (id) jobIds.add(id);
+      const sec = Math.max(
+        0,
+        Number(job.overlapSeconds) || Math.round(num(job.overlapMinutes) * 60)
+      );
+      totalSeconds += sec;
+
+      if (id && repairJobIsActive(job.status) && !liveIds.has(id)){
+        liveIds.add(id);
+        liveJobs++;
+      }
+    });
+  });
+
+  const fallbackMinutes = Math.max(0, Number(context.totalRepairMinutes) || 0);
+  const totalMinutes = totalSeconds > 0
+    ? Math.max(1, Math.round(totalSeconds / 60))
+    : Math.round(fallbackMinutes);
+
+  const jobCount = jobIds.size || Math.max(0, Number(context.jobCount) || 0);
+  return { jobCount, totalMinutes, liveJobs };
+}
+
+function renderFloorTipRepair(lineCode){
+  const row = el('tipRepair');
+  const tip = el('planTip');
+  if (!row || !tip || tip.dataset.line !== String(lineCode || '').toUpperCase()) return;
+
+  const summary = getRepairFloorSummary(lineCode);
+  if (!summary || summary.jobCount <= 0 || summary.totalMinutes <= 0){
+    row.classList.add('hide');
+    row.innerText = '';
+    return;
+  }
+
+  const duration = summary.totalMinutes >= 60
+    ? `${Math.floor(summary.totalMinutes / 60)}ชม.${summary.totalMinutes % 60 ? (summary.totalMinutes % 60) + 'น.' : ''}`
+    : `${summary.totalMinutes}น.`;
+
+  row.innerText = summary.liveJobs > 0
+    ? `🛠️ กำลังซ่อม ${summary.liveJobs} งาน · ${duration}`
+    : `🛠️ ซ่อมวันนี้ ${summary.jobCount} งาน · ${duration}`;
+
+  row.className = 'text-[10px] font-semibold mt-2 ' +
+    (summary.liveJobs > 0 ? 'text-orange-600' : 'text-sky-700');
+}
+
+async function ensureRepairContextForFloorTip(lineCode){
+  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
+  if (!code || !selectedDate || currentDashboardIsRange) return;
+
+  const cacheKey = getRepairHourlyCacheKey(selectedDate, code);
+  const cachedAt = Number(repairHourlyContextFetchedAt[cacheKey] || 0);
+
+  if (repairHourlyContextCache[cacheKey] && Date.now() - cachedAt < 30000){
+    renderFloorTipRepair(code);
+    return;
+  }
+
+  if (repairFloorContextPromiseCache[cacheKey]){
+    await repairFloorContextPromiseCache[cacheKey];
+    renderFloorTipRepair(code);
+    return;
+  }
+
+  const request = (async () => {
+    try{
+      const url = `${GAS_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
+      const rawText = await fetchTextWithRetry(url, {
+        attempts:2,
+        timeoutMs:15000
+      });
+
+      let data;
+      try { data = JSON.parse(rawText); }
+      catch(_){ throw new Error('Repair API ไม่ได้ส่ง JSON กลับมา'); }
+
+      if (!data || data.status !== 'success'){
+        throw new Error((data && data.message) || 'โหลด Repair Context ไม่สำเร็จ');
+      }
+
+      const lineData =
+        (data.lines && data.lines[code]) ||
+        (String(data.line || '').toUpperCase() === code
+          ? {
+              line:code,
+              slots:data.slots || {},
+              totalRepairMinutes:Number(data.totalRepairMinutes) || 0,
+              jobCount:Number(data.jobCount) || 0
+            }
+          : null);
+
+      repairHourlyContextCache[cacheKey] = lineData || {
+        line:code,
+        slots:{},
+        totalRepairMinutes:0,
+        jobCount:0
+      };
+      repairHourlyContextFetchedAt[cacheKey] = Date.now();
+    }catch(err){
+      console.warn('Repair floor context:', err);
+    }
+  })();
+
+  repairFloorContextPromiseCache[cacheKey] = request;
+  try{
+    await request;
+  }finally{
+    if (repairFloorContextPromiseCache[cacheKey] === request){
+      delete repairFloorContextPromiseCache[cacheKey];
+    }
+  }
+
+  renderFloorTipRepair(code);
+}
+
 function showTip(cfg, hotEl){
   const item = findLine(cfg.code);
   const st = getLineStatus(item);
   const tip = el('planTip');
   const wrap = el('planWrap');
+  tip.dataset.line = cfg.code;
+
+  const repairRow = el('tipRepair');
+  if (repairRow){
+    repairRow.classList.add('hide');
+    repairRow.innerText = '';
+  }
 
   const tg = item ? (num(item.target) || (num(item.target1)+num(item.target2)+num(item.target3))) : 0;
   const ac = item ? (num(item.actual) || (num(item.actual1)+num(item.actual2)+num(item.actual3))) : 0;
@@ -1805,6 +1945,9 @@ function showTip(cfg, hotEl){
   el('tipBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
   el('tipBar').className = 'h-1.5 rounded-full ' + (st.key==='bad' ? 'bg-rose-500' : st.key==='warn' ? 'bg-amber-500' : 'bg-emerald-500');
 
+  renderFloorTipRepair(cfg.code);
+  ensureRepairContextForFloorTip(cfg.code);
+
   const wrapRect = wrap.getBoundingClientRect();
   const hotRect = hotEl.getBoundingClientRect();
   const w = wrap.clientWidth, h = wrap.clientHeight;
@@ -1824,7 +1967,11 @@ function showTip(cfg, hotEl){
   tip.style.top  = top + 'px';
   tip.classList.add('show');
 }
-function hideTip(){ el('planTip').classList.remove('show'); }
+function hideTip(){
+  const tip = el('planTip');
+  tip.classList.remove('show');
+  tip.dataset.line = '';
+}
 
 /* =======================================================
    LINE DETAIL
