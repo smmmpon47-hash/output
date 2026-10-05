@@ -267,112 +267,6 @@
   }
 
 
-  /* ---------- compact Repair summary for Hourly chart ---------- */
-  .repairSummaryControl{
-    position:relative;
-    display:inline-flex;
-    align-items:center;
-  }
-  .repairSummaryChip{
-    display:inline-flex;
-    align-items:center;
-    gap:6px;
-    height:28px;
-    padding:0 10px;
-    border:1px solid rgba(186,230,253,.95);
-    border-radius:999px;
-    background:rgba(240,249,255,.92);
-    color:#0369A1;
-    font-size:9px;
-    line-height:1;
-    font-weight:800;
-    white-space:nowrap;
-    box-shadow:0 1px 2px rgba(15,23,42,.03);
-    cursor:default;
-    pointer-events:none;
-  }
-  .repairSummaryDot{
-    width:6px;
-    height:6px;
-    border-radius:999px;
-    background:#0EA5E9;
-    box-shadow:0 0 0 3px rgba(14,165,233,.10);
-    flex:0 0 auto;
-  }
-  .repairSummaryControl.is-live .repairSummaryChip{
-    background:#FFF7ED;
-    border-color:#FED7AA;
-    color:#C2410C;
-  }
-  .repairSummaryControl.is-live .repairSummaryDot{
-    background:#F97316;
-    box-shadow:0 0 0 3px rgba(249,115,22,.12);
-  }
-  .repairSummaryPopover{ display:none !important; }
-
-  .repairSummaryHead{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    padding:5px 7px 8px;
-  }
-  .repairSummaryList{
-    display:flex;
-    flex-direction:column;
-    gap:3px;
-    max-height:250px;
-    overflow:auto;
-  }
-  .repairSummaryRow{
-    display:grid;
-    grid-template-columns:78px minmax(0,1fr) auto;
-    align-items:center;
-    gap:9px;
-    min-height:42px;
-    padding:7px 8px;
-    border:1px solid transparent;
-    border-radius:11px;
-    background:#fff;
-    transition:background .12s ease,border-color .12s ease,transform .12s ease;
-  }
-  .repairSummaryRow:hover{
-    background:#F8FBFF;
-    border-color:#E0F2FE;
-    transform:translateX(1px);
-  }
-  .repairSummaryTime{
-    font-size:9px;
-    font-weight:800;
-    color:#475569;
-    font-variant-numeric:tabular-nums;
-    white-space:nowrap;
-  }
-  .repairSummaryJob{
-    min-width:0;
-  }
-  .repairSummaryJobId{
-    font-size:9px;
-    line-height:1.2;
-    font-weight:800;
-    color:#0F172A;
-  }
-  .repairSummaryMachine{
-    margin-top:3px;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    white-space:nowrap;
-    font-size:8px;
-    line-height:1.2;
-    color:#94A3B8;
-  }
-  .repairSummaryDuration{
-    font-size:9px;
-    font-weight:800;
-    color:#0369A1;
-    white-space:nowrap;
-    font-variant-numeric:tabular-nums;
-  }
 
 
 
@@ -539,7 +433,6 @@
               <div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                 <div id="tipBar" class="h-1.5 rounded-full bg-emerald-500" style="width:0%"></div>
               </div>
-              <p id="tipRepair" class="hide text-[10px] font-semibold text-sky-700 mt-2"></p>
               <p class="text-[10px] text-slate-400 mt-2">คลิกเพื่อดูรายละเอียดไลน์</p>
             </div>
           </div>
@@ -637,22 +530,6 @@
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
             <h3 class="text-sm font-bold text-slate-700">ผลการผลิตรายชั่วโมง</h3>
             <div class="flex flex-wrap items-center justify-end gap-2">
-              <div id="repairSummaryControl" class="repairSummaryControl hide">
-                <button id="repairSummaryChip" type="button" class="repairSummaryChip" aria-haspopup="true" aria-expanded="false">
-                  <span class="repairSummaryDot"></span>
-                  <span id="repairSummaryChipText">Repair</span>
-                </button>
-                <div id="repairSummaryPopover" class="repairSummaryPopover" role="dialog" aria-label="รายละเอียดงานซ่อม">
-                  <div class="repairSummaryHead">
-                    <div>
-                      <p class="text-[10px] font-extrabold text-slate-700">Repair activity</p>
-                      <p id="repairSummaryMeta" class="text-[8px] text-slate-400 mt-0.5">-</p>
-                    </div>
-                    <span class="text-[8px] font-semibold text-sky-700 bg-sky-50 border border-sky-100 rounded-full px-2 py-1">Hover เพื่อเทียบกราฟ</span>
-                  </div>
-                  <div id="repairSummaryList" class="repairSummaryList"></div>
-                </div>
-              </div>
               <p id="hourlyTargetSubtitle" class="text-[11px] text-slate-400">-</p>
             </div>
           </div>
@@ -725,6 +602,19 @@
           <h3 class="text-sm font-bold text-amber-800 mb-2">หมายเหตุจากหน้างาน</h3>
           <div id="dtRemarks" class="space-y-1.5 text-[11px] text-amber-900/80">
             <p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>
+          </div>
+        </div>
+
+        <div id="repairOverviewCard" class="bg-slate-50/70 border border-slate-100 rounded-2xl p-4">
+          <div class="flex items-start justify-between gap-3 mb-3">
+            <div>
+              <h3 class="text-sm font-bold text-slate-700">🛠️ สรุปงานซ่อม</h3>
+              <p id="repairOverviewDate" class="text-[10px] text-slate-400 mt-0.5">-</p>
+            </div>
+            <span class="text-[9px] font-semibold text-slate-400">ทุก LINE</span>
+          </div>
+          <div id="repairOverviewList" class="space-y-1.5">
+            <div class="text-[11px] text-slate-400 py-2">กำลังโหลดข้อมูลงานซ่อม...</div>
           </div>
         </div>
       </div>
@@ -903,6 +793,24 @@
   </div>
 </div>
 
+<div id="repairOverviewModal"
+     class="hide fixed inset-0 z-[95] bg-slate-900/40 backdrop-blur-[2px] p-4 flex items-center justify-center"
+     onclick="if(event.target===this) closeRepairOverviewDetail()">
+  <div class="w-full max-w-xl bg-white border border-slate-200 rounded-[24px] shadow-2xl overflow-hidden">
+    <div class="flex items-start justify-between gap-3 px-5 py-4 border-b border-slate-100">
+      <div>
+        <h3 id="repairDetailTitle" class="text-base font-extrabold text-slate-800">งานซ่อม</h3>
+        <p id="repairDetailMeta" class="text-[11px] text-slate-400 mt-0.5">-</p>
+      </div>
+      <button type="button" onclick="closeRepairOverviewDetail()"
+              class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 text-lg leading-none">×</button>
+    </div>
+    <div id="repairDetailList" class="max-h-[68vh] overflow-y-auto px-4 py-3 space-y-2">
+      <p class="text-[11px] text-slate-400 py-6 text-center">กำลังโหลดรายละเอียด...</p>
+    </div>
+  </div>
+</div>
+
 <script>
 Chart.register(ChartDataLabels);
 
@@ -951,12 +859,11 @@ let etonRequestSeq = 0;
 let globalLinesData = [];
 let currentFloor = 3;
 let currentLine = "";
-let repairHourlyRequestSeq = 0;
-let repairSummaryRenderSeq = 0;
-let repairTimelineRenderSeq = 0;
+let repairOverviewLoadSeq = 0;
+let repairOverviewDetailSeq = 0;
 const repairHourlyContextCache = {};
 const repairHourlyContextFetchedAt = {};
-const repairFloorContextPromiseCache = {};
+const repairContextPromiseCache = {};
 const repairJobDetailCache = {};
 const repairJobDetailPromiseCache = {};
 
@@ -1780,149 +1687,11 @@ function renderHotspots(){
 
 }
 
-function getRepairFloorSummary(lineCode){
-  const context = getRepairHourlyLineContext(lineCode);
-  if (!context) return null;
-
-  const slots = context.slots || {};
-  const jobIds = new Set();
-  let totalSeconds = 0;
-  let liveJobs = 0;
-  const liveIds = new Set();
-
-  Object.values(slots).forEach(info => {
-    const jobs = Array.isArray(info && info.jobs) ? info.jobs : [];
-    jobs.forEach(job => {
-      const id = String(job.jobId || '').trim();
-      if (id) jobIds.add(id);
-      const sec = Math.max(
-        0,
-        Number(job.overlapSeconds) || Math.round(num(job.overlapMinutes) * 60)
-      );
-      totalSeconds += sec;
-
-      if (id && repairJobIsActive(job.status) && !liveIds.has(id)){
-        liveIds.add(id);
-        liveJobs++;
-      }
-    });
-  });
-
-  const fallbackMinutes = Math.max(0, Number(context.totalRepairMinutes) || 0);
-  const totalMinutes = totalSeconds > 0
-    ? Math.max(1, Math.round(totalSeconds / 60))
-    : Math.round(fallbackMinutes);
-
-  const jobCount = jobIds.size || Math.max(0, Number(context.jobCount) || 0);
-  return { jobCount, totalMinutes, liveJobs };
-}
-
-function renderFloorTipRepair(lineCode){
-  const row = el('tipRepair');
-  const tip = el('planTip');
-  if (!row || !tip || tip.dataset.line !== String(lineCode || '').toUpperCase()) return;
-
-  const summary = getRepairFloorSummary(lineCode);
-  if (!summary || summary.jobCount <= 0 || summary.totalMinutes <= 0){
-    row.classList.add('hide');
-    row.innerText = '';
-    return;
-  }
-
-  const duration = summary.totalMinutes >= 60
-    ? `${Math.floor(summary.totalMinutes / 60)}ชม.${summary.totalMinutes % 60 ? (summary.totalMinutes % 60) + 'น.' : ''}`
-    : `${summary.totalMinutes}น.`;
-
-  row.innerText = summary.liveJobs > 0
-    ? `🛠️ กำลังซ่อม ${summary.liveJobs} งาน · ${duration}`
-    : `🛠️ ซ่อมวันนี้ ${summary.jobCount} งาน · ${duration}`;
-
-  row.className = 'text-[10px] font-semibold mt-2 ' +
-    (summary.liveJobs > 0 ? 'text-orange-600' : 'text-sky-700');
-}
-
-async function ensureRepairContextForFloorTip(lineCode){
-  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
-  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
-  if (!code || !selectedDate || currentDashboardIsRange) return;
-
-  const cacheKey = getRepairHourlyCacheKey(selectedDate, code);
-  const cachedAt = Number(repairHourlyContextFetchedAt[cacheKey] || 0);
-
-  if (repairHourlyContextCache[cacheKey] && Date.now() - cachedAt < 30000){
-    renderFloorTipRepair(code);
-    return;
-  }
-
-  if (repairFloorContextPromiseCache[cacheKey]){
-    await repairFloorContextPromiseCache[cacheKey];
-    renderFloorTipRepair(code);
-    return;
-  }
-
-  const request = (async () => {
-    try{
-      const url = `${GAS_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
-      const rawText = await fetchTextWithRetry(url, {
-        attempts:2,
-        timeoutMs:15000
-      });
-
-      let data;
-      try { data = JSON.parse(rawText); }
-      catch(_){ throw new Error('Repair API ไม่ได้ส่ง JSON กลับมา'); }
-
-      if (!data || data.status !== 'success'){
-        throw new Error((data && data.message) || 'โหลด Repair Context ไม่สำเร็จ');
-      }
-
-      const lineData =
-        (data.lines && data.lines[code]) ||
-        (String(data.line || '').toUpperCase() === code
-          ? {
-              line:code,
-              slots:data.slots || {},
-              totalRepairMinutes:Number(data.totalRepairMinutes) || 0,
-              jobCount:Number(data.jobCount) || 0
-            }
-          : null);
-
-      repairHourlyContextCache[cacheKey] = lineData || {
-        line:code,
-        slots:{},
-        totalRepairMinutes:0,
-        jobCount:0
-      };
-      repairHourlyContextFetchedAt[cacheKey] = Date.now();
-    }catch(err){
-      console.warn('Repair floor context:', err);
-    }
-  })();
-
-  repairFloorContextPromiseCache[cacheKey] = request;
-  try{
-    await request;
-  }finally{
-    if (repairFloorContextPromiseCache[cacheKey] === request){
-      delete repairFloorContextPromiseCache[cacheKey];
-    }
-  }
-
-  renderFloorTipRepair(code);
-}
-
 function showTip(cfg, hotEl){
   const item = findLine(cfg.code);
   const st = getLineStatus(item);
   const tip = el('planTip');
   const wrap = el('planWrap');
-  tip.dataset.line = cfg.code;
-
-  const repairRow = el('tipRepair');
-  if (repairRow){
-    repairRow.classList.add('hide');
-    repairRow.innerText = '';
-  }
 
   const tg = item ? (num(item.target) || (num(item.target1)+num(item.target2)+num(item.target3))) : 0;
   const ac = item ? (num(item.actual) || (num(item.actual1)+num(item.actual2)+num(item.actual3))) : 0;
@@ -1945,9 +1714,6 @@ function showTip(cfg, hotEl){
   el('tipBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
   el('tipBar').className = 'h-1.5 rounded-full ' + (st.key==='bad' ? 'bg-rose-500' : st.key==='warn' ? 'bg-amber-500' : 'bg-emerald-500');
 
-  renderFloorTipRepair(cfg.code);
-  ensureRepairContextForFloorTip(cfg.code);
-
   const wrapRect = wrap.getBoundingClientRect();
   const hotRect = hotEl.getBoundingClientRect();
   const w = wrap.clientWidth, h = wrap.clientHeight;
@@ -1967,11 +1733,7 @@ function showTip(cfg, hotEl){
   tip.style.top  = top + 'px';
   tip.classList.add('show');
 }
-function hideTip(){
-  const tip = el('planTip');
-  tip.classList.remove('show');
-  tip.dataset.line = '';
-}
+function hideTip(){ el('planTip').classList.remove('show'); }
 
 /* =======================================================
    LINE DETAIL
@@ -1993,10 +1755,9 @@ function openLine(code){
 function closeDetail(){
   currentLine = '';
   etonRequestSeq++;
-  repairHourlyRequestSeq++;
-  repairSummaryRenderSeq++;
-  repairTimelineRenderSeq++;
-  hideRepairSummary();
+  repairOverviewLoadSeq++;
+  repairOverviewDetailSeq++;
+  closeRepairOverviewDetail();
   etonCurrentReport = null;
   etonLatestReport = null;
   if (etonChartInstance){ etonChartInstance.destroy(); etonChartInstance = null; }
@@ -2024,7 +1785,7 @@ function renderLineDetail(code){
     el('dtLotTable').innerHTML = `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มีข้อมูลของไลน์นี้</td></tr>`;
     el('dtRemarks').innerHTML = `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
     updateHourlyChart(code);
-    loadRepairHourlyContext(code);
+    loadRepairOverview();
     renderEtonSection(code);
     return;
   }
@@ -2092,12 +1853,12 @@ function renderLineDetail(code){
     : `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
 
   updateHourlyChart(code);
-  loadRepairHourlyContext(code);
+  loadRepairOverview();
   renderEtonSection(code);
 }
 
 /* =======================================================
-   REPAIR HOURLY CONTEXT (read-only, rendered inside chart)
+   REPAIR OVERVIEW (read-only summary for all production lines)
    ======================================================= */
 function getRepairHourlyCacheKey(dateStr, lineCode){
   const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
@@ -2110,73 +1871,28 @@ function getRepairHourlyLineContext(lineCode){
   return repairHourlyContextCache[getRepairHourlyCacheKey(selectedDate, lineCode)] || null;
 }
 
-function renderRepairLoadingState(selectedLine, timeSlots, chart){
-  if (currentDashboardIsRange || !timeSlots || !timeSlots.length){
-    hideRepairSummary();
-    return;
-  }
-
-  const control = el('repairSummaryControl');
-  const chipText = el('repairSummaryChipText');
-  const meta = el('repairSummaryMeta');
-  const list = el('repairSummaryList');
-  if (control && chipText && meta && list){
-    chipText.innerText = 'Repair · กำลังโหลด…';
-    meta.innerText = 'กำลังโหลดข้อมูลงานซ่อม';
-    list.innerHTML = '<div class="px-3 py-3 text-[9px] text-slate-400">กำลังโหลดรายละเอียด Repair…</div>';
-    control.classList.remove('hide');
-  }
-}
-
-function refreshRepairUiForLine(lineCode){
-  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
-  if (!code || currentLine !== code) return;
-
-  const lineObj = findLine(code) || {};
-  const timeSlots = Object.keys(lineObj.hourly_data || {});
-  const repairContext = currentDashboardIsRange ? null : getRepairHourlyLineContext(code);
-
-  if (!repairContext){
-    renderRepairLoadingState(code, timeSlots, hourlyChartInstance);
-    return;
-  }
-
-  const pluginOpts = hourlyChartInstance &&
-    hourlyChartInstance.options &&
-    hourlyChartInstance.options.plugins &&
-    hourlyChartInstance.options.plugins.hourlyRepairHover;
-
-  if (pluginOpts){
-    pluginOpts.slotMap = repairContext.slots || {};
-    hourlyChartInstance.update('none');
-  }
-
-  renderRepairSummary(code, timeSlots, repairContext);
-}
-
-async function loadRepairHourlyContext(lineCode){
+async function fetchRepairContextForLine(lineCode){
   const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
   const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
-
-  if (!code || !selectedDate || currentDashboardIsRange) return;
+  if (!code || !selectedDate || currentDashboardIsRange) return null;
 
   const cacheKey = getRepairHourlyCacheKey(selectedDate, code);
   const cachedAt = Number(repairHourlyContextFetchedAt[cacheKey] || 0);
+
   if (repairHourlyContextCache[cacheKey] && Date.now() - cachedAt < 30000){
-    if (currentLine === code) refreshRepairUiForLine(code);
-    return;
+    return repairHourlyContextCache[cacheKey];
   }
 
-  const seq = ++repairHourlyRequestSeq;
+  if (repairContextPromiseCache[cacheKey]){
+    return repairContextPromiseCache[cacheKey];
+  }
 
-  try{
+  const request = (async () => {
     const url = `${GAS_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
     const rawText = await fetchTextWithRetry(url, {
-      attempts: 2,
-      timeoutMs: 15000
+      attempts:2,
+      timeoutMs:15000
     });
-
-    if (seq !== repairHourlyRequestSeq || currentLine !== code) return;
 
     let data;
     try { data = JSON.parse(rawText); }
@@ -2190,29 +1906,251 @@ async function loadRepairHourlyContext(lineCode){
       (data.lines && data.lines[code]) ||
       (String(data.line || '').toUpperCase() === code
         ? {
-            line: code,
-            slots: data.slots || {},
-            totalRepairMinutes: 0,
-            jobCount: 0
+            line:code,
+            slots:data.slots || {},
+            totalRepairMinutes:Number(data.totalRepairMinutes) || 0,
+            jobCount:Number(data.jobCount) || 0
           }
         : null);
 
-    repairHourlyContextCache[cacheKey] = lineData || {
-      line: code,
-      slots: {},
-      totalRepairMinutes: 0,
-      jobCount: 0
+    const normalized = lineData || {
+      line:code,
+      slots:{},
+      totalRepairMinutes:0,
+      jobCount:0
     };
+
+    repairHourlyContextCache[cacheKey] = normalized;
     repairHourlyContextFetchedAt[cacheKey] = Date.now();
+    return normalized;
+  })();
 
-    if (currentLine === code) refreshRepairUiForLine(code);
-
-  }catch(err){
-    if (seq !== repairHourlyRequestSeq || currentLine !== code) return;
-    console.warn('Repair hourly context:', err);
-    // Production chart remains usable even when Repair context is unavailable.
+  repairContextPromiseCache[cacheKey] = request;
+  try{
+    return await request;
+  }finally{
+    if (repairContextPromiseCache[cacheKey] === request){
+      delete repairContextPromiseCache[cacheKey];
+    }
   }
 }
+
+function collectRepairOverviewJobs(repairContext){
+  const slots = repairContext && repairContext.slots ? repairContext.slots : {};
+  const map = {};
+
+  Object.keys(slots).forEach(slot => {
+    const info = slots[slot] || {};
+    const jobs = Array.isArray(info.jobs) ? info.jobs : [];
+
+    jobs.forEach(job => {
+      const jobId = String(job.jobId || '').trim();
+      if (!jobId) return;
+
+      if (!map[jobId]){
+        map[jobId] = {
+          jobId,
+          machineCode:String(job.machineCode || '').trim(),
+          machineName:String(job.machineName || '').trim(),
+          repairType:String(job.repairType || '').trim(),
+          repairDetail:String(job.repairDetail || '').trim(),
+          status:String(job.status || '').trim(),
+          totalSeconds:0,
+          slots:[]
+        };
+      }
+
+      map[jobId].totalSeconds += Math.max(
+        0,
+        Number(job.overlapSeconds) || Math.round(num(job.overlapMinutes) * 60)
+      );
+      if (!map[jobId].slots.includes(slot)) map[jobId].slots.push(slot);
+
+      if (!map[jobId].machineCode) map[jobId].machineCode = String(job.machineCode || '').trim();
+      if (!map[jobId].machineName) map[jobId].machineName = String(job.machineName || '').trim();
+      if (!map[jobId].repairType) map[jobId].repairType = String(job.repairType || '').trim();
+      if (!map[jobId].repairDetail) map[jobId].repairDetail = String(job.repairDetail || '').trim();
+      if (!map[jobId].status) map[jobId].status = String(job.status || '').trim();
+    });
+  });
+
+  return Object.values(map);
+}
+
+function summarizeRepairContext(repairContext){
+  const jobs = collectRepairOverviewJobs(repairContext);
+  const totalSeconds = jobs.reduce((sum,job) => sum + Math.max(0,Number(job.totalSeconds) || 0),0);
+  const liveJobs = jobs.filter(job => repairJobIsActive(job.status)).length;
+
+  return {
+    jobs,
+    jobCount:jobs.length || Math.max(0,Number(repairContext && repairContext.jobCount) || 0),
+    totalSeconds,
+    liveJobs
+  };
+}
+
+function repairOverviewDateText(dateStr){
+  const m = String(dateStr || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(dateStr || '-');
+}
+
+function renderRepairOverviewRows(results){
+  const list = el('repairOverviewList');
+  if (!list) return;
+
+  list.innerHTML = results.map(result => {
+    const code = result.code;
+    if (result.error){
+      return `<div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5">
+        <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+        <span class="text-[10px] text-slate-400">โหลดไม่สำเร็จ</span>
+      </div>`;
+    }
+
+    const summary = result.summary;
+    if (!summary || summary.jobCount <= 0){
+      return `<div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5">
+        <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+        <span class="text-[10px] text-slate-400">ไม่มีงานซ่อม</span>
+      </div>`;
+    }
+
+    const duration = repairFormatDurationShort(summary.totalSeconds);
+    const liveText = summary.liveJobs > 0
+      ? `<span class="text-[9px] font-bold text-orange-600 ml-1">กำลังซ่อม ${summary.liveJobs}</span>`
+      : '';
+
+    return `<button type="button" onclick="openRepairOverviewDetail('${esc(code)}')"
+              class="w-full flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5 text-left hover:border-sky-200 hover:bg-sky-50/40 transition">
+      <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+      <span class="ml-auto text-[10px] font-semibold text-slate-600">${summary.jobCount} งาน · ${esc(duration)}${liveText}</span>
+      <span class="text-slate-300 text-base leading-none">›</span>
+    </button>`;
+  }).join('');
+}
+
+async function loadRepairOverview(){
+  const card = el('repairOverviewCard');
+  const list = el('repairOverviewList');
+  const dateLabel = el('repairOverviewDate');
+  if (!card || !list || !dateLabel) return;
+
+  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
+  dateLabel.innerText = selectedDate ? `วันที่ ${repairOverviewDateText(selectedDate)}` : '-';
+
+  if (currentDashboardIsRange){
+    list.innerHTML = '<div class="text-[11px] text-slate-400 py-2">สรุปงานซ่อมแสดงเมื่อเลือกวันเดียว</div>';
+    return;
+  }
+
+  const codes = Object.keys(LINE_FLOOR).sort();
+  const seq = ++repairOverviewLoadSeq;
+
+  list.innerHTML = codes.map(code => `
+    <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5">
+      <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+      <span class="text-[10px] text-slate-400">กำลังโหลด...</span>
+    </div>`).join('');
+
+  const results = await Promise.all(codes.map(async code => {
+    try{
+      const context = await fetchRepairContextForLine(code);
+      return {code,summary:summarizeRepairContext(context)};
+    }catch(err){
+      console.warn('Repair overview:', code, err);
+      return {code,error:true,summary:null};
+    }
+  }));
+
+  if (seq !== repairOverviewLoadSeq || !currentLine) return;
+  renderRepairOverviewRows(results);
+}
+
+function closeRepairOverviewDetail(){
+  const modal = el('repairOverviewModal');
+  if (modal) modal.classList.add('hide');
+  document.body.style.overflow = '';
+}
+
+async function openRepairOverviewDetail(lineCode){
+  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  if (!code) return;
+
+  const modal = el('repairOverviewModal');
+  const title = el('repairDetailTitle');
+  const meta = el('repairDetailMeta');
+  const list = el('repairDetailList');
+  if (!modal || !title || !meta || !list) return;
+
+  const context = await fetchRepairContextForLine(code).catch(() => null);
+  const summary = summarizeRepairContext(context);
+  if (!context || summary.jobCount <= 0) return;
+
+  const seq = ++repairOverviewDetailSeq;
+  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
+
+  title.innerText = `LINE ${code} — งานซ่อม`;
+  meta.innerText = `${summary.jobCount} งาน · ซ่อมจริงรวม ${repairFormatDurationShort(summary.totalSeconds)}`;
+  list.innerHTML = '<p class="text-[11px] text-slate-400 py-6 text-center">กำลังโหลดรายละเอียด...</p>';
+  modal.classList.remove('hide');
+  document.body.style.overflow = 'hidden';
+
+  const rows = await Promise.all(summary.jobs.map(async job => {
+    try{
+      const detail = await getRepairJobDetailCached(job.jobId);
+      return {job,detail};
+    }catch(err){
+      console.warn('Repair overview detail:', job.jobId, err);
+      return {job,detail:null};
+    }
+  }));
+
+  if (seq !== repairOverviewDetailSeq || modal.classList.contains('hide')) return;
+
+  const prepared = rows.map(({job,detail}) => {
+    const status = String((detail && detail.status) || job.status || '').trim();
+    const startMs = detail ? repairDateTimeMs(detail.startDate,detail.startTime,selectedDate) : 0;
+    let endMs = detail ? repairDateTimeMs(detail.finishDate,detail.finishTime,selectedDate) : 0;
+    const running = !endMs && selectedDate === getTodayStr() && repairJobIsActive(status);
+    if (running) endMs = Date.now();
+
+    return {
+      ...job,
+      detail,
+      status,
+      startMs,
+      endMs,
+      running,
+      repairType:String((detail && detail.repairType) || job.repairType || '').trim(),
+      repairDetail:String((detail && detail.repairDetail) || job.repairDetail || '').trim()
+    };
+  }).sort((a,b) => (a.startMs || 0) - (b.startMs || 0));
+
+  list.innerHTML = prepared.map(job => {
+    const startText = job.startMs ? repairFormatClock(job.startMs) : '-';
+    const endText = job.running ? 'กำลังซ่อม' : (job.endMs ? repairFormatClock(job.endMs) : '-');
+    const repairedText = [job.repairType,job.repairDetail].filter(Boolean).join(' · ') || 'ยังไม่มีรายละเอียดการซ่อม';
+    const liveBadge = job.running
+      ? '<span class="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-100 rounded-full px-2 py-0.5">กำลังซ่อม</span>'
+      : '';
+
+    return `<div class="rounded-2xl border border-slate-100 bg-slate-50/70 px-3.5 py-3">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-[11px] font-extrabold text-slate-800">${esc(job.jobId)}</p>
+          <p class="text-[10px] font-semibold text-slate-500 mt-0.5 tabular-nums">${esc(startText)}–${esc(endText)} · ${esc(repairFormatDurationShort(job.totalSeconds))}</p>
+        </div>
+        ${liveBadge}
+      </div>
+      <p class="text-[10px] text-slate-600 mt-2"><span class="font-bold text-slate-700">ซ่อม:</span> ${esc(repairedText)}</p>
+    </div>`;
+  }).join('') || '<p class="text-[11px] text-slate-400 py-6 text-center">ไม่มีรายละเอียดงานซ่อม</p>';
+}
+
+document.addEventListener('keydown', event => {
+  if (event.key === 'Escape') closeRepairOverviewDetail();
+});
 
 /* =======================================================
    ETON PROCESS ANALYSIS (separate API; B/C/D only)
@@ -2647,54 +2585,6 @@ const hourlyBreakBandPlugin = {
   }
 };
 
-const hourlyRepairHoverPlugin = {
-  id:'hourlyRepairHover',
-
-  beforeDatasetsDraw(chart, args, opts){
-    const slotMap = opts && opts.slotMap && typeof opts.slotMap === 'object' ? opts.slotMap : {};
-    const activeSlots = Array.isArray(opts && opts.activeSlots) ? opts.activeSlots : [];
-    const labels = chart.data.labels || [];
-    const x = chart.scales.x;
-    const area = chart.chartArea;
-    if (!x || !area || !labels.length) return;
-
-    const active = new Set(activeSlots);
-    const ctx = chart.ctx;
-    ctx.save();
-
-    labels.forEach((slot, i) => {
-      const info = slotMap[slot];
-      const minutes = repairSlotMinutes(info);
-      if (!info || minutes <= 0) return;
-
-      const center = x.getPixelForValue(i);
-      const prev = i > 0 ? x.getPixelForValue(i-1) : center;
-      const next = i < labels.length-1 ? x.getPixelForValue(i+1) : center;
-      const left = center - (i > 0 ? (center-prev)/2 : 18);
-      const right = center + (i < labels.length-1 ? (next-center)/2 : 18);
-      const width = Math.max(0, right-left-2);
-      const isActive = active.has(slot);
-      const isLiveNow = repairSlotIsLiveNow(slot, info);
-
-      // Very light slot tint: context only, not another visual block.
-      ctx.fillStyle = isLiveNow
-        ? 'rgba(249,115,22,0.035)'
-        : (isActive ? 'rgba(14,165,233,0.055)' : 'rgba(14,165,233,0.025)');
-      ctx.fillRect(left + 1, area.top, width, area.bottom-area.top);
-
-      // No text or rail here; the slot tint is the main context cue.
-    });
-
-    ctx.restore();
-  },
-
-  afterDatasetsDraw(chart, args, opts){
-    // Repair is indicated on the X-axis label with a wrench icon.
-    // No extra dot or badge is drawn over the production chart.
-  }
-};
-
-
 function repairFormatDurationShort(seconds){
   const sec = Math.max(0, Math.round(Number(seconds) || 0));
   if (sec >= 3600){
@@ -2706,243 +2596,8 @@ function repairFormatDurationShort(seconds){
   return `${m}น.`;
 }
 
-function repairSlotSeconds(info){
-  if (!info) return 0;
-
-  const directSeconds = Math.max(0, Number(info.repairSeconds) || 0);
-  if (directSeconds > 0) return directSeconds;
-
-  const directMinutes = Math.max(0, Number(info.repairMinutes) || 0);
-  if (directMinutes > 0) return directMinutes * 60;
-
-  const jobs = Array.isArray(info.jobs) ? info.jobs : [];
-  return jobs.reduce((sum,job) => sum + Math.max(
-    0,
-    Number(job.overlapSeconds) || Math.round(num(job.overlapMinutes) * 60)
-  ), 0);
-}
-
-function repairSlotMinutes(info){
-  const seconds = repairSlotSeconds(info);
-  return seconds > 0 ? Math.max(1, Math.round(seconds / 60)) : 0;
-}
-
 function repairJobIsActive(status){
   return ['กำลังซ่อม','กำลังดำเนินการ'].includes(String(status || '').trim());
-}
-
-function repairSlotIsLiveNow(slot, info){
-  const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
-  if (!selectedDate || selectedDate !== getTodayStr() || !info) return false;
-
-  const jobs = Array.isArray(info.jobs) ? info.jobs : [];
-  if (!jobs.some(job => repairJobIsActive(job.status))) return false;
-
-  const parts = String(slot || '').split('-');
-  if (parts.length !== 2) return false;
-
-  const now = new Date();
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const parseClock = value => {
-    const m = String(value || '').trim().replace('.',':').match(/^(\d{1,2}):(\d{2})$/);
-    return m ? Number(m[1]) * 60 + Number(m[2]) : null;
-  };
-
-  const start = parseClock(parts[0]);
-  const end = parseClock(parts[1]);
-  if (start === null || end === null) return false;
-  return nowMinutes >= start && nowMinutes < end;
-}
-
-function repairTooltipLinesForSlot(slot, repairSlots){
-  const info = repairSlots && repairSlots[slot] ? repairSlots[slot] : null;
-  if (!info) return [];
-
-  const jobs = Array.isArray(info.jobs) ? info.jobs : [];
-  const uniqueJobIds = [];
-  jobs.forEach(job => {
-    const id = String(job.jobId || '').trim();
-    if (id && !uniqueJobIds.includes(id)) uniqueJobIds.push(id);
-  });
-
-  const lines = [];
-  const minutes = repairSlotMinutes(info);
-  if (minutes > 0){
-    lines.push(`Repair รวมในชั่วโมงนี้: ${minutes} นาที`);
-  }
-
-  if (uniqueJobIds.length){
-    lines.push('งานซ่อม:');
-  }
-
-  uniqueJobIds.forEach(jobId => {
-    const cached = repairJobDetailCache[jobId] && repairJobDetailCache[jobId].data
-      ? repairJobDetailCache[jobId].data
-      : null;
-
-    const rawRows = [];
-    Object.values(repairSlots || {}).forEach(slotInfo => {
-      const slotJobs = Array.isArray(slotInfo && slotInfo.jobs) ? slotInfo.jobs : [];
-      slotJobs.forEach(job => {
-        if (String(job.jobId || '').trim() === jobId) rawRows.push(job);
-      });
-    });
-    const raw = rawRows[0] || jobs.find(j => String(j.jobId || '').trim() === jobId) || {};
-
-    const startText = cached && cached.startTime ? repairTimePart(cached.startTime).slice(0,5) : '';
-    const finishText = cached && cached.finishTime ? repairTimePart(cached.finishTime).slice(0,5) : '';
-    const timeText = startText
-      ? (finishText ? ` · ${startText}–${finishText}` : ` · ${startText}–...`)
-      : '';
-
-    const totalJobSeconds = rawRows.reduce((sum,j) => sum + Math.max(
-      0,
-      Number(j.overlapSeconds) || Math.round(num(j.overlapMinutes) * 60)
-    ), 0);
-
-    const repairType = String(
-      (cached && cached.repairType) ||
-      raw.repairType ||
-      ''
-    ).trim();
-
-    const repairDetail = String(
-      (cached && cached.repairDetail) ||
-      raw.repairDetail ||
-      ''
-    ).trim();
-
-    lines.push(
-      `• ${jobId}${timeText}${totalJobSeconds ? ` · ${repairFormatDurationShort(totalJobSeconds)}` : ''}`
-    );
-
-    const repairedText = [repairType, repairDetail].filter(Boolean).join(' · ');
-    if (repairedText){
-      lines.push(`  ซ่อม: ${repairedText}`);
-    }
-  });
-
-  return lines;
-}
-
-
-function hideRepairSummary(){
-  const control = el('repairSummaryControl');
-  const list = el('repairSummaryList');
-  const chip = el('repairSummaryChip');
-  if (control){
-    control.classList.add('hide');
-    control.classList.remove('is-open');
-    control.classList.remove('is-live');
-  }
-  if (list) list.innerHTML = '';
-  if (chip){
-    chip.setAttribute('aria-expanded','false');
-    chip.title = '';
-  }
-  setRepairChartHighlight([]);
-}
-
-function setRepairChartHighlight(slots){
-  if (!hourlyChartInstance) return;
-  const pluginOpts = hourlyChartInstance.options &&
-    hourlyChartInstance.options.plugins &&
-    hourlyChartInstance.options.plugins.hourlyRepairHover;
-
-  if (!pluginOpts) return;
-  pluginOpts.activeSlots = Array.isArray(slots) ? slots : [];
-  hourlyChartInstance.update('none');
-}
-
-async function renderRepairSummary(selectedLine, timeSlots, repairContext){
-  const seq = ++repairSummaryRenderSeq;
-  const code = String(selectedLine || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
-  const control = el('repairSummaryControl');
-  const chipText = el('repairSummaryChipText');
-  const chip = el('repairSummaryChip');
-
-  if (!control || !chipText || !chip ||
-      currentDashboardIsRange || !repairContext || !timeSlots || !timeSlots.length){
-    hideRepairSummary();
-    return;
-  }
-
-  const baseJobs = collectRepairTimelineJobs(repairContext, timeSlots);
-  if (!baseJobs.length){
-    hideRepairSummary();
-    return;
-  }
-
-  const totalSeconds = baseJobs.reduce((sum,job) => sum + Math.max(0, Number(job.totalSeconds) || 0), 0);
-  const liveJobs = baseJobs.filter(job => repairJobIsActive(job.status)).length;
-
-  chipText.innerText = `Repair · ${baseJobs.length} งาน · ${repairFormatDurationShort(totalSeconds)}`;
-  control.classList.toggle('is-live', liveJobs > 0);
-  chip.title = liveJobs ? `กำลังซ่อม ${liveJobs} งาน` : '';
-  chip.onclick = null;
-  control.classList.remove('is-open');
-  control.classList.remove('hide');
-
-  // Load job details quietly for richer chart tooltip, without delaying or opening a large overlay.
-  baseJobs.forEach(job => {
-    getRepairJobDetailCached(job.jobId).catch(err => {
-      console.warn('Repair detail preload:', job.jobId, err);
-    });
-  });
-
-  if (seq !== repairSummaryRenderSeq || currentLine !== code) return;
-}
-
-
-function collectRepairTimelineJobs(repairContext, timeSlots){
-  const slots = repairContext && repairContext.slots ? repairContext.slots : {};
-  const slotIndex = {};
-  (timeSlots || []).forEach((slot, i) => slotIndex[slot] = i);
-
-  const map = {};
-  Object.keys(slots).forEach(slot => {
-    const info = slots[slot] || {};
-    const jobs = Array.isArray(info.jobs) ? info.jobs : [];
-
-    jobs.forEach((job, idx) => {
-      const jobId = String(job.jobId || '').trim();
-      if (!jobId) return;
-
-      if (!map[jobId]){
-        map[jobId] = {
-          jobId,
-          machineCode:String(job.machineCode || '').trim(),
-          machineName:String(job.machineName || '').trim(),
-          repairType:String(job.repairType || '').trim(),
-          status:String(job.status || '').trim(),
-          entries:[]
-        };
-      }
-
-      const seconds = Math.max(
-        0,
-        Number(job.overlapSeconds) ||
-        Math.round(num(job.overlapMinutes) * 60)
-      );
-
-      map[jobId].entries.push({
-        slot,
-        slotIndex:Number.isInteger(slotIndex[slot]) ? slotIndex[slot] : idx,
-        seconds
-      });
-
-      if (!map[jobId].machineCode) map[jobId].machineCode = String(job.machineCode || '').trim();
-      if (!map[jobId].machineName) map[jobId].machineName = String(job.machineName || '').trim();
-      if (!map[jobId].repairType) map[jobId].repairType = String(job.repairType || '').trim();
-      if (!map[jobId].status) map[jobId].status = String(job.status || '').trim();
-    });
-  });
-
-  return Object.values(map).map(job => {
-    job.entries.sort((a,b) => a.slotIndex - b.slotIndex);
-    job.totalSeconds = job.entries.reduce((sum,e) => sum + Math.max(0, Number(e.seconds) || 0), 0);
-    return job;
-  }).filter(job => job.totalSeconds > 0);
 }
 
 function repairDatePart(value){
@@ -3091,9 +2746,6 @@ function updateHourlyChart(selectedLine){
   const hourlyDataObj = lineObj.hourly_data || {};
   const timeSlots = Object.keys(hourlyDataObj);
   const hourlyActuals = Object.values(hourlyDataObj);
-  const repairContext = currentDashboardIsRange ? null : getRepairHourlyLineContext(selectedLine);
-  const repairSlots = repairContext && repairContext.slots ? repairContext.slots : {};
-
   const target = num(lineObj.target) || (num(lineObj.target1)+num(lineObj.target2)+num(lineObj.target3));
   const totalHours = num(lineObj.total_working_hours) || 8;
   const overallRate = totalHours > 0 ? target/totalHours : 0;
@@ -3133,7 +2785,6 @@ function updateHourlyChart(selectedLine){
     el('pulseSubtitle').innerText = 'ยังไม่มีข้อมูลรายชั่วโมงของไลน์นี้';
     el('pulseLineBadge').innerText = 'LINE ' + selectedLine;
     if (cumulativeChartInstance){ cumulativeChartInstance.destroy(); cumulativeChartInstance = null; }
-    hideRepairSummary();
     return;
   }
 
@@ -3141,7 +2792,7 @@ function updateHourlyChart(selectedLine){
 
   hourlyChartInstance = new Chart(ctx, {
     type:'bar',
-    plugins:[hourlyBreakBandPlugin, hourlyRepairHoverPlugin],
+    plugins:[hourlyBreakBandPlugin],
     data:{ labels:timeSlots, datasets:[
       { type:'line', label:(hrs2>0||hrs3>0) ? 'เป้าต่อชั่วโมง (แยกตาม LOT)' : `เป้าต่อชั่วโมง (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
         data:targetLine, borderColor:'#6366F1', borderWidth:2, borderDash:[5,5], fill:false,
@@ -3155,79 +2806,26 @@ function updateHourlyChart(selectedLine){
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
-      layout:{ padding:{ bottom:4, top:10 } },
+      layout:{ padding:{ bottom:4 } },
       interaction:{ mode:'nearest', intersect:false },
       plugins:{
         hourlyBreakBand:{ breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1 },
-        hourlyRepairHover:{ slotMap:repairSlots, activeSlots:[] },
         legend:{ position:'top', labels:{ font:{family:'Kanit', size:10}, usePointStyle:true } },
         datalabels:{ anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:10, family:'Kanit'},
           formatter:v => v > 0 ? v : '' },
         tooltip:{
           bodyFont:{family:'Kanit'},
-          titleFont:{family:'Kanit'},
-          callbacks:{
-            label:(ctx) => {
-              const slot = String(ctx.label || '').trim();
-              const slotMap = ctx.chart &&
-                ctx.chart.options &&
-                ctx.chart.options.plugins &&
-                ctx.chart.options.plugins.hourlyRepairHover
-                ? (ctx.chart.options.plugins.hourlyRepairHover.slotMap || {})
-                : {};
-              if (slotMap[slot] && repairSlotMinutes(slotMap[slot]) > 0){
-                return '';
-              }
-              return `${ctx.dataset.label}: ${Number(ctx.raw || 0).toLocaleString()}`;
-            },
-            afterBody:(items) => {
-              if (!items || !items.length) return [];
-              const first = items[0];
-              const slot = String(first.label || '').trim();
-              const slotMap = first.chart &&
-                first.chart.options &&
-                first.chart.options.plugins &&
-                first.chart.options.plugins.hourlyRepairHover
-                ? (first.chart.options.plugins.hourlyRepairHover.slotMap || {})
-                : {};
-              return repairTooltipLinesForSlot(slot, slotMap);
-            }
-          }
+          titleFont:{family:'Kanit'}
         }
       },
       scales:{
-        x:{
-          grid:{display:false},
-          ticks:{
-            autoSkip:false,
-            maxRotation:60,
-            minRotation:45,
-            font:{size:9, family:'Kanit'},
-            callback:function(value){
-              const slot = String(this.getLabelForValue(value) || '').trim();
-              const slotMap = this.chart &&
-                this.chart.options &&
-                this.chart.options.plugins &&
-                this.chart.options.plugins.hourlyRepairHover
-                ? (this.chart.options.plugins.hourlyRepairHover.slotMap || {})
-                : {};
-              const info = slotMap[slot] || null;
-              return info && repairSlotMinutes(info) > 0 ? `${slot}  🛠️` : slot;
-            }
-          }
-        },
+        x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:60, minRotation:45, font:{size:9, family:'Kanit'} } },
         y:{ beginAtZero:true, grid:{color:'#F1F5F9'}, ticks:{ font:{size:10, family:'Kanit'} } }
       }
     }
   });
 
-  if (currentDashboardIsRange){
-    hideRepairSummary();
-  }else if (repairContext){
-    renderRepairSummary(selectedLine, timeSlots, repairContext);
-  }else{
-    renderRepairLoadingState(selectedLine, timeSlots, hourlyChartInstance);
-  }
+
 }
 
 /* ---------- pulse (ตรรกะเดิม) ---------- */
