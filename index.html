@@ -1606,7 +1606,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
 
   const pct = target > 0 ? Math.round(actual/target*100) : 0;
   const width = Math.max(0, Math.min(pct, 100));
-  const barColor = 'bg-amber-500';
+  const barColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
 
   return `
     <div class="card lineCard p-4 flex flex-col cursor-pointer hover:border-indigo-200 transition" onclick="openLine('${String(line).toUpperCase()}')">
@@ -1628,8 +1628,8 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
         <div class="space-y-2 text-xs pt-0.5">
           <div class="font-semibold text-slate-500">ผลิตจริง/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
           <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
-          ${loadInValue !== null ? `<div class="font-semibold text-slate-500">เข้าโหลดวันนี้ <span class="ml-1 font-extrabold text-violet-600">${loadInValue.toLocaleString()} ตัว</span></div>` : ''}
           ${manpowerValue !== null ? `<div class="font-semibold text-slate-500">กำลังคน <span class="ml-1 font-extrabold text-indigo-600">${manpowerValue.toLocaleString()} คน</span></div>` : ''}
+          ${loadInValue !== null ? `<div class="font-semibold text-slate-500">เข้าโหลดวันนี้ <span class="ml-1 font-extrabold text-violet-600">${loadInValue.toLocaleString()} ตัว</span></div>` : ''}
         </div>
       </div>
 
