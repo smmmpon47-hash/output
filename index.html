@@ -2995,12 +2995,27 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
   let ac = 0, tg = 0;
   const breakSlot = getBreakSlotForDashboardLine(selectedLine);
 
+  const reportedWorkingIndexes = timeSlots
+    .map((slot, idx) => ({slot, idx}))
+    .filter(({slot}) => slot !== breakSlot && hourlyReported[slot] === true)
+    .map(({idx}) => idx);
+  const lastReportedWorkingIndex = reportedWorkingIndexes.length
+    ? Math.max(...reportedWorkingIndexes)
+    : -1;
+
   const cumulativeActual = timeSlots.map((slot, idx) => {
     if (slot === breakSlot){
-      const before = timeSlots.slice(0, idx).some(s => s !== breakSlot && hourlyReported[s] === true);
-      return before ? ac : null;
+      const hasReportedBefore = reportedWorkingIndexes.some(i => i < idx);
+      const hasReportedAfter = reportedWorkingIndexes.some(i => i > idx);
+
+      // Carry the cumulative actual through break only when production
+      // has actually resumed after the break. Otherwise stop at the
+      // latest reported working hour.
+      return hasReportedBefore && hasReportedAfter ? ac : null;
     }
-    if (hourlyReported[slot] !== true) return null;
+
+    if (hourlyReported[slot] !== true || idx > lastReportedWorkingIndex) return null;
+
     ac += num(hourlyActuals[idx]);
     return ac;
   });
@@ -3012,7 +3027,7 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
     data:{ labels:timeSlots, datasets:[
       { label:'เป้าสะสม', data:cumulativeTarget, borderColor:'#6366F1', borderWidth:2, borderDash:[6,5],
         pointRadius:2, tension:.25, fill:false, datalabels:{display:false} },
-      { label:'ผลิตสะสม', data:cumulativeActual, spanGaps:true, borderColor:'#10B981',
+      { label:'ผลิตสะสม', data:cumulativeActual, spanGaps:false, borderColor:'#10B981',
         backgroundColor:'rgba(16,185,129,0.10)', borderWidth:3, pointRadius:3, tension:.25, fill:true, datalabels:{display:false} }
     ]},
     options:{
@@ -3024,6 +3039,7 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
           callbacks:{ footer:items => {
             if (!items || !items.length) return '';
             const i = items[0].dataIndex;
+            if (cumulativeActual[i] === null || cumulativeActual[i] === undefined) return '';
             const gap = cumulativeActual[i] - cumulativeTarget[i];
             return `ส่วนต่างรอบนี้ ${gap>=0?'+':''}${gap.toLocaleString()} ชิ้น`;
           } } }
