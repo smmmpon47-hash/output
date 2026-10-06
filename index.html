@@ -1545,22 +1545,37 @@ function renderCards(lines, isRange){
     if (isRange){
       const tg = num(item.target) || (num(item.target1)+num(item.target2)+num(item.target3));
       const ac = num(item.actual) || (num(item.actual1)+num(item.actual2)+num(item.actual3));
-      c.innerHTML += createCardHtml(lineName,'','',tg,ac,item.remarks,null,null);
+      c.innerHTML += createCardHtml(lineName,'','',tg,ac,item.remarks,null,null,null);
       return;
     }
     getLotPlan(item).forEach((lotInfo, idx) => {
       if (idx > 0 && !lotInfo.lot) return;
-      c.innerHTML += createCardHtml(lineName, lotInfo.model, lotInfo.lot, lotInfo.target, lotInfo.actual, item.remarks, getLotLiveMetrics(lotInfo), item.manpower);
+      c.innerHTML += createCardHtml(
+        lineName,
+        lotInfo.model,
+        lotInfo.lot,
+        lotInfo.target,
+        lotInfo.actual,
+        item.remarks,
+        getLotLiveMetrics(lotInfo),
+        item.manpower,
+        item.load_in
+      );
     });
   });
 }
 
-function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower){
+function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower, loadIn){
   target = num(target); actual = num(actual);
   const manpowerValue =
     (manpower === null || manpower === undefined || manpower === '')
       ? null
-      : Math.max(0, Math.round(num(manpower)));
+      : Math.max(0, Math.round(num(manpower) * 2) / 2);
+
+  const loadInValue =
+    (loadIn === null || loadIn === undefined || loadIn === '')
+      ? null
+      : Math.max(0, Math.round(num(loadIn)));
 
   const dayGap = actual - target;
   const dayGapPct = target > 0 ? Math.round(dayGap/target*100) : 0;
@@ -1609,6 +1624,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
         <div class="space-y-2 text-xs pt-0.5">
           <div class="font-semibold text-slate-500">ผลิตจริง/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
           <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
+          ${loadInValue !== null ? `<div class="font-semibold text-slate-500">เข้าโหลดวันนี้ <span class="ml-1 font-extrabold text-violet-600">${loadInValue.toLocaleString()} ตัว</span></div>` : ''}
           ${manpowerValue !== null ? `<div class="font-semibold text-slate-500">กำลังคน <span class="ml-1 font-extrabold text-indigo-600">${manpowerValue.toLocaleString()} คน</span></div>` : ''}
         </div>
       </div>
@@ -1814,7 +1830,7 @@ function renderLineDetail(code){
   const detailManpower =
     (item.manpower === null || item.manpower === undefined || item.manpower === '')
       ? null
-      : Math.max(0, Math.round(num(item.manpower)));
+      : Math.max(0, Math.round(num(item.manpower) * 2) / 2);
   el('dtManpower').innerText =
     detailManpower === null ? 'กำลังคน -' : `กำลังคน ${detailManpower.toLocaleString()} คน`;
 
