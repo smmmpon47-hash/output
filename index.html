@@ -1549,6 +1549,54 @@ function renderDailyChart(lines, rememberLines = true){
   });
 }
 
+const __lotModelFallbackCache = new Map();
+
+function normalizeLotLookupKey_(lot){
+  return String(lot || '')
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g,'');
+}
+
+async function resolveLotModelFallback_(lot){
+  const key = normalizeLotLookupKey_(lot);
+  if (!key) return '';
+
+  if (__lotModelFallbackCache.has(key)){
+    return __lotModelFallbackCache.get(key) || '';
+  }
+
+  try{
+    const res = await fetch(
+      `${GAS_API_URL}?searchLot=${encodeURIComponent(key)}&_=${Date.now()}`,
+      { method:'GET', redirect:'follow', cache:'no-store' }
+    );
+    if (!res.ok) return '';
+
+    const data = await res.json();
+    const model = data && !data.error ? String(data.model || '').trim() : '';
+    __lotModelFallbackCache.set(key, model);
+    return model;
+  }catch(err){
+    console.warn('LOT model fallback failed:', lot, err);
+    return '';
+  }
+}
+
+async function hydrateMissingCardModels_(){
+  const nodes = Array.from(document.querySelectorAll('[data-lot-model-fallback]'));
+  if (!nodes.length) return;
+
+  await Promise.all(nodes.map(async node => {
+    const lot = node.getAttribute('data-lot-model-fallback') || '';
+    const model = await resolveLotModelFallback_(lot);
+    if (!model || !node.isConnected) return;
+
+    node.textContent = 'รุ่น ' + model;
+    node.classList.remove('hidden');
+  }));
+}
+
 function renderCards(lines, isRange){
   const c = el('cardsContainer');
   c.innerHTML = '';
@@ -1575,6 +1623,10 @@ function renderCards(lines, isRange){
       );
     });
   });
+
+  // บาง LOT ใน Summary อาจมีช่องว่างไม่ตรงกับ Master_LOT
+  // ถ้า backend ส่ง model ว่าง ให้ค้นจาก LOT แบบ normalize เฉพาะหน้า Dashboard
+  void hydrateMissingCardModels_();
 }
 
 function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower, loadIn){
@@ -1612,7 +1664,11 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
     <div class="card lineCard p-4 flex flex-col cursor-pointer hover:border-indigo-200 transition" onclick="openLine('${String(line).toUpperCase()}')">
       <div class="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-[28px]">
         <span class="font-extrabold text-slate-800">LINE ${line}</span>
-        ${modelName ? `<span class="text-[11px] font-semibold text-slate-600">รุ่น ${modelName}</span>` : ''}
+        ${modelName
+          ? `<span class="text-[11px] font-semibold text-slate-600">รุ่น ${modelName}</span>`
+          : (lotName
+              ? `<span class="hidden text-[11px] font-semibold text-slate-600" data-lot-model-fallback="${esc(lotName)}"></span>`
+              : '')}
         ${lotName ? `<span class="text-[11px] font-semibold text-indigo-600">LOT ${lotName}</span>` : ''}
       </div>
 
