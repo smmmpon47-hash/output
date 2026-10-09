@@ -820,6 +820,8 @@ Chart.register(ChartDataLabels);
    CONFIG  (ของเดิม ไม่ต้องแก้)
    ======================================================= */
 const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec";
+// Repair Web App (แยกจาก Production) ใช้เฉพาะข้อมูลแจ้งซ่อม
+const REPAIR_API_URL = "https://script.google.com/macros/s/AKfycbzavJ88xJPcMo3rBcE8FtA2mI0ctkSxnqN5Xj8ObEGPXqRC2kE2tMRig2CQ9PAhQ_yijQ/exec";
 // ETON Importer Web App /exec URL (separate project; does not touch Production)
 const ETON_API_URL = "https://script.google.com/macros/s/AKfycbxaZJdIAeQPMg47LkdLVGkNI2eSXQBMutMtBW4aJvMzt5i0gBKENj_fBHc7UCR0Iu8F/exec";
 const LIFF_ID = "2011181755-bLeCO8Hs";
@@ -1980,7 +1982,7 @@ async function fetchRepairContextForLine(lineCode){
   }
 
   const request = (async () => {
-    const url = `${GAS_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
+    const url = `${REPAIR_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
     const rawText = await fetchTextWithRetry(url, {
       attempts:2,
       timeoutMs:15000
@@ -2815,7 +2817,7 @@ async function getRepairJobDetailCached(jobId){
   }
 
   const request = (async () => {
-    const url = `${GAS_API_URL}?action=getJobDetail&jobId=${encodeURIComponent(key)}`;
+    const url = `${REPAIR_API_URL}?action=getJobDetail&jobId=${encodeURIComponent(key)}`;
     const rawText = await fetchTextWithRetry(url, {
       attempts:2,
       timeoutMs:15000
