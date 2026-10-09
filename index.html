@@ -370,7 +370,8 @@
         <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">🎯</div>
         <div>
           <p class="text-[11px] text-slate-400 font-semibold">เป้าหมายรวม</p>
-          <p class="text-xl font-extrabold text-slate-800"><span id="kpiTarget">-</span> <span class="text-xs font-semibold text-slate-400">ชิ้น</span></p>
+          <p class="text-xl font-extrabold text-slate-800"><span id="kpiTarget">-</span> <span class="text-xs font-semibold text-slate-400">ชิ้น</span><span id="kpiAvgHoursWrap" class="hidden"> <span class="text-slate-300 font-semibold">/</span> <span id="kpiAvgHours">-</span> <span class="text-xs font-semibold text-slate-400">ชม.</span></span></p>
+          <p id="kpiAvgHoursNote" class="hidden text-[10px] text-slate-400 font-semibold">ชม.ทำงานเฉลี่ย <span id="kpiAvgHoursCount">-</span> LINE</p>
         </div>
       </div>
       <div class="card soft kpi">
@@ -1052,6 +1053,7 @@ function prepareDashboardDetailsLoading(){
 function renderDashboardQuickPayload(data, selectedDate, endDate){
   const isRange = endDate && endDate !== selectedDate;
   if (!data || !Array.isArray(data.lines) || !data.lines.length) return false;
+  currentDashboardIsRange = Boolean(isRange);
 
   // First paint: KPI + Daily Summary ก่อน
   // ไม่ overwrite globalLinesData เพราะ LOT/Hourly/Remark ยังมาไม่ครบ
@@ -1415,6 +1417,7 @@ function showEmptyState(){
     </div>`;
   ['kpiActual','kpiTarget','kpiPct'].forEach(id => el(id).innerText = '-');
   el('kpiBar').style.width = '0%';
+  renderKpiAvgHours([]);
   if (chartInstance) chartInstance.destroy();
   dailyChartLines = [];
   renderHotspots();
@@ -1433,6 +1436,26 @@ function renderKPI(lines){
   el('kpiTarget').innerText = fmt(tg);
   el('kpiPct').innerText = pct.toFixed(1) + '%';
   el('kpiBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
+  renderKpiAvgHours(lines);
+}
+
+// ชม.ทำงานเฉลี่ยของทุก LINE (จาก total_working_hours = Summary!AA ที่ฟอร์ม Hourly บันทึก)
+// แสดงเฉพาะวันเดียว / ช่วงวันที่ซ่อน เพราะ payload แบบช่วงรวมหลายวันต่อ LINE
+// ข้อมูลประกอบเท่านั้น ไม่ใช้คำนวณ Target / Actual / Progress
+function renderKpiAvgHours(lines){
+  const wrap = el('kpiAvgHoursWrap'), note = el('kpiAvgHoursNote');
+  if (!wrap || !note) return;
+  const hours = currentDashboardIsRange ? [] : (lines || [])
+    .map(d => num(d.total_working_hours))
+    .filter(h => h > 0);
+  if (!hours.length){
+    wrap.classList.add('hidden'); note.classList.add('hidden');
+    return;
+  }
+  const avg = hours.reduce((a, h) => a + h, 0) / hours.length;
+  el('kpiAvgHours').innerText = Number.isInteger(avg) ? String(avg) : avg.toFixed(1);
+  el('kpiAvgHoursCount').innerText = hours.length;
+  wrap.classList.remove('hidden'); note.classList.remove('hidden');
 }
 
 function setDailyChartMode(mode){
