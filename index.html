@@ -5,8 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Production Dashboard</title>
 <!-- V32: silent auto-refresh + resilient loading + loading percentage -->
+<link rel="preconnect" href="https://script.google.com">
+<link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
+<script>
+  // V33 FAST LOAD: เริ่มขอข้อมูล "วันนี้" ทันทีตั้งแต่ต้นหน้า
+  // ไม่ต้องรอ Tailwind / Chart.js / LIFF โหลดเสร็จก่อน (ข้อมูล LIVE เหมือนเดิม ไม่ใช้ cache)
+  (function(){
+    try{
+      var d = new Date();
+      var today = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      var url = 'https://script.google.com/macros/s/AKfycbyLm1LVkTiwK3PCvPSt3PFA1ifb76KCRsWxC1SkaLdDC-ginxy0RHWstWpHgDytaBmm/exec?action=getDailySummary&date=' + today;
+      window.__dashPrefetch = {
+        url: url,
+        used: false,
+        promise: fetch(url + '&_=' + Date.now() + '_pre', { method:'GET', redirect:'follow', cache:'no-store' })
+          .then(function(res){ if (!res.ok) throw new Error('HTTP ' + res.status); return res.text(); })
+      };
+      window.__dashPrefetch.promise.catch(function(){});
+    }catch(e){ window.__dashPrefetch = null; }
+  })();
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script async src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -883,7 +903,7 @@ let currentDashboardIsRange = false;
 const DASHBOARD_CACHE_PREFIX = 'production_dashboard_cache_v21_';
 const DASHBOARD_CACHE_INDEX_KEY = 'production_dashboard_cache_v21_index';
 const DASHBOARD_CACHE_MAX_ENTRIES = 14;
-const DASHBOARD_LOADING_MIN_MS = 7000;
+const DASHBOARD_LOADING_MIN_MS = 300; // V33: เดิม 7000 (ค้าง Loading 7 วิทุกครั้ง) เหลือแค่กันจอกระพริบ
 let dashboardLoadingProgressTimer = null;
 let dashboardLoadingProgress = 0;
 
@@ -1219,6 +1239,21 @@ async function fetchTextWithRetry(url, options = {}){
   const timeoutMs = Math.max(3000, Number(options.timeoutMs) || DASHBOARD_FETCH_TIMEOUT_MS);
   let lastError = null;
 
+  // V33: ใช้คำขอที่ยิงไว้ตั้งแต่ต้นหน้า (ครั้งเดียว เฉพาะ URL เดียวกัน) ถ้าพลาดค่อยยิงใหม่ตามปกติ
+  const pre = window.__dashPrefetch;
+  if (pre && !pre.used && pre.url === url){
+    pre.used = true;
+    try{
+      const text = await Promise.race([
+        pre.promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('prefetch timeout')), timeoutMs))
+      ]);
+      if (text && text.trim()) return text;
+    }catch(err){
+      console.warn('Dashboard prefetch failed, fetching again:', err);
+    }
+  }
+
   for (let attempt = 1; attempt <= attempts; attempt++){
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -1408,7 +1443,7 @@ async function onDateChange(){
 
   } finally {
     // เปิด Dashboard หลัง Full payload เสร็จเท่านั้น
-    // ถ้า Full มาเร็วกว่า 7 วิ จะถือ Loading ไว้ให้ครบประมาณ 7 วิ
+    // ปิด Loading ทันทีที่ข้อมูลครบ (ขั้นต่ำ 0.3 วิ กันกระพริบ)
     await hideDashboardLoading(loadingStartedAt);
   }
 }
@@ -3178,6 +3213,10 @@ async function searchLot(){
    ======================================================= */
 async function initLiffProfile(){
   try{
+    // V33: LIFF SDK โหลดแบบ async ไม่บล็อกหน้า รอสูงสุด 8 วิ
+    for (let i = 0; i < 40 && typeof window.liff === 'undefined'; i++){
+      await new Promise(resolve => setTimeout(resolve, 200));
+    }
     await liff.init({ liffId: LIFF_ID });
     if (liff.isLoggedIn()){
       const p = await liff.getProfile();
