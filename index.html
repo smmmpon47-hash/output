@@ -1657,6 +1657,17 @@ async function hydrateMissingCardModels_(){
   }));
 }
 
+// เข้าโหลดแยก LOT (load_in_by_lot) → การ์ดแต่ละ LOT แสดงยอดของตัวเอง
+// ข้อมูลเก่าที่ยังเป็นยอดรวม (ไม่มี load_in_by_lot) → แสดงยอดรวมเหมือนเดิม
+function getLoadInForLot_(item, lot){
+  const byLot = item && item.load_in_by_lot;
+  const cleanLot = String(lot || '').trim().toUpperCase();
+  if (byLot && typeof byLot === 'object' && Object.keys(byLot).length){
+    return Object.prototype.hasOwnProperty.call(byLot, cleanLot) ? byLot[cleanLot] : null;
+  }
+  return item ? item.load_in : null;
+}
+
 function renderCards(lines, isRange){
   const c = el('cardsContainer');
   c.innerHTML = '';
@@ -1679,7 +1690,7 @@ function renderCards(lines, isRange){
         item.remarks,
         getLotLiveMetrics(lotInfo),
         item.manpower,
-        item.load_in
+        getLoadInForLot_(item, lotInfo.lot)
       );
     });
   });
