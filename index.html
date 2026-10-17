@@ -1690,6 +1690,14 @@ function getLoadInForLot_(item, lot){
   return item ? item.load_in : null;
 }
 
+// ออกโหลดแยก LOT (load_out_by_lot) → การ์ดแต่ละ LOT แสดงยอดของตัวเอง
+function getLoadOutForLot_(item, lot){
+  const byLot = item && item.load_out_by_lot;
+  const cleanLot = String(lot || '').trim().toUpperCase();
+  if (byLot && typeof byLot === 'object' && Object.prototype.hasOwnProperty.call(byLot, cleanLot)) return byLot[cleanLot];
+  return null;
+}
+
 function renderCards(lines, isRange){
   const c = el('cardsContainer');
   c.innerHTML = '';
@@ -1712,7 +1720,8 @@ function renderCards(lines, isRange){
         item.remarks,
         getLotLiveMetrics(lotInfo),
         item.manpower,
-        getLoadInForLot_(item, lotInfo.lot)
+        getLoadInForLot_(item, lotInfo.lot),
+        getLoadOutForLot_(item, lotInfo.lot)
       );
     });
   });
@@ -1722,7 +1731,7 @@ function renderCards(lines, isRange){
   void hydrateMissingCardModels_();
 }
 
-function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower, loadIn){
+function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower, loadIn, loadOut){
   target = num(target); actual = num(actual);
   const manpowerValue =
     (manpower === null || manpower === undefined || manpower === '')
@@ -1733,6 +1742,10 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
     (loadIn === null || loadIn === undefined || loadIn === '')
       ? null
       : Math.max(0, Math.round(num(loadIn)));
+  const loadOutValue =
+    (loadOut === null || loadOut === undefined || loadOut === '')
+      ? null
+      : Math.max(0, Math.round(num(loadOut)));
 
   const dayGap = actual - target;
   const dayGapPct = target > 0 ? Math.round(dayGap/target*100) : 0;
@@ -1782,6 +1795,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
           <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
           ${manpowerValue !== null ? `<div class="font-semibold text-slate-500">กำลังคน <span class="ml-1 font-extrabold text-indigo-600">${manpowerValue.toLocaleString()} คน</span></div>` : ''}
           ${loadInValue !== null ? `<div class="font-semibold text-slate-500">เข้าโหลดวันนี้ <span class="ml-1 font-extrabold text-violet-600">${loadInValue.toLocaleString()} ตัว</span></div>` : ''}
+          ${loadOutValue !== null ? `<div class="font-semibold text-slate-500">ออกโหลดวันนี้ <span class="ml-1 font-extrabold text-fuchsia-600">${loadOutValue.toLocaleString()} ตัว</span></div>` : ''}
         </div>
       </div>
 
