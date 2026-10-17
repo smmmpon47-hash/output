@@ -1142,10 +1142,32 @@ function startClock(){
 
 function getBreakSlotForDashboardLine(lineCode){
   const c = String(lineCode||'').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  // ใช้รอบพักจริงของวันนั้นจาก Apps Script (slot_grid) ถ้ามี
+  const obj = c ? findLine(c) : null;
+  const grid = obj && !currentDashboardIsRange ? obj.slot_grid : null;
+  if (grid && grid.breakStart) {
+    const parts = String(grid.breakStart).split(':').map(Number);
+    const b = parts[0] * 60 + parts[1], e = b + 60;
+    const t = m => String(Math.floor(m/60)).padStart(2,'0') + '.' + String(m%60).padStart(2,'0');
+    return t(b) + '-' + t(e);
+  }
   if (['B','C'].includes(c)) return '12.30-13.30';
   if (['D','E','F','G'].includes(c)) return '11.30-12.30';
   return '';
 }
+/* ช่องเวลาของไลน์วันนั้น (เวลาเข้างาน 08.00 / พัก 12.00 ทำให้บางช่องยาว 0.5 / 1.5 ชม.) */
+function getDashboardSlotInfo(lineObj){
+  const grid = lineObj && !currentDashboardIsRange ? lineObj.slot_grid : null;
+  const info = {};
+  if (!grid || !Array.isArray(grid.slots)) return { info, hasOdd:false, grid:null };
+  let hasOdd = false;
+  grid.slots.forEach(s => {
+    info[s.label] = { minutes: num(s.minutes) || 60, target: (s.target === undefined || s.target === null) ? null : num(s.target), no: s.no };
+    if ((num(s.minutes) || 60) !== 60) hasOdd = true;
+  });
+  return { info, hasOdd, grid };
+}
+
 /* หมายเหตุ: รองรับทั้งแบบเดิม (ข้อความล้วน) และแบบใหม่ที่มีรอบเวลา */
 function normalizeRemarks(remarks){
   if (!Array.isArray(remarks)) return [];
@@ -1962,7 +1984,10 @@ function renderLineDetail(code){
 
   const breakSlot = getBreakSlotForDashboardLine(code);
   const slots = Object.keys(item.hourly_data || {});
-  const working = slots.filter(s => s !== breakSlot).slice(0, Math.max(0, totalHours));
+  const gridSlots = getDashboardSlotInfo(item).grid;
+  const working = (gridSlots && gridSlots.slots.length)
+    ? gridSlots.slots.map(s => s.label)
+    : slots.filter(s => s !== breakSlot).slice(0, Math.max(0, totalHours));
   el('dtSlotRange').innerText = working.length
     ? `${working[0].split('-')[0]} ถึง ${working[working.length-1].split('-')[1]} น.`
     : '-';
@@ -2919,8 +2944,14 @@ function updateHourlyChart(selectedLine){
   const workingIndex = {};
   workingSlots.forEach((s,i) => workingIndex[s] = i);
 
+  const slotInfo = getDashboardSlotInfo(lineObj);
   const targetLine = timeSlots.map(slot => {
     if (slot === breakSlot) return null;
+    // วันที่มีช่อง 0.5 / 1.5 ชม.: ใช้เป้ารายช่องจาก Apps Script (แบ่งตามนาที)
+    if (slotInfo.hasOdd) {
+      const s = slotInfo.info[slot];
+      return s && s.target !== null ? s.target : null;
+    }
     if (!(slot in workingIndex)) return null;
     const i = workingIndex[slot];
     if (hrs1 > 0 && i < hrs1) return Math.round(rate1 || overallRate);
@@ -2953,8 +2984,11 @@ function updateHourlyChart(selectedLine){
   hourlyChartInstance = new Chart(ctx, {
     type:'bar',
     plugins:[hourlyBreakBandPlugin],
-    data:{ labels:timeSlots, datasets:[
-      { type:'line', label:(hrs2>0||hrs3>0) ? 'เป้าต่อชั่วโมง (แยกตาม LOT)' : `เป้าต่อชั่วโมง (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
+    data:{ labels:timeSlots.map(slot => {
+        const s = slotInfo.info[slot];
+        return (s && s.minutes !== 60) ? [slot, `${s.minutes/60} ชม.`] : slot;
+      }), datasets:[
+      { type:'line', label:slotInfo.hasOdd ? 'เป้ารายช่อง (ตามความยาวช่อง)' : ((hrs2>0||hrs3>0) ? 'เป้าต่อชั่วโมง (แยกตาม LOT)' : `เป้าต่อชั่วโมง (${Math.round(overallRate).toLocaleString()} ชิ้น)`),
         data:targetLine, borderColor:'#6366F1', borderWidth:2, borderDash:[5,5], fill:false,
         pointRadius:0, stepped:true, spanGaps:false, datalabels:{display:false} },
       { type:'bar', label:'ผลิตได้จริง', data:hourlyActuals,
@@ -3029,12 +3063,14 @@ function getActiveLotPace(lineObj, selectedLine){
   const breakSlot = getBreakSlotForDashboardLine(selectedLine);
   if (!activeLot) return { pace:0, hours:0, actual:0 };
 
+  const slotInfo = getDashboardSlotInfo(lineObj).info;
   let actual = 0, hours = 0;
   Object.keys(hourlyData).forEach(slot => {
     if (slot === breakSlot) return;
     if (reported[slot] !== true) return;
     if (String(lotMap[slot]||'').trim().toUpperCase() !== activeLot) return;
-    actual += num(hourlyData[slot]); hours += 1;
+    actual += num(hourlyData[slot]);
+    hours += slotInfo[slot] ? slotInfo[slot].minutes / 60 : 1;
   });
   return { pace: hours > 0 ? actual/hours : 0, hours, actual };
 }
