@@ -1145,6 +1145,8 @@ function getBreakSlotForDashboardLine(lineCode){
   // ใช้รอบพักจริงของวันนั้นจาก Apps Script (slot_grid) ถ้ามี
   const obj = c ? findLine(c) : null;
   const grid = obj && !currentDashboardIsRange ? obj.slot_grid : null;
+  // แบบใหม่ (ช่องรายชั่วโมง): มีช่องพักเฉพาะตอนพักทับเต็มช่อง · พักคร่อม 2 ช่อง = ไม่มีช่องพัก
+  if (grid && grid.mode === 'split') return grid.breakSlot && grid.breakSlot.label ? grid.breakSlot.label : '';
   if (grid && grid.breakStart) {
     const parts = String(grid.breakStart).split(':').map(Number);
     const b = parts[0] * 60 + parts[1], e = b + 60;
@@ -1155,6 +1157,15 @@ function getBreakSlotForDashboardLine(lineCode){
   if (['D','E','F','G'].includes(c)) return '11.30-12.30';
   return '';
 }
+/* ช่องพักคร่อม 2 ช่อง (แบบใหม่): index ของช่องแรก ไม่มี = -1 */
+function getHalfBreakSpanIndex_(timeSlots, slotInfo){
+  const info = slotInfo && slotInfo.info ? slotInfo.info : {};
+  for (let i = 0; i < timeSlots.length - 1; i++){
+    const a = info[timeSlots[i]], b = info[timeSlots[i+1]];
+    if (a && b && a.breakMinutes > 0 && b.breakMinutes > 0) return i;
+  }
+  return -1;
+}
 /* ช่องเวลาของไลน์วันนั้น (เวลาเข้างาน 08.00 / พัก 12.00 ทำให้บางช่องยาว 0.5 / 1.5 ชม.) */
 function getDashboardSlotInfo(lineObj){
   const grid = lineObj && !currentDashboardIsRange ? lineObj.slot_grid : null;
@@ -1162,7 +1173,7 @@ function getDashboardSlotInfo(lineObj){
   if (!grid || !Array.isArray(grid.slots)) return { info, hasOdd:false, grid:null };
   let hasOdd = false;
   grid.slots.forEach(s => {
-    info[s.label] = { minutes: num(s.minutes) || 60, target: (s.target === undefined || s.target === null) ? null : num(s.target), no: s.no };
+    info[s.label] = { minutes: num(s.minutes) || 60, target: (s.target === undefined || s.target === null) ? null : num(s.target), no: s.no, breakMinutes: num(s.breakMinutes) };
     if ((num(s.minutes) || 60) !== 60) hasOdd = true;
   });
   return { info, hasOdd, grid };
@@ -2761,10 +2772,25 @@ function updateEtonProcessChart(rows, lowest){
 const hourlyBreakBandPlugin = {
   id:'hourlyBreakBand',
   beforeDatasetsDraw(chart, args, opts){
-    const bi = Number(opts && opts.breakIndex);
-    if (!Number.isInteger(bi) || bi < 0) return;
     const x = chart.scales.x, area = chart.chartArea;
     if (!x || !area) return;
+    // พักคร่อม 2 ช่อง (ช่องละ 0.5 ชม.): แถบพักคลุมครึ่งหลังของช่องแรก + ครึ่งแรกของช่องถัดไป
+    const si = Number(opts && opts.spanIndex);
+    if (Number.isInteger(si) && si >= 0 && si < chart.data.labels.length - 1) {
+      const left = x.getPixelForValue(si), right = x.getPixelForValue(si + 1);
+      const ctx = chart.ctx;
+      ctx.save();
+      ctx.fillStyle = 'rgba(148,163,184,0.14)';
+      ctx.fillRect(left, area.top, right - left, area.bottom - area.top);
+      ctx.fillStyle = '#94A3B8';
+      ctx.font = '600 10px Kanit';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+      ctx.fillText('พักเบรก', (left + right) / 2, area.top + 6);
+      ctx.restore();
+      return;
+    }
+    const bi = Number(opts && opts.breakIndex);
+    if (!Number.isInteger(bi) || bi < 0) return;
 
     const center = x.getPixelForValue(bi);
     const prev = bi > 0 ? x.getPixelForValue(bi-1) : center;
@@ -3017,7 +3043,7 @@ function updateHourlyChart(selectedLine){
       layout:{ padding:{ bottom:4 } },
       interaction:{ mode:'nearest', intersect:false },
       plugins:{
-        hourlyBreakBand:{ breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1 },
+        hourlyBreakBand:{ breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1, spanIndex: getHalfBreakSpanIndex_(timeSlots, slotInfo) },
         legend:{ position:'top', labels:{ font:{family:'Kanit', size:10}, usePointStyle:true } },
         datalabels:{ anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:10, family:'Kanit'},
           formatter:v => v > 0 ? v : '' },
