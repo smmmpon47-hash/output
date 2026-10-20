@@ -1157,6 +1157,21 @@ function getBreakSlotForDashboardLine(lineCode){
   if (['D','E','F','G'].includes(c)) return '11.30-12.30';
   return '';
 }
+/* เส้นเป้ารายชั่วโมงสำหรับวาดกราฟ: ใช้อัตราต่อชั่วโมงของ LOT × ความยาวช่อง
+   (เป้ารายช่องจริงปัดเศษสะสม เช่น 80/79/79/80 ทำให้เส้นหยักขึ้นลงทั้งที่อัตราเท่าเดิม)
+   ตัวเลขเป้าสะสม/สีแท่ง ยังใช้เป้ารายช่องจริงจาก Apps Script เหมือนเดิม */
+function getSmoothTargetLine_(timeSlots, slotInfo, targetLine){
+  const grid = slotInfo && slotInfo.grid;
+  if (!slotInfo || !slotInfo.hasOdd || !grid || !Array.isArray(grid.slots) || !grid.lotTargets) return targetLine;
+  const lotMinutes = {};
+  grid.slots.forEach(s => { if (s.lot) lotMinutes[s.lot] = (lotMinutes[s.lot] || 0) + num(s.minutes); });
+  const bySlot = {};
+  grid.slots.forEach(s => {
+    const mins = lotMinutes[s.lot] || 0, tg = num(grid.lotTargets[s.lot]);
+    bySlot[s.label] = mins > 0 ? Math.round(tg / mins * num(s.minutes)) : null;
+  });
+  return timeSlots.map((slot, i) => (slot in bySlot) ? bySlot[slot] : targetLine[i]);
+}
 /* ช่องพักคร่อม 2 ช่อง (แบบใหม่): index ของช่องแรก ไม่มี = -1 */
 function getHalfBreakSpanIndex_(timeSlots, slotInfo){
   const info = slotInfo && slotInfo.info ? slotInfo.info : {};
@@ -3028,9 +3043,9 @@ function updateHourlyChart(selectedLine){
         const s = slotInfo.info[slot];
         return (s && s.minutes !== 60) ? [slot, `${s.minutes/60} ชม.`] : slot;
       }), datasets:[
-      { type:'line', label:slotInfo.hasOdd ? 'เป้ารายช่อง (ตามความยาวช่อง)' : ((hrs2>0||hrs3>0) ? 'เป้าต่อชั่วโมง (แยกตาม LOT)' : `เป้าต่อชั่วโมง (${Math.round(overallRate).toLocaleString()} ชิ้น)`),
-        data:targetLine, borderColor:'#6366F1', borderWidth:2, borderDash:[5,5], fill:false,
-        pointRadius:0, stepped:true, spanGaps:false, datalabels:{display:false} },
+      { type:'line', label:(slotInfo.hasOdd || hrs2>0 || hrs3>0) ? 'เป้ารายชั่วโมง' : `เป้ารายชั่วโมง (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
+        data:getSmoothTargetLine_(timeSlots, slotInfo, targetLine), borderColor:'#6366F1', borderWidth:2, borderDash:[5,5], fill:false,
+        pointRadius:0, stepped:'middle', spanGaps:false, datalabels:{display:false} },
       { type:'bar', label:'ผลิตได้จริง', data:hourlyActuals,
         backgroundColor:hourlyActuals.map((v,i) => {
           const t = targetLine[i];
