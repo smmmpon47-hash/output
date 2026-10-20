@@ -2783,6 +2783,53 @@ function updateEtonProcessChart(rows, lowest){
   });
 }
 
+/* เส้นเป้าวันที่พักคร่อม 2 ช่อง (ช่องละ 30 นาที):
+   วาดเส้นเองให้ลดลงเฉพาะช่วงพัก (กลางแท่งแรก → กลางแท่งที่สอง ตรงกับแถบพักเบรก)
+   นอกช่วงพักเส้นอยู่ที่อัตราเต็มต่อชั่วโมงของ LOT */
+const hourlyTargetPathPlugin = {
+  id:'hourlyTargetPath',
+  afterDatasetsDraw(chart, args, opts){
+    const si = Number(opts && opts.spanIndex);
+    if (!Number.isInteger(si) || si < 0) return;
+    const ds = chart.data.datasets[0];
+    const x = chart.scales.x, y = chart.scales.y;
+    if (!ds || !x || !y) return;
+    const vals = ds.data || [], mins = (opts && opts.minutes) || [];
+    const n = chart.data.labels.length;
+    const cx = i => x.getPixelForValue(i);
+    const left = i => i > 0 ? (cx(i - 1) + cx(i)) / 2 : cx(i) - (n > 1 ? (cx(1) - cx(0)) / 2 : 18);
+    const right = i => i < n - 1 ? (cx(i) + cx(i + 1)) / 2 : cx(i) + (n > 1 ? (cx(1) - cx(0)) / 2 : 18);
+    // ชิ้นส่วนแนวนอน [x1, x2, ค่า]
+    const pieces = [];
+    for (let i = 0; i < n; i++) {
+      const v = vals[i];
+      if (v === null || v === undefined || v === '') continue;
+      const m = Number(mins[i]) || 60;
+      const full = m < 60 ? Math.round(Number(v) * 60 / m) : Number(v);
+      if (i === si) { pieces.push([left(i), cx(i), full]); pieces.push([cx(i), right(i), Number(v)]); }
+      else if (i === si + 1) { pieces.push([left(i), cx(i), Number(v)]); pieces.push([cx(i), right(i), full]); }
+      else pieces.push([left(i), right(i), Number(v)]);
+    }
+    if (!pieces.length) return;
+    const ctx = chart.ctx;
+    ctx.save();
+    ctx.strokeStyle = ds.borderColor || '#6366F1';
+    ctx.lineWidth = ds.borderWidth || 2;
+    ctx.setLineDash(ds.borderDash || [5,5]);
+    ctx.beginPath();
+    let prev = null;
+    pieces.forEach(p => {
+      const py = y.getPixelForValue(p[2]);
+      if (prev && Math.abs(prev[0] - p[0]) < 0.5) ctx.lineTo(p[0], py);
+      else ctx.moveTo(p[0], py);
+      ctx.lineTo(p[1], py);
+      prev = [p[1], py];
+    });
+    ctx.stroke();
+    ctx.restore();
+  }
+};
+
 /* ---------- hourly chart (ตรรกะเดิม) ---------- */
 const hourlyBreakBandPlugin = {
   id:'hourlyBreakBand',
@@ -3038,13 +3085,14 @@ function updateHourlyChart(selectedLine){
 
   hourlyChartInstance = new Chart(ctx, {
     type:'bar',
-    plugins:[hourlyBreakBandPlugin],
+    plugins:[hourlyBreakBandPlugin, hourlyTargetPathPlugin],
     data:{ labels:timeSlots.map(slot => {
         const s = slotInfo.info[slot];
         return (s && s.minutes !== 60) ? [slot, `${s.minutes/60} ชม.`] : slot;
       }), datasets:[
       { type:'line', label:(slotInfo.hasOdd || hrs2>0 || hrs3>0) ? 'เป้ารายชั่วโมง' : `เป้ารายชั่วโมง (${Math.round(overallRate).toLocaleString()} ชิ้น)`,
         data:getSmoothTargetLine_(timeSlots, slotInfo, targetLine), borderColor:'#6366F1', borderWidth:2, borderDash:[5,5], fill:false,
+        showLine: getHalfBreakSpanIndex_(timeSlots, slotInfo) < 0,
         pointRadius:0, stepped:'middle', spanGaps:false, datalabels:{display:false} },
       { type:'bar', label:'ผลิตได้จริง', data:hourlyActuals,
         backgroundColor:hourlyActuals.map((v,i) => {
@@ -3059,6 +3107,7 @@ function updateHourlyChart(selectedLine){
       interaction:{ mode:'nearest', intersect:false },
       plugins:{
         hourlyBreakBand:{ breakIndex: breakSlot ? timeSlots.indexOf(breakSlot) : -1, spanIndex: getHalfBreakSpanIndex_(timeSlots, slotInfo) },
+        hourlyTargetPath:{ spanIndex: getHalfBreakSpanIndex_(timeSlots, slotInfo), minutes: timeSlots.map(slot => (slotInfo.info[slot] || {}).minutes || 60) },
         legend:{ position:'top', labels:{ font:{family:'Kanit', size:10}, usePointStyle:true } },
         datalabels:{ anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:10, family:'Kanit'},
           formatter:v => v > 0 ? v : '' },
