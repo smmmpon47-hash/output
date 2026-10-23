@@ -1285,6 +1285,12 @@ function getLineStatus(item){
     });
   }
 
+  return statusByPieces_(targetNow, actualNow);
+}
+
+/* เกณฑ์สีเดียวกันทั้งหน้า: ผลิตจริงเทียบ "เป้า ณ ตอนนี้" (ขาดไม่เกิน 10 ชิ้น = เขียว, 11–20 = ส้ม, มากกว่านั้น = แดง) */
+function statusByPieces_(targetNow, actualNow){
+  targetNow = num(targetNow); actualNow = num(actualNow);
   if (targetNow <= 0 && actualNow <= 0) return { key:'none', label:'รอเริ่มผลิต', cls:'st-none', text:'text-slate-500' };
   if (targetNow <= 0) return { key:'ok', label:'ผลิตปกติ', cls:'st-ok', text:'text-emerald-600' };
 
@@ -1802,7 +1808,9 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
 
   const pct = target > 0 ? Math.round(actual/target*100) : 0;
   const width = Math.max(0, Math.min(pct, 100));
-  const barColor = pct >= 100 ? 'bg-emerald-500' : 'bg-amber-500';
+  // สีแถบ = สถานะเทียบเป้าตอนนี้ (เกณฑ์เดียวกับจุดสีบนผังโรงงาน); ดูหลายวันเทียบเป้ารวม
+  const barSt = live ? statusByPieces_(targetNow, actualNow) : statusByPieces_(target, actual);
+  const barColor = barSt.key === 'bad' ? 'bg-rose-500' : barSt.key === 'warn' ? 'bg-amber-500' : 'bg-emerald-500';
 
   return `
     <div class="card lineCard p-4 flex flex-col cursor-pointer hover:border-indigo-200 transition" onclick="openLine('${String(line).toUpperCase()}')">
