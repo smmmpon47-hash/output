@@ -8,6 +8,16 @@
 <link rel="preconnect" href="https://script.google.com">
 <link rel="preconnect" href="https://script.googleusercontent.com" crossorigin>
 <script>
+  // EMBED: เปิดผ่านหน้ารวม (?embed=1) → ซ่อนหัวของหน้านี้ (หน้ารวมมีหัวของตัวเอง)
+  // เปิดจากลิงก์เดิมไม่มี ?embed=1 → แสดงเหมือนเดิมทุกอย่าง
+  window.__DASH_EMBED__ = /(?:^|[?&])embed=1(?:&|$)/.test(location.search);
+  if (window.__DASH_EMBED__) document.documentElement.classList.add('is-embed');
+</script>
+<style>
+  .is-embed .shell > header{ display:none !important; }
+  .is-embed .shell{ padding-top:12px !important; }
+</style>
+<script>
   // V33 FAST LOAD: เริ่มขอข้อมูล "วันนี้" ทันทีตั้งแต่ต้นหน้า
   // ไม่ต้องรอ Tailwind / Chart.js / LIFF โหลดเสร็จก่อน (ข้อมูล LIVE เหมือนเดิม ไม่ใช้ cache)
   (function(){
@@ -3388,7 +3398,7 @@ async function main(){
   el('datePickerTo').value = '';
 
   switchFloor(3);
-  initLiffProfile();
+  if (!window.__DASH_EMBED__) initLiffProfile(); // ฝังในหน้ารวม: ไม่เรียก LINE (หน้ารวมดูแลหัวเอง)
 
   // วันนี้ = ข้อมูล LIVE จึงไม่ใช้ localStorage cache เป็นหน้าหลัก
   // ป้องกันกรณีหัวหน้า LINE กรอกแล้ว แต่ Dashboard ยังโชว์ยอดเก่าจาก cache
