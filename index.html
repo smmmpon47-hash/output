@@ -394,6 +394,54 @@
   html.dark input:not([type=checkbox]):not([type=radio]), html.dark select{ background-color:var(--d-card2); color:var(--d-hi); border-color:var(--d-line2); }
   html.dark ::placeholder{ color:var(--d-t4); }
 
+  /* ---------- NIGHT MODE: ลุคผู้บริหาร — ดำน้ำเงินลึก + เส้นบาง + แชมเปญโกลด์เฉพาะจุดที่เลือก ---------- */
+  html.dark{
+    --d-bg:#06080E; --d-card:#0D121D; --d-card2:#0A0E17; --d-line:rgba(255,255,255,.06); --d-line2:rgba(255,255,255,.10);
+    --gold:#D6B97B; --gold2:#B8975A; --gold-soft:rgba(214,185,123,.12);
+  }
+  html.dark body{
+    background:
+      radial-gradient(1200px 520px at 15% -8%, rgba(56,78,130,.22), transparent 60%),
+      radial-gradient(900px 420px at 100% 0%, rgba(214,185,123,.06), transparent 60%),
+      var(--d-bg);
+    background-attachment:fixed;
+  }
+  html.dark .card, html.dark .floorMain, html.dark .guideTitle, html.dark .lineShortcutBody, html.dark .guideBody{
+    background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 40%), var(--d-card);
+    border:1px solid var(--d-line);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 24px 48px -32px rgba(0,0,0,.95);
+  }
+  html.dark .soft{ box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 24px 48px -32px rgba(0,0,0,.95); }
+  html.dark .shell > header{
+    background:linear-gradient(120deg,#0B0F19 0%,#111A2C 60%,#16223A 100%) !important;
+    border:1px solid var(--d-line);
+    box-shadow:inset 0 -1px 0 rgba(214,185,123,.35), 0 24px 48px -32px rgba(0,0,0,.95);
+  }
+  html.dark .shell > header h1{ letter-spacing:.02em; }
+  html.dark .shell > header .border-white\/15{ border-color:rgba(255,255,255,.08); }
+  html.dark .shell > header .bg-white\/10{ background-color:rgba(255,255,255,.04); }
+  html.dark h2.font-bold{ letter-spacing:.015em; }
+
+  /* ปุ่ม/แท็บที่เลือกอยู่ = แชมเปญโกลด์ */
+  html.dark .bg-slate-900, html.dark .bg-slate-800,
+  html.dark .floorTab.active, html.dark .lineChip.active{
+    background:linear-gradient(180deg,var(--gold),var(--gold2)); color:#14110A; box-shadow:0 6px 16px -10px rgba(214,185,123,.7);
+  }
+  html.dark .bg-slate-900.text-white, html.dark .bg-slate-800.text-white{ color:#14110A; }
+  html.dark .hover\:bg-slate-900:hover{ background:var(--gold); }
+  html.dark .bg-slate-100, html.dark .floorSwitch{ background-color:rgba(255,255,255,.04); }
+  html.dark .border-slate-100{ border-color:var(--d-line); }
+  html.dark .border-slate-200{ border-color:var(--d-line2); }
+
+  /* ตัวเลขหลัก / แถบความคืบหน้าทั้งโรง */
+  html.dark #kpiBar{ background:linear-gradient(90deg,var(--gold2),var(--gold)); }
+  html.dark .text-indigo-600, html.dark .text-indigo-700{ color:#C9B489; }
+  html.dark .lineShortcut:hover{ background:var(--gold-soft); border-color:var(--gold2); color:var(--gold); }
+  html.dark .guideNo{ background:var(--gold-soft); color:var(--gold); }
+  html.dark .planWrap{ border-color:var(--d-line2); box-shadow:0 30px 60px -36px rgba(0,0,0,1); }
+  html.dark input:not([type=checkbox]):not([type=radio]), html.dark select{ background-color:rgba(255,255,255,.03); border-color:var(--d-line2); }
+  html.dark ::selection{ background:rgba(214,185,123,.35); }
+
   #themeBtn .ico-sun{ display:none; } html.dark #themeBtn .ico-sun{ display:inline; } html.dark #themeBtn .ico-moon{ display:none; }
 </style>
 </head>
