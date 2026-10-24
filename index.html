@@ -594,7 +594,7 @@
               <div class="space-y-1 text-xs">
                 <div class="flex justify-between"><span class="text-slate-500">เป้าหมาย</span><span id="tipTarget" class="font-bold text-slate-800">-</span></div>
                 <div class="flex justify-between"><span class="text-slate-500">ผลิตแล้ว</span><span id="tipActual" class="font-bold text-slate-800">-</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">คืบหน้า</span><span id="tipPct" class="font-bold text-slate-800">-</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">เทียบเป้าตอนนี้</span><span id="tipPct" class="font-bold text-slate-800">-</span></div>
               </div>
               <div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden">
                 <div id="tipBar" class="h-1.5 rounded-full bg-emerald-500" style="width:0%"></div>
@@ -1432,7 +1432,7 @@ function getLotLiveMetrics(lotPlan){
   };
 }
 
-/* สถานะไลน์ เทียบกับ "เป้า ณ เวลานี้" เป็นจำนวนชิ้น */
+/* สถานะไลน์ เทียบกับ "เป้า ณ เวลานี้" เป็น % */
 function getLineStatus(item){
   if (!item) return { key:'none', label:'ไม่มีข้อมูล', cls:'st-none', text:'text-slate-500' };
 
@@ -1454,16 +1454,18 @@ function getLineStatus(item){
   return statusByPieces_(targetNow, actualNow);
 }
 
-/* เกณฑ์สีเดียวกันทั้งหน้า: ผลิตจริงเทียบ "เป้า ณ ตอนนี้" (ขาดไม่เกิน 10 ชิ้น = เขียว, 11–20 = ส้ม, มากกว่านั้น = แดง) */
+/* เกณฑ์สีเดียวกันทั้งหน้า (ตรงกับการ์ดสรุป 21.00): % ของ "เป้า ณ ตอนนี้"
+   ≥95% = เขียว · 85–94% = ส้ม · <85% = แดง · จบวันแล้ว เป้าตอนนี้ = เป้าทั้งวัน → สีตรงกับการ์ด */
+const STATUS_OK_PCT = 95, STATUS_WARN_PCT = 85;
 function statusByPieces_(targetNow, actualNow){
   targetNow = num(targetNow); actualNow = num(actualNow);
-  if (targetNow <= 0 && actualNow <= 0) return { key:'none', label:'รอเริ่มผลิต', cls:'st-none', text:'text-slate-500' };
-  if (targetNow <= 0) return { key:'ok', label:'ผลิตปกติ', cls:'st-ok', text:'text-emerald-600' };
+  if (targetNow <= 0 && actualNow <= 0) return { key:'none', label:'รอเริ่มผลิต', cls:'st-none', text:'text-slate-500', pct:0 };
+  if (targetNow <= 0) return { key:'ok', label:'ผลิตปกติ', cls:'st-ok', text:'text-emerald-600', pct:100 };
 
-  const diffPieces = actualNow - targetNow;
-  if (diffPieces >= -10) return { key:'ok', label:'ผลิตปกติ', cls:'st-ok', text:'text-emerald-600' };
-  if (diffPieces >= -20) return { key:'warn', label:'ใกล้เป้า', cls:'st-warn', text:'text-amber-600' };
-  return { key:'bad', label:'ต่ำกว่าเป้า', cls:'st-bad', text:'text-rose-600' };
+  const pct = Math.round(actualNow / targetNow * 100);
+  if (pct >= STATUS_OK_PCT) return { key:'ok', label:'ผลิตปกติ', cls:'st-ok', text:'text-emerald-600', pct };
+  if (pct >= STATUS_WARN_PCT) return { key:'warn', label:'ใกล้เป้า', cls:'st-warn', text:'text-amber-600', pct };
+  return { key:'bad', label:'ต่ำกว่าเป้า', cls:'st-bad', text:'text-rose-600', pct };
 }
 
 async function fetchTextWithRetry(url, options = {}){
@@ -1972,10 +1974,10 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
   const avgOutput = live ? Math.round(num(live.avgOutput)) : 0;
   const tgPerHour = live ? Math.round(num(live.tgPerHour)) : 0;
 
-  const pct = target > 0 ? Math.round(actual/target*100) : 0;
-  const width = Math.max(0, Math.min(pct, 100));
-  // สีแถบ = สถานะเทียบเป้าตอนนี้ (เกณฑ์เดียวกับจุดสีบนผังโรงงาน); ดูหลายวันเทียบเป้ารวม
+  // แถบ + % = เทียบเป้าตอนนี้ (เกณฑ์เดียวกับจุดสีบนผังโรงงานและการ์ด 21.00); ดูหลายวันเทียบเป้ารวม
   const barSt = live ? statusByPieces_(targetNow, actualNow) : statusByPieces_(target, actual);
+  const pct = barSt.pct || 0;
+  const width = Math.max(0, Math.min(pct, 100));
   const barColor = barSt.key === 'bad' ? 'bg-rose-500' : barSt.key === 'warn' ? 'bg-amber-500' : 'bg-emerald-500';
 
   return `
@@ -2101,8 +2103,9 @@ function showTip(cfg, hotEl){
   el('tipModel').innerText = (model ? 'รุ่น ' + model : 'ยังไม่ระบุรุ่น') + (lot ? ' • LOT ' + lot : '');
   el('tipTarget').innerText = fmt(tg) + ' ชิ้น';
   el('tipActual').innerText = fmt(ac) + ' ชิ้น';
-  el('tipPct').innerText = pct.toFixed(0) + '%';
-  el('tipBar').style.width = Math.max(0, Math.min(100, pct)) + '%';
+  const nowPct = st.pct !== undefined ? st.pct : Math.round(pct);
+  el('tipPct').innerText = nowPct + '%';
+  el('tipBar').style.width = Math.max(0, Math.min(100, nowPct)) + '%';
   el('tipBar').className = 'h-1.5 rounded-full ' + (st.key==='bad' ? 'bg-rose-500' : st.key==='warn' ? 'bg-amber-500' : 'bg-emerald-500');
 
   const wrapRect = wrap.getBoundingClientRect();
@@ -2191,7 +2194,7 @@ function renderLineDetail(code){
   el('dtLot').innerText = item.active_lot ? `LOT ${item.active_lot}` : '-';
   el('dtStatus').innerText = st.label;
   el('dtStatus').className = 'text-sm font-extrabold mt-1 ' + st.text;
-  el('dtStatusNote').innerText = currentDashboardIsRange ? 'เทียบเป้ารวมของช่วงที่เลือก' : 'เทียบกับเป้า ณ เวลานี้';
+  el('dtStatusNote').innerText = (currentDashboardIsRange ? 'เทียบเป้ารวมของช่วงที่เลือก' : 'เทียบกับเป้า ณ เวลานี้') + (st.key !== 'none' && st.pct !== undefined ? ` • ${st.pct}%` : '');
   el('dtTarget').innerText = fmt(tg);
   el('dtActual').innerText = fmt(ac);
   el('dtGap').innerText = `${gap>=0?'+':''}${gap.toLocaleString()}`;
