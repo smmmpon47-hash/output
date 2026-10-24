@@ -15,6 +15,15 @@
   window.__DASH_EMBED__ = /(?:^|[?&])embed=1(?:&|$)/.test(location.search);
   if (window.__DASH_EMBED__) document.documentElement.classList.add('is-embed');
 </script>
+<script>
+  // โหมดกลางคืน: ค่าที่เลือกไว้ในเครื่องนี้ก่อน ไม่งั้นตามโหมดของเครื่อง
+  (function(){
+    var t = null;
+    try{ t = localStorage.getItem('dashTheme'); }catch(e){}
+    if (t !== 'dark' && t !== 'light') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+    if (t === 'dark') document.documentElement.classList.add('dark');
+  })();
+</script>
 <style>
   .is-embed .shell > header{ display:none !important; }
   .is-embed .shell{ padding-top:12px !important; }
@@ -312,6 +321,81 @@
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
 </style>
+<style>
+  /* ================= NIGHT MODE (html.dark) — โหมดสว่างไม่ถูกแตะ ================= */
+  html.dark{
+    color-scheme:dark;
+    --d-bg:#0A101C; --d-card:#111A2B; --d-card2:#0E1626; --d-line:#1E2A3E; --d-line2:#28364D;
+    --d-hi:#E6EDF6; --d-t1:#CBD5E1; --d-t2:#A3B1C6; --d-t3:#8292A9; --d-t4:#64748B;
+    --navy:#E2E8F0;
+  }
+  html.dark body{ background:var(--d-bg); color:var(--d-hi); }
+  html.dark .card{ background:var(--d-card); border-color:var(--d-line); }
+  html.dark .soft{ box-shadow:0 14px 34px -24px rgba(0,0,0,.9); }
+
+  /* พื้น / ขอบ */
+  html.dark .bg-white{ background-color:var(--d-card); }
+  html.dark .bg-white\/70{ background-color:rgba(17,26,43,.7); }
+  html.dark .bg-slate-50, html.dark .bg-slate-50\/70{ background-color:var(--d-card2); }
+  html.dark .bg-slate-100, html.dark .hover\:bg-slate-100:hover{ background-color:#172236; }
+  html.dark .bg-slate-200, html.dark .hover\:bg-slate-200:hover{ background-color:#1F2D44; }
+  html.dark .border-slate-100{ border-color:var(--d-line); }
+  html.dark .border-slate-200{ border-color:var(--d-line2); }
+
+  /* ปุ่ม/แท็บที่เลือกอยู่ (พื้นเข้ม → กลับเป็นพื้นสว่างในโหมดมืด) */
+  html.dark .bg-slate-900, html.dark .bg-slate-800{ background-color:#E2E8F0; color:#0F172A; }
+  html.dark .bg-slate-900.text-white, html.dark .bg-slate-800.text-white{ color:#0F172A; }
+  html.dark .hover\:bg-slate-900:hover{ background-color:#F8FAFC; }
+  html.dark .floorTab.active, html.dark .lineChip.active{ background:#E2E8F0; color:#0F172A; box-shadow:none; }
+
+  /* ตัวหนังสือ */
+  html.dark .text-slate-800, html.dark .hover\:text-slate-800:hover{ color:var(--d-hi); }
+  html.dark .text-slate-700, html.dark .hover\:text-slate-700:hover{ color:var(--d-t1); }
+  html.dark .text-slate-600{ color:var(--d-t2); }
+  html.dark .text-slate-500{ color:var(--d-t3); }
+  html.dark .text-slate-400{ color:var(--d-t4); }
+  html.dark .text-slate-300{ color:#475569; }
+
+  /* สีสถานะ: สว่างขึ้นให้อ่านง่ายบนพื้นมืด ความหมายเดิม */
+  html.dark .text-emerald-600{ color:#34D399; } html.dark .text-emerald-700, html.dark .text-emerald-800{ color:#6EE7B7; }
+  html.dark .text-rose-400, html.dark .text-rose-500, html.dark .text-rose-600{ color:#FB7185; } html.dark .text-rose-700{ color:#FDA4AF; }
+  html.dark .text-amber-600{ color:#FBBF24; } html.dark .text-amber-700, html.dark .text-amber-800{ color:#FCD34D; }
+  html.dark .text-amber-700\/60{ color:rgba(252,211,77,.6); } html.dark .text-amber-900\/80{ color:rgba(253,230,138,.85); }
+  html.dark .text-indigo-400, html.dark .text-indigo-500{ color:#A5B4FC; } html.dark .text-indigo-600, html.dark .text-indigo-700{ color:#A5B4FC; }
+  html.dark .text-violet-600{ color:#C4B5FD; } html.dark .text-sky-600{ color:#7DD3FC; } html.dark .text-orange-600{ color:#FDBA74; }
+
+  html.dark .bg-emerald-50, html.dark .bg-emerald-100{ background-color:rgba(16,185,129,.13); }
+  html.dark .bg-rose-50, html.dark .bg-rose-50\/70, html.dark .bg-rose-100{ background-color:rgba(244,63,94,.13); }
+  html.dark .bg-amber-50, html.dark .bg-amber-50\/70, html.dark .bg-amber-100{ background-color:rgba(245,158,11,.13); }
+  html.dark .bg-indigo-50{ background-color:rgba(99,102,241,.16); }
+  html.dark .bg-sky-50, html.dark .hover\:bg-sky-50\/40:hover{ background-color:rgba(14,165,233,.12); }
+  html.dark .bg-orange-50{ background-color:rgba(249,115,22,.13); }
+  html.dark .border-emerald-100, html.dark .border-emerald-200{ border-color:rgba(16,185,129,.3); }
+  html.dark .border-rose-100, html.dark .border-rose-200{ border-color:rgba(244,63,94,.3); }
+  html.dark .border-amber-100, html.dark .border-amber-200{ border-color:rgba(245,158,11,.3); }
+  html.dark .border-indigo-100, html.dark .hover\:border-indigo-200:hover{ border-color:rgba(99,102,241,.35); }
+  html.dark .border-orange-100{ border-color:rgba(249,115,22,.3); }
+  html.dark .hover\:border-sky-200:hover{ border-color:rgba(14,165,233,.4); }
+
+  /* ส่วนที่เขียนสีเองในหน้า */
+  html.dark .floorMain, html.dark .guideTitle, html.dark .lineShortcutBody, html.dark .guideBody{ background:var(--d-card); border-color:var(--d-line); color:var(--d-hi); }
+  html.dark .floorSwitch{ background:#172236; }
+  html.dark .planWrap{ border-color:var(--d-line2); }
+  html.dark .lineShortcut{ background:var(--d-card2); border-color:var(--d-line2); color:var(--d-t1); }
+  html.dark .lineShortcut:hover{ background:rgba(99,102,241,.16); border-color:#818CF8; color:#C7D2FE; }
+  html.dark .guideNo{ background:rgba(99,102,241,.18); color:#C7D2FE; }
+  html.dark #planTip{ background:#16213A; color:var(--d-hi); box-shadow:0 18px 40px -16px rgba(0,0,0,.9); }
+  html.dark #dashboardLoadingOverlay{ background:rgba(2,6,15,.55); }
+  html.dark .dashboardLoadingCard{ background:rgba(17,26,43,.97); border-color:var(--d-line2); }
+  html.dark .dashboardLoadingBar{ background:#1F2D44; }
+  html.dark .dashboardSpinner{ border-color:#1F2D44; border-top-color:#818CF8; }
+  html.dark .dashboardLoadingPercent{ color:#A5B4FC; }
+  html.dark input, html.dark select{ color-scheme:dark; }
+  html.dark input:not([type=checkbox]):not([type=radio]), html.dark select{ background-color:var(--d-card2); color:var(--d-hi); border-color:var(--d-line2); }
+  html.dark ::placeholder{ color:var(--d-t4); }
+
+  #themeBtn .ico-sun{ display:none; } html.dark #themeBtn .ico-sun{ display:inline; } html.dark #themeBtn .ico-moon{ display:none; }
+</style>
 </head>
 <body class="pb-10">
 
@@ -342,6 +426,7 @@
           <p id="hdClock" class="text-sm font-bold tabular-nums">--:--:--</p>
         </div>
         <button onclick="openLotSearch()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px]" title="ค้นหา LOT">🔍</button>
+        <button id="themeBtn" type="button" onclick="toggleDashTheme()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px]" title="สลับโหมดกลางวัน / กลางคืน" aria-label="สลับโหมดกลางวัน / กลางคืน"><span class="ico-moon">🌙</span><span class="ico-sun">☀️</span></button>
         <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 h-[48px]">
           <span class="text-sm">👤</span>
           <span id="displayName" class="text-xs font-semibold">กำลังเชื่อมต่อ LINE...</span>
@@ -847,6 +932,39 @@
 
 <script>
 Chart.register(ChartDataLabels);
+
+/* ---------- NIGHT MODE: สีกราฟตามโหมด ---------- */
+function isDashDark(){ return document.documentElement.classList.contains('dark'); }
+function dashGrid(){ return isDashDark() ? 'rgba(148,163,184,0.10)' : '#F1F5F9'; }
+function dashTick(){ return isDashDark() ? '#8292A9' : '#666'; }
+function applyDashChartTheme(){
+  Chart.defaults.color = dashTick();
+  Object.values(Chart.instances || {}).forEach(ch => {
+    const sc = (ch.options && ch.options.scales) || {};
+    Object.values(sc).forEach(axis => {
+      if (axis.grid && (axis.grid.color === '#F1F5F9' || axis.grid.color === 'rgba(148,163,184,0.10)')) axis.grid.color = dashGrid();
+      if (axis.ticks) axis.ticks.color = dashTick();
+    });
+    const lg = ch.options && ch.options.plugins && ch.options.plugins.legend;
+    if (lg && lg.labels) lg.labels.color = dashTick();
+    ch.update('none');
+  });
+}
+function toggleDashTheme(){
+  const dark = !isDashDark();
+  document.documentElement.classList.toggle('dark', dark);
+  try{ localStorage.setItem('dashTheme', dark ? 'dark' : 'light'); }catch(e){}
+  applyDashChartTheme();
+}
+Chart.defaults.color = dashTick();
+// ยังไม่เคยเลือกเอง → เปลี่ยนตามโหมดของเครื่อง
+try{
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    let saved = null; try{ saved = localStorage.getItem('dashTheme'); }catch(_){}
+    if (saved === 'dark' || saved === 'light') return;
+    document.documentElement.classList.toggle('dark', e.matches); applyDashChartTheme();
+  });
+}catch(e){}
 
 /* =======================================================
    CONFIG  (ของเดิม ไม่ต้องแก้)
@@ -1658,7 +1776,7 @@ function renderDailyChart(lines, rememberLines = true){
       },
       scales:{
         x:{ stacked, grid:{display:false}, ticks:{ font:{family:'Kanit', size:11} } },
-        y:{ stacked, beginAtZero:true, grid:{color:'#F1F5F9'}, ticks:{ font:{family:'Kanit', size:10} } }
+        y:{ stacked, beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:{family:'Kanit', size:10} } }
       }
     }
   });
@@ -3138,7 +3256,7 @@ function updateHourlyChart(selectedLine){
       },
       scales:{
         x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:60, minRotation:45, font:{size:9, family:'Kanit'} } },
-        y:{ beginAtZero:true, grid:{color:'#F1F5F9'}, ticks:{ font:{size:10, family:'Kanit'} } }
+        y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:{size:10, family:'Kanit'} } }
       }
     }
   });
@@ -3332,7 +3450,7 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
       },
       scales:{
         x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:60, minRotation:45, font:{size:9, family:'Kanit'} } },
-        y:{ beginAtZero:true, grid:{color:'#F1F5F9'}, ticks:{ font:{size:10, family:'Kanit'} } }
+        y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:{size:10, family:'Kanit'} } }
       }
     }
   });
