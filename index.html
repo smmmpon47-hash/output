@@ -115,11 +115,26 @@
 
   .guideColumn{
     min-width:0;
-    display:grid;
-    grid-template-rows:52px 60px 52px 156px;
-    gap:10px;
     align-self:start;
+    padding:16px;
+    border:1px solid #E2E8F0;
+    border-radius:20px;
+    background:#fff;
   }
+  .floorLineRow{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 12px;
+    border:1px solid #E2E8F0;
+    border-radius:14px;
+    background:#fff;
+    text-align:left;
+    transition:border-color .16s ease,background .16s ease;
+  }
+  .floorLineRow:hover{ border-color:#A5B4FC; background:#F8FAFF; }
+  .floorLineRow .dot{ width:10px; height:10px; border-radius:999px; flex:none; }
   .guideTitle{
     min-height:52px;
     padding:8px 16px;
@@ -314,9 +329,6 @@
 
   @media (max-width:900px){
     .floorLayout{ grid-template-columns:1fr; }
-    .guideColumn{ grid-template-rows:auto; }
-    .lineShortcutBody{ min-height:60px; }
-    .guideBody{ min-height:156px; }
   }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
@@ -378,10 +390,10 @@
   html.dark .hover\:border-sky-200:hover{ border-color:rgba(14,165,233,.4); }
 
   /* ส่วนที่เขียนสีเองในหน้า */
-  html.dark .floorMain, html.dark .guideTitle, html.dark .lineShortcutBody, html.dark .guideBody{ background:var(--d-card); border-color:var(--d-line); color:var(--d-hi); }
+  html.dark .floorMain, html.dark .guideColumn, html.dark .guideTitle, html.dark .lineShortcutBody, html.dark .guideBody{ background:var(--d-card); border-color:var(--d-line); color:var(--d-hi); }
   html.dark .floorSwitch{ background:#172236; }
   html.dark .planWrap{ border-color:var(--d-line2); }
-  html.dark .lineShortcut{ background:var(--d-card2); border-color:var(--d-line2); color:var(--d-t1); }
+  html.dark .lineShortcut, html.dark .floorLineRow{ background:var(--d-card2); border-color:var(--d-line2); color:var(--d-t1); }
   html.dark .lineShortcut:hover{ background:rgba(99,102,241,.16); border-color:#818CF8; color:#C7D2FE; }
   html.dark .guideNo{ background:rgba(99,102,241,.18); color:#C7D2FE; }
   html.dark #planTip{ background:#16213A; color:var(--d-hi); box-shadow:0 18px 40px -16px rgba(0,0,0,.9); }
@@ -406,7 +418,7 @@
       var(--d-bg);
     background-attachment:fixed;
   }
-  html.dark .card, html.dark .floorMain, html.dark .guideTitle, html.dark .lineShortcutBody, html.dark .guideBody{
+  html.dark .card, html.dark .floorMain, html.dark .guideColumn, html.dark .guideTitle, html.dark .lineShortcutBody, html.dark .guideBody{
     background:linear-gradient(180deg, rgba(255,255,255,.025), rgba(255,255,255,0) 40%), var(--d-card);
     border:1px solid var(--d-line);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.04), 0 24px 48px -32px rgba(0,0,0,.95);
@@ -436,7 +448,7 @@
   /* ตัวเลขหลัก / แถบความคืบหน้าทั้งโรง */
   html.dark #kpiBar{ background:linear-gradient(90deg,var(--gold2),var(--gold)); }
   html.dark .text-indigo-600, html.dark .text-indigo-700{ color:#C9B489; }
-  html.dark .lineShortcut:hover{ background:var(--gold-soft); border-color:var(--gold2); color:var(--gold); }
+  html.dark .lineShortcut:hover, html.dark .floorLineRow:hover{ background:var(--gold-soft); border-color:var(--gold2); color:var(--gold); }
   html.dark .guideNo{ background:var(--gold-soft); color:var(--gold); }
   html.dark .planWrap{ border-color:var(--d-line2); box-shadow:0 30px 60px -36px rgba(0,0,0,1); }
   html.dark input:not([type=checkbox]):not([type=radio]), html.dark select{ background-color:rgba(255,255,255,.03); border-color:var(--d-line2); }
@@ -782,40 +794,10 @@
         </div>
       </div>
 
-      <aside class="guideColumn" aria-label="ข้อมูลประกอบผังไลน์การผลิต">
-        <div class="guideTitle soft">ไลน์ในชั้นนี้</div>
-        <div class="lineShortcutBody soft">
-          <div id="floorLineShortcuts" class="flex flex-wrap justify-center gap-2"></div>
-        </div>
-
-        <div class="guideTitle soft">วิธีใช้งาน</div>
-        <div class="guideBody soft">
-          <div class="space-y-3">
-            <div class="guideStep">
-              <span class="guideNo">1</span>
-              <div>
-                <p class="text-xs font-bold text-slate-700">เลือกชั้น</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">กดชั้น 3 หรือชั้น 4 เพื่อแสดงไลน์การผลิตในชั้นนั้น</p>
-              </div>
-            </div>
-
-            <div class="guideStep">
-              <span class="guideNo">2</span>
-              <div>
-                <p class="text-xs font-bold text-slate-700">ดูข้อมูลแบบย่อ</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">วางเมาส์บน LINE เพื่อดูภาพรวมการผลิต</p>
-              </div>
-            </div>
-
-            <div class="guideStep">
-              <span class="guideNo">3</span>
-              <div>
-                <p class="text-xs font-bold text-slate-700">ดูรายละเอียดเพิ่มเติม</p>
-                <p class="text-[10px] text-slate-400 mt-0.5">คลิก LINE ที่ต้องการเพื่อเปิดข้อมูลทั้งหมด</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <aside class="guideColumn soft" aria-label="ไลน์ในชั้นนี้">
+        <p class="text-[15px] font-extrabold text-slate-800">ไลน์ในชั้นนี้</p>
+        <p class="text-[11px] text-slate-400 mt-0.5 mb-3">กดไลน์บนผังหรือในรายการเพื่อดูรายละเอียด</p>
+        <div id="floorLineShortcuts" class="space-y-2"></div>
       </aside>
     </div>
   </section>
@@ -2140,6 +2122,17 @@ function formatShipmentDate_(v){
   return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
 }
 
+// วันที่ dd/mm/yyyy → จำนวนวันจากวันนี้ (อ่านไม่ออก = null)
+function shipmentDaysLeft_(ddmmyyyy){
+  const m = String(ddmmyyyy || '').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  let y = Number(m[3]); if (y > 2400) y -= 543;
+  const due = new Date(y, Number(m[2]) - 1, Number(m[1]));
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((due - today) / 86400000);
+}
+
 async function resolveLotShipment_(lot){
   const key = normalizeLotLookupKey_(lot);
   if (!key) return '';
@@ -2155,8 +2148,22 @@ async function hydrateCardShipments_(){
     const date = formatShipmentDate_(await resolveLotShipment_(node.getAttribute('data-lot-shipment') || ''));
     if (!date || !node.isConnected) return;
 
-    node.querySelector('span').textContent = date;
+    // เลยกำหนด = แดง · เหลือ ≤ 3 วัน = ส้ม · นอกนั้นสีปกติ
+    // (Tailwind: text-rose-600 text-amber-600 bg-rose-100 text-rose-700 bg-amber-100 text-amber-700)
+    const span = node.querySelector('span'), pill = node.querySelector('em');
+    const left = shipmentDaysLeft_(date);
+    let note = '', tone = '';
+    if (left !== null && left < 0){ note = `เลย ${-left} วัน`; tone = 'rose'; }
+    else if (left === 0){ note = 'ส่งวันนี้'; tone = 'amber'; }
+    else if (left !== null && left <= 3){ note = `อีก ${left} วัน`; tone = 'amber'; }
+    span.textContent = date;
+    span.className = 'ml-1 font-extrabold ' + (tone ? `text-${tone}-600` : 'text-sky-600');
+    if (note){
+      pill.textContent = note;
+      pill.className = `not-italic whitespace-nowrap text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-${tone}-100 text-${tone}-700`;
+    }
     node.classList.remove('hidden');
+    node.classList.add('flex');
   }));
 }
 
@@ -2204,8 +2211,8 @@ function renderCards(lines, isRange){
       c.innerHTML += createCardHtml(lineName,'','',tg,ac,item.remarks,null,null,null);
       return;
     }
-    getLotPlan(item).forEach((lotInfo, idx) => {
-      if (idx > 0 && !lotInfo.lot) return;
+    const lotPlans = getLotPlan(item).filter((lp, idx) => idx === 0 || lp.lot);
+    lotPlans.forEach((lotInfo, idx) => {
       c.innerHTML += createCardHtml(
         lineName,
         lotInfo.model,
@@ -2216,7 +2223,8 @@ function renderCards(lines, isRange){
         getLotLiveMetrics(lotInfo),
         item.manpower,
         getLoadInForLot_(item, lotInfo.lot),
-        getLoadOutForLot_(item, lotInfo.lot)
+        getLoadOutForLot_(item, lotInfo.lot),
+        lotPlans.length > 1 ? `LOT ${idx + 1}/${lotPlans.length}` : ''
       );
     });
   });
@@ -2227,7 +2235,7 @@ function renderCards(lines, isRange){
   void hydrateCardShipments_();
 }
 
-function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower, loadIn, loadOut){
+function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower, loadIn, loadOut, lotTag){
   target = num(target); actual = num(actual);
   const manpowerValue =
     (manpower === null || manpower === undefined || manpower === '')
@@ -2268,6 +2276,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
     <div class="card lineCard p-4 flex flex-col cursor-pointer hover:border-indigo-200 transition" onclick="openLine('${String(line).toUpperCase()}')">
       <div class="flex flex-wrap items-center gap-x-2 gap-y-1 min-h-[28px]">
         <span class="font-extrabold text-slate-800">LINE ${line}</span>
+        ${lotTag ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500">${lotTag}</span>` : ''}
         ${modelName
           ? `<span class="text-[11px] font-semibold text-slate-600">รุ่น ${modelName}</span>`
           : (lotName
@@ -2289,10 +2298,12 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
           <div class="font-semibold text-slate-500">ผลิตจริง <span class="ml-1 font-extrabold text-emerald-600">${actual.toLocaleString()}</span></div>
         </div>
         <div class="space-y-2 text-xs pt-0.5">
-          <div class="font-semibold text-slate-500">ผลิตจริง/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
-          <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
+          <div class="flex flex-wrap gap-x-4 gap-y-1">
+            <div class="font-semibold text-slate-500">ผลิต/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
+            <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
+          </div>
           ${manpowerValue !== null ? `<div class="font-semibold text-slate-500">กำลังคน <span class="ml-1 font-extrabold text-indigo-600">${manpowerValue.toLocaleString()} คน</span></div>` : ''}
-          ${lotName ? `<div class="hidden font-semibold text-slate-500" data-lot-shipment="${esc(lotName)}">Shipment <span class="ml-1 font-extrabold text-sky-600"></span></div>` : ''}
+          ${lotName ? `<div class="hidden flex-wrap items-center gap-x-1.5 gap-y-1 font-semibold text-slate-500" data-lot-shipment="${esc(lotName)}">Shipment <span class="ml-1 font-extrabold text-sky-600"></span><em class="hidden not-italic whitespace-nowrap text-[10px] font-bold px-1.5 py-0.5 rounded-md"></em></div>` : ''}
           ${loadInValue !== null ? `<div class="font-semibold text-slate-500">เข้าโหลดวันนี้ <span class="ml-1 font-extrabold text-violet-600">${loadInValue.toLocaleString()} ตัว</span></div>` : ''}
           ${loadOutValue !== null ? `<div class="font-semibold text-slate-500">ออกโหลดวันนี้ <span class="ml-1 font-extrabold text-fuchsia-600">${loadOutValue.toLocaleString()} ตัว</span></div>` : ''}
         </div>
@@ -2323,13 +2334,6 @@ function switchFloor(floor){
   planImg.src = FLOOR_PLANS[floor].img;
   planImg.alt = 'ผังโรงงานชั้น ' + floor;
   if (planImg.complete) requestAnimationFrame(() => planImg.classList.remove('is-switching'));
-
-  const shortcutBox = el('floorLineShortcuts');
-  shortcutBox.innerHTML = FLOOR_PLANS[floor].lines
-    .slice()
-    .sort((a,b) => a.code.localeCompare(b.code))
-    .map(cfg => `<button type="button" onclick="openLine('${cfg.code}')" class="lineShortcut">LINE ${cfg.code}</button>`)
-    .join('');
 
   hideTip();
   renderHotspots();
@@ -2363,6 +2367,31 @@ function renderHotspots(){
     wrap.appendChild(d);
   });
 
+  renderFloorLineList_();
+}
+
+// รายการไลน์ข้างผัง: จุดสี + รุ่น + % เทียบเป้าตอนนี้ (เกณฑ์เดียวกับการ์ด)
+function renderFloorLineList_(){
+  const box = el('floorLineShortcuts');
+  if (!box) return;
+  const DOT = { ok:'#10B981', warn:'#F59E0B', bad:'#F43F5E', none:'#CBD5E1' };
+  box.innerHTML = FLOOR_PLANS[currentFloor].lines
+    .slice()
+    .sort((a,b) => a.code.localeCompare(b.code))
+    .map(cfg => {
+      const item = findLine(cfg.code);
+      const st = getLineStatus(item);
+      const models = item ? getLotPlan(item).filter((lp, i) => i === 0 || lp.lot).map(lp => lp.model).filter(Boolean) : [];
+      return `<button type="button" onclick="openLine('${cfg.code}')" class="floorLineRow">
+        <span class="dot" style="background:${DOT[st.key] || DOT.none}"></span>
+        <span class="flex-1 min-w-0">
+          <span class="block text-xs font-extrabold text-slate-800">LINE ${cfg.code}</span>
+          <span class="block text-[10px] text-slate-400 truncate">${models.length ? esc(models.join(' → ')) : st.label}</span>
+        </span>
+        <span class="text-xs font-extrabold ${st.text}">${st.key === 'none' ? '-' : st.pct + '%'}</span>
+      </button>`;
+    })
+    .join('');
 }
 
 function showTip(cfg, hotEl){
