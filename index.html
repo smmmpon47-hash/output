@@ -3871,19 +3871,23 @@ main();
 const F1Nav = (function(){
   const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', finishing:'Finishing Dept' };
   const NAV_OF = { plan:'sewing' }; // ประวัติรุ่น & วางแผน = แท็บย่อยของ Sewing Dept
-  // แท็บย่อยของ Sewing Dept: ใส่ใต้หัว Dashboard เดิม (สร้างด้วย JS ไม่แก้ markup เดิม) และบนหน้าประวัติรุ่น
+  // ประวัติรุ่น & วางแผน: ปุ่มไอคอนข้างแว่นขยายบนหัว Dashboard เดิม (สร้างด้วย JS ไม่แก้ markup เดิม)
+  // หน้าประวัติรุ่นมีแท็บกลับไปภาพรวมวันนี้
   function sewTabsHtml(active){
     const t = (href, key, label) => `<a href="${href}" class="sew-tab${active === key ? ' on' : ''}"${active === key ? ' aria-current="page"' : ''}>${label}</a>`;
     return `<nav class="sew-tabs" aria-label="Sewing Dept">${t('#sewing', 'sewing', 'ภาพรวมวันนี้')}${t('#plan', 'plan', 'ประวัติรุ่น &amp; วางแผน')}</nav>`;
   }
   function mountSewTabs(){
-    const head = document.querySelector('.shell[data-view="sewing"] > header');
-    if (head && !document.getElementById('sewTabsMain')){
-      const wrap = document.createElement('div');
-      wrap.id = 'sewTabsMain';
-      wrap.className = 'mt-4';
-      wrap.innerHTML = sewTabsHtml('sewing');
-      head.insertAdjacentElement('afterend', wrap);
+    const search = document.querySelector('.shell[data-view="sewing"] > header button[onclick="openLotSearch()"]');
+    if (search && !document.getElementById('sewPlanBtn')){
+      const a = document.createElement('a');
+      a.id = 'sewPlanBtn';
+      a.href = '#plan';
+      a.className = 'bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px] inline-flex items-center justify-center';
+      a.title = 'ประวัติรุ่น & วางแผน';
+      a.setAttribute('aria-label', 'ประวัติรุ่น & วางแผน');
+      a.textContent = '📈';
+      search.insertAdjacentElement('afterend', a);
     }
     const planTabs = document.getElementById('sewTabsPlan');
     if (planTabs) planTabs.innerHTML = sewTabsHtml('plan');
