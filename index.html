@@ -444,10 +444,154 @@
 
   #themeBtn .ico-sun{ display:none; } html.dark #themeBtn .ico-sun{ display:inline; } html.dark #themeBtn .ico-moon{ display:none; }
 </style>
+<style>
+  /* ================= APP NAV (เมนูซ้าย) — ไม่แสดงในโหมด ?embed=1 ================= */
+  :root{ --nav-w:252px; --nav-rail:72px; }
+  #appNav, #appTopbar, #appNavBackdrop{ display:none; }
+  html.has-nav #appNav{
+    display:flex; flex-direction:column; position:fixed; z-index:90; top:0; bottom:0; left:0;
+    width:var(--nav-w); color:#E6EDF6; overflow:hidden;
+    background:linear-gradient(180deg,#0F172A 0%,#16233F 100%);
+    border-right:1px solid rgba(255,255,255,.06); transition:width .2s ease, transform .2s ease;
+  }
+  html.has-nav body{ padding-left:var(--nav-w); transition:padding-left .2s ease; }
+  html.has-nav.nav-collapsed #appNav{ width:var(--nav-rail); }
+  html.has-nav.nav-collapsed body{ padding-left:var(--nav-rail); }
+  html.nav-collapsed .nav-text, html.nav-collapsed .nav-tag, html.nav-collapsed .nav-group{ display:none; }
+  html.nav-collapsed .nav-item, html.nav-collapsed .nav-brand{ justify-content:center; padding-left:0; padding-right:0; }
+  .nav-brand{ display:flex; align-items:center; gap:10px; padding:16px 16px 12px; min-height:64px; box-sizing:border-box; }
+  .nav-logo{ width:40px; height:40px; flex:0 0 40px; border-radius:12px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); display:flex; align-items:center; justify-content:center; }
+  .nav-toggle{ margin-left:auto; width:40px; height:40px; flex:0 0 40px; border-radius:10px; border:0; background:transparent; color:#B7C2D3; cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .nav-toggle:hover{ background:rgba(255,255,255,.08); color:#fff; }
+  html.nav-collapsed .nav-toggle{ margin-left:0; }
+  html.nav-collapsed .nav-brand{ flex-direction:column; gap:6px; }
+  .nav-list{ display:flex; flex-direction:column; gap:2px; padding:4px 10px; overflow-y:auto; }
+  .nav-group{ font-size:11px; letter-spacing:.06em; color:#7F8CA3; padding:14px 12px 6px; }
+  .nav-item{ display:flex; align-items:center; gap:12px; min-height:44px; padding:0 12px; border-radius:12px; color:#C7D0DD; text-decoration:none; font-size:14px; }
+  .nav-item:hover{ background:rgba(255,255,255,.07); color:#fff; }
+  .nav-item.is-active{ background:rgba(214,185,123,.16); color:#F1DFB5; }
+  .nav-item svg{ flex:0 0 20px; }
+  .nav-tag{ margin-left:auto; font-size:10px; padding:2px 8px; border-radius:999px; background:rgba(255,255,255,.08); color:#93A0B4; white-space:nowrap; }
+  .nav-foot{ margin-top:auto; padding:12px 16px 16px; font-size:11px; color:#6F7C91; }
+  html.nav-collapsed .nav-foot{ display:none; }
+
+  /* มือถือ / แท็บเล็ต: เมนูเป็นลิ้นชัก + แถบบน */
+  @media (max-width:1023px){
+    html.has-nav body, html.has-nav.nav-collapsed body{ padding-left:0; padding-top:56px; }
+    html.has-nav #appNav, html.has-nav.nav-collapsed #appNav{ width:var(--nav-w); transform:translateX(-100%); box-shadow:none; }
+    html.nav-open #appNav{ transform:translateX(0) !important; box-shadow:0 20px 60px rgba(0,0,0,.45); }
+    html.nav-collapsed .nav-text, html.nav-collapsed .nav-tag, html.nav-collapsed .nav-group, html.nav-collapsed .nav-foot{ display:revert; }
+    html.nav-collapsed .nav-item{ justify-content:flex-start; padding:0 12px; }
+    html.nav-collapsed .nav-brand{ flex-direction:row; justify-content:flex-start; padding:16px 16px 12px; }
+    html.has-nav #appTopbar{ display:flex; position:fixed; z-index:85; top:0; left:0; right:0; height:56px; align-items:center; gap:10px; padding:0 8px; background:#0F172A; color:#fff; }
+    html.nav-open #appNavBackdrop{ display:block; position:fixed; inset:0; z-index:88; background:rgba(15,23,42,.55); }
+    .nav-toggle.desk{ display:none; }
+  }
+  @media (min-width:1024px){ .nav-close.mob{ display:none; } }
+
+  /* หน้าอื่นที่ไม่ใช่ Sewing: ซ่อน Loading ของ Dashboard (Dashboard ยังโหลดอยู่เบื้องหลัง) */
+  html[data-view]:not([data-view="sewing"]) #dashboardLoadingOverlay{ display:none !important; }
+  .app-view .pg-title{ font-size:22px; font-weight:700; color:#0F172A; }
+  html.dark .app-view .pg-title{ color:var(--d-hi); }
+  .mh-seg{ min-width:52px; height:44px; padding:0 10px; white-space:nowrap; border-radius:12px; border:1px solid #E2E8F0; background:#fff; color:#475569; font:inherit; font-size:14px; cursor:pointer; }
+  .mh-seg.on{ background:#0F172A; border-color:#0F172A; color:#fff; font-weight:600; }
+  html.dark .mh-seg{ background:var(--d-card2); border-color:var(--d-line2); color:var(--d-t1); }
+  html.dark .mh-seg.on{ background:#D6B97B; border-color:#D6B97B; color:#1A1407; }
+  .mh-input{ height:44px; border-radius:12px; border:1px solid #E2E8F0; background:#F8FAFC; padding:0 12px; font:inherit; font-size:16px; color:#0F172A; width:100%; box-sizing:border-box; }
+  .mh-input:focus{ outline:none; border-color:#6366F1; }
+  html.dark .mh-input{ background:var(--d-card2); border-color:var(--d-line2); color:var(--d-hi); color-scheme:dark; }
+  .mh-big{ font-size:40px; font-weight:700; line-height:1.1; color:#0F172A; font-variant-numeric:tabular-nums; }
+  html.dark .mh-big{ color:#F1DFB5; }
+  .mh-bar{ border-radius:8px 8px 2px 2px; background:#0F172A; }
+  .mh-bar.ramp{ background:#94A3B8; }
+  html.dark .mh-bar{ background:#D6B97B; }
+  html.dark .mh-bar.ramp{ background:#3A4762; }
+  .mh-row{ display:grid; grid-template-columns:100px 140px 120px 56px 76px 76px 84px 140px minmax(120px,1fr); gap:12px; align-items:center; padding:12px 18px; }
+  .mh-lrow{ display:grid; grid-template-columns:120px 70px 90px 70px 80px 110px 130px 90px; gap:12px; align-items:center; padding:10px 18px; }
+  .mh-click{ cursor:pointer; text-align:left; width:100%; font:inherit; color:inherit; background:none; border:0; }
+  .mh-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 8px; margin-top:8px; }
+  /* แท็บย่อย Sewing Dept */
+  .sew-tabs{ display:inline-flex; flex-wrap:wrap; gap:6px; padding:5px; border-radius:16px; background:#fff; border:1px solid #E6EBF2; }
+  .sew-tab{ display:inline-flex; align-items:center; min-height:40px; padding:0 16px; border-radius:12px; font-size:14px; font-weight:500; color:#475569; text-decoration:none; }
+  .sew-tab:hover{ background:#F1F5F9; color:#0F172A; }
+  .sew-tab.on{ background:#0F172A; color:#fff; font-weight:600; }
+  html.dark .sew-tabs{ background:var(--d-card); border-color:var(--d-line); }
+  html.dark .sew-tab{ color:var(--d-t1); }
+  html.dark .sew-tab:hover{ background:#172236; color:var(--d-hi); }
+  html.dark .sew-tab.on{ background:#D6B97B; color:#1A1407; }
+  /* Process (ค้นหารุ่นงาน / LOT) */
+  .pr-steps{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+  @media (max-width:640px){ .pr-steps{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
+  .pr-step{ border:1px solid #E2E8F0; border-radius:16px; padding:12px 14px; background:#F8FAFC; min-width:0; }
+  .pr-step.now{ border-color:#B8975A; background:#FBF6EC; box-shadow:0 0 0 1px #B8975A inset; }
+  .pr-step.done .pr-badge{ background:#D1FAE5; color:#047857; }
+  .pr-step.wait, .pr-step.skip{ opacity:.6; }
+  .pr-step.part .pr-badge{ background:#FEF3C7; color:#92400E; }
+  html.dark .pr-step.part .pr-badge{ background:#33240C; color:#FBBF5A; }
+  .pr-badge{ display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px; background:#E2E8F0; color:#475569; }
+  .pr-step.now .pr-badge{ background:#B8975A; color:#fff; }
+  .pr-track{ height:6px; border-radius:3px; background:#E2E8F0; overflow:hidden; margin-top:8px; }
+  .pr-fill{ height:6px; background:#0F172A; }
+  .pr-step.done .pr-fill{ background:#10B981; }
+  html.dark .pr-step{ background:var(--d-card2); border-color:var(--d-line2); }
+  html.dark .pr-step.now{ background:#2A2416; border-color:#D6B97B; box-shadow:0 0 0 1px #D6B97B inset; }
+  html.dark .pr-badge{ background:#1E2A3E; color:var(--d-t1); }
+  html.dark .pr-step.now .pr-badge{ background:#D6B97B; color:#1A1407; }
+  html.dark .pr-step.done .pr-badge{ background:#0E2C22; color:#34D399; }
+  html.dark .pr-track{ background:#1E2A3E; }
+  html.dark .pr-fill{ background:#D6B97B; }
+</style>
 </head>
 <body class="pb-10">
 
-<div class="shell px-3 md:px-6 pt-4 md:pt-6">
+<!-- ======================= APP NAV (เมนูซ้าย) ======================= -->
+<div id="appTopbar">
+  <button type="button" class="nav-toggle" onclick="F1Nav.open()" aria-label="เปิดเมนู" style="color:#fff">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <span id="appTopbarTitle" style="font-weight:600;font-size:16px">Sewing Dept</span>
+</div>
+<div id="appNavBackdrop" onclick="F1Nav.close()"></div>
+<aside id="appNav" aria-label="เมนูหลัก">
+  <div class="nav-brand">
+    <div class="nav-logo" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D6B97B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l5 3V10l5 3V6l8 4v11z"/><path d="M3 21h18"/></svg>
+    </div>
+    <div class="nav-text" style="line-height:1.2"><div style="font-weight:600;font-size:15px">Factory 1</div><div style="font-size:11px;color:#93A0B4">Production System</div></div>
+    <button type="button" class="nav-toggle desk" onclick="F1Nav.toggleCollapse()" aria-label="ย่อ / ขยายเมนู" title="ย่อ / ขยายเมนู">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg>
+    </button>
+    <button type="button" class="nav-toggle nav-close mob" onclick="F1Nav.close()" aria-label="ปิดเมนู">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+  <nav class="nav-list">
+    <a class="nav-item" href="#home" data-nav="home" title="หน้าหลัก">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>
+      <span class="nav-text">หน้าหลัก</span><span class="nav-tag">เร็ว ๆ นี้</span>
+    </a>
+    <a class="nav-item" href="#search" data-nav="search" title="ค้นหารุ่นงาน / LOT">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span class="nav-text">ค้นหารุ่นงาน / LOT</span>
+    </a>
+    <div class="nav-group">แผนก</div>
+    <a class="nav-item" href="#cutting" data-nav="cutting" title="Cutting Dept">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg>
+      <span class="nav-text">Cutting Dept</span><span class="nav-tag">เร็ว ๆ นี้</span>
+    </a>
+    <a class="nav-item" href="#sewing" data-nav="sewing" title="Sewing Dept">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l3 2v12h10V9l3-2-4-4"/><path d="M8 3c0 2 2 3 4 3s4-1 4-3"/></svg>
+      <span class="nav-text">Sewing Dept</span>
+    </a>
+    <a class="nav-item" href="#finishing" data-nav="finishing" title="Finishing Dept">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+      <span class="nav-text">Finishing Dept</span><span class="nav-tag">เร็ว ๆ นี้</span>
+    </a>
+  </nav>
+  <div class="nav-foot">โรง 1 · โรงเย็บ</div>
+</aside>
+
+<div class="shell px-3 md:px-6 pt-4 md:pt-6" data-view="sewing">
 
   <!-- ======================= HEADER ======================= -->
   <header class="rounded-[26px] px-4 md:px-6 py-4 text-white soft"
@@ -893,6 +1037,60 @@
     </div>
   </section>
 
+</div>
+
+<!-- ======================= หน้าใหม่จากเมนูซ้าย (ไม่แตะ Dashboard เดิมด้านบน) ======================= -->
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="home">
+  <div class="card soft p-6 md:p-8 max-w-3xl">
+    <p class="text-xs font-semibold text-amber-700">กำลังพัฒนา</p>
+    <h1 class="pg-title mt-1">หน้าหลัก · ภาพรวมโรงงาน</h1>
+    <p class="text-sm text-slate-500 mt-2">หน้านี้จะรวมทุกแผนกไว้ในจอเดียว</p>
+    <ul class="mt-4 space-y-2 text-sm text-slate-600 list-disc pl-5">
+      <li>ตอนนี้แต่ละไลน์กำลังทำรุ่นอะไร · รุ่นไหนใกล้ Shipment</li>
+      <li>แผนการผลิตคร่าว ๆ และรุ่นงานที่กำลังขึ้น</li>
+      <li>ผังโรงงาน 3D แบบเคลื่อนไหว จิ้มแล้วเห็นว่า ตัด / เย็บ / Finishing รุ่นอะไรอยู่</li>
+    </ul>
+    <a href="#sewing" class="inline-flex items-center mt-5 h-11 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold">ไปที่ Sewing Dept (Dashboard ตอนนี้)</a>
+  </div>
+</div>
+
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="cutting">
+  <div class="card soft p-6 md:p-8 max-w-3xl">
+    <p class="text-xs font-semibold text-amber-700">กำลังพัฒนา</p>
+    <h1 class="pg-title mt-1">Cutting Dept</h1>
+    <p class="text-sm text-slate-500 mt-2">พื้นที่สำหรับข้อมูลแผนกตัด จะเพิ่มเมื่อเริ่มเก็บข้อมูลของแผนก</p>
+  </div>
+</div>
+
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="finishing">
+  <div class="card soft p-6 md:p-8 max-w-3xl">
+    <p class="text-xs font-semibold text-amber-700">กำลังพัฒนา</p>
+    <h1 class="pg-title mt-1">Finishing Dept</h1>
+    <p class="text-sm text-slate-500 mt-2">พื้นที่สำหรับข้อมูลแผนก Finishing จะเพิ่มเมื่อเริ่มเก็บข้อมูลของแผนก</p>
+  </div>
+</div>
+
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="search">
+  <div class="flex flex-col gap-4">
+    <div>
+      <h1 class="pg-title">ค้นหารุ่นงาน / LOT</h1>
+      <p class="text-sm text-slate-500 mt-1">ดูว่างานอยู่ขั้นตอนไหน: ตัด (เข้าโหลด) → เย็บ → ส่ง Finishing</p>
+    </div>
+    <div class="card soft p-4 flex flex-wrap gap-3 items-center">
+      <label for="mhSearchInput" class="sr-only">เลข LOT หรือ รหัสรุ่น</label>
+      <input id="mhSearchInput" class="mh-input" style="flex:1 1 260px" placeholder="เลข LOT หรือ รหัสรุ่น เช่น 26121008 / MBIP190" autocomplete="off" oninput="F1MH.onSearchInput()" onkeydown="if(event.key==='Enter')F1MH.searchLotNow()">
+      <button type="button" onclick="F1MH.searchLotNow()" class="h-11 px-5 rounded-xl bg-slate-900 text-white text-sm font-semibold">ค้นหา</button>
+    </div>
+    <div>
+      <p id="mhSearchHint" class="text-sm text-slate-500 mb-2">กำลังโหลด...</p>
+      <div id="mhProcList" class="flex flex-col gap-3"></div>
+    </div>
+  </div>
+</div>
+
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="plan">
+  <div id="sewTabsPlan" class="mb-4"></div>
+  <div id="mhPlanRoot" class="flex flex-col gap-4"></div>
 </div>
 
 
@@ -3664,6 +3862,491 @@ async function main(){
 }
 
 main();
+</script>
+
+<script>
+/* =======================================================
+   APP NAV — เมนูซ้าย + สลับหน้า (#sewing = Dashboard เดิม เป็นหน้าเริ่มต้น)
+   ======================================================= */
+const F1Nav = (function(){
+  const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', finishing:'Finishing Dept' };
+  const NAV_OF = { plan:'sewing' }; // ประวัติรุ่น & วางแผน = แท็บย่อยของ Sewing Dept
+  // แท็บย่อยของ Sewing Dept: ใส่ใต้หัว Dashboard เดิม (สร้างด้วย JS ไม่แก้ markup เดิม) และบนหน้าประวัติรุ่น
+  function sewTabsHtml(active){
+    const t = (href, key, label) => `<a href="${href}" class="sew-tab${active === key ? ' on' : ''}"${active === key ? ' aria-current="page"' : ''}>${label}</a>`;
+    return `<nav class="sew-tabs" aria-label="Sewing Dept">${t('#sewing', 'sewing', 'ภาพรวมวันนี้')}${t('#plan', 'plan', 'ประวัติรุ่น &amp; วางแผน')}</nav>`;
+  }
+  function mountSewTabs(){
+    const head = document.querySelector('.shell[data-view="sewing"] > header');
+    if (head && !document.getElementById('sewTabsMain')){
+      const wrap = document.createElement('div');
+      wrap.id = 'sewTabsMain';
+      wrap.className = 'mt-4';
+      wrap.innerHTML = sewTabsHtml('sewing');
+      head.insertAdjacentElement('afterend', wrap);
+    }
+    const planTabs = document.getElementById('sewTabsPlan');
+    if (planTabs) planTabs.innerHTML = sewTabsHtml('plan');
+  }
+  const root = document.documentElement;
+  function parseHash(){
+    const h = decodeURIComponent((location.hash || '').replace(/^#/, ''));
+    const parts = h.split('/');
+    return { view: VIEWS[parts[0]] ? parts[0] : 'sewing', arg: parts.slice(1).join('/') };
+  }
+  function show(){
+    const { view, arg } = parseHash();
+    root.setAttribute('data-view', view);
+    document.querySelectorAll('[data-view]').forEach(node => {
+      if (node === root) return;
+      node.classList.toggle('hide', node.getAttribute('data-view') !== view);
+    });
+    document.querySelectorAll('#appNav [data-nav]').forEach(a => {
+      const on = a.getAttribute('data-nav') === (NAV_OF[view] || view);
+      a.classList.toggle('is-active', on);
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    const t = document.getElementById('appTopbarTitle');
+    if (t) t.textContent = VIEWS[view];
+    close();
+    if (view === 'sewing') setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
+    if (view === 'search' || view === 'plan') F1MH.enter(view, arg);
+    window.scrollTo(0, 0);
+  }
+  function toggleCollapse(){
+    const c = !root.classList.contains('nav-collapsed');
+    root.classList.toggle('nav-collapsed', c);
+    try{ localStorage.setItem('f1NavCollapsed', c ? '1' : '0'); }catch(e){}
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 220);
+  }
+  function open(){ root.classList.add('nav-open'); }
+  function close(){ root.classList.remove('nav-open'); }
+  function init(){
+    if (window.__DASH_EMBED__) return; // หน้ารวมโรง 1|2: ไม่มีเมนู เหมือนเดิม
+    root.classList.add('has-nav');
+    try{ if (localStorage.getItem('f1NavCollapsed') === '1') root.classList.add('nav-collapsed'); }catch(e){}
+    mountSewTabs();
+    window.addEventListener('hashchange', show);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    show();
+  }
+  return { init, show, toggleCollapse, open, close };
+})();
+
+/* =======================================================
+   ประวัติรุ่น & วางแผน — ข้อมูลจาก ?action=getModelHistory (ModelHistory.gs)
+   รวมประวัติตามรหัสหน้าขีด (ท้ายรหัส = สี เย็บเหมือนกัน)
+   ======================================================= */
+const F1MH = (function(){
+  const PAID = { 8:450, 9:550, 10:600, 11:650 };
+  const TH_DAY = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
+  const TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  let data = null, loading = null, loadError = '';
+  let plan = { style:'', qty:3000, mp:25, hours:10, start:'', due:'', line:'' };
+  // Load = ไลน์ที่มีงานเข้าโหลด (B C D) · Lean = E F · SAM / ความเร็วรุ่นเดียวกันคนละประเภทไม่เท่ากัน
+  const LINE_TYPE = c => ['B', 'C', 'D'].indexOf(c) >= 0 ? 'Load' : 'Lean';
+  let openRun = '';
+
+  const esc = s => String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  const fmt = n => Math.round(Number(n) || 0).toLocaleString('en-US');
+  const f2 = n => n === null || n === undefined ? '-' : Number(n).toFixed(2);
+  const styleOf = m => String(m || '').replace(/\(.*?\)/g, '').trim().toUpperCase().split('-')[0].trim();
+  const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  const parseYmd = s => { const p = String(s).split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+  const thDate = (s, withYear) => {
+    if (!s) return '-';
+    const d = parseYmd(s);
+    return TH_DAY[d.getDay()] + ' ' + d.getDate() + ' ' + TH_MON[d.getMonth()] + (withYear ? ' ' + String(d.getFullYear() + 543).slice(-2) : '');
+  };
+  const thRange = (a, b) => a === b ? thDate(a, true) : thDate(a) + ' – ' + thDate(b, true);
+  function nextWorkday(from){
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + 1);
+    while (d.getDay() === 0) d.setDate(d.getDate() + 1);
+    return d;
+  }
+
+  async function load(){
+    if (data) return data;
+    if (loading) return loading;
+    loading = (async () => {
+      try{
+        const res = await fetch(`${GAS_API_URL}?action=getModelHistory&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' });
+        const j = await res.json();
+        if (!j || j.status !== 'success' || !Array.isArray(j.styles)) throw new Error('not_deployed');
+        data = j; loadError = '';
+      }catch(err){
+        loadError = err && err.message === 'not_deployed'
+          ? 'ระบบหลังบ้านยังไม่มีข้อมูลประวัติรุ่น (รอ Deploy Apps Script เวอร์ชันที่มี ModelHistory)'
+          : 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ลองรีเฟรชอีกครั้ง';
+      }
+      loading = null;
+      return data;
+    })();
+    return loading;
+  }
+
+  function msgCard(text, tone){
+    const cls = tone === 'warn' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-slate-100 border-slate-200 text-slate-600';
+    return `<div class="card soft p-5 border ${cls} text-sm">${esc(text)}</div>`;
+  }
+
+  /* ---------- หน้า: ค้นหารุ่นงาน / LOT (Process) ---------- */
+  const STAGE = {
+    cut_in:   { text:'ตัดแล้ว รอเย็บ', now:0 },
+    sewing:   { text:'กำลังเย็บ', now:1 },
+    sew_done: { text:'เย็บครบ รอส่ง Finishing', now:2 },
+    out_only: { text:'ส่ง Finishing แล้วบางส่วน', now:2 },
+    out_done: { text:'ส่ง Finishing ครบแล้ว', now:3 }
+  };
+  const daysTo = s => Math.round((parseYmd(s) - new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 86400000);
+  // ป้ายตามจำนวนจริง: ครบ PO = เสร็จ · ขั้นปัจจุบัน = ตอนนี้ · มีบางส่วน = บางส่วน · ผ่านมาแล้วแต่ไม่มีข้อมูล = ไม่มีข้อมูล
+  function stepBox(idx, nowIdx, title, step, po, emptyText, extra){
+    const full = !!(step && po && step.total >= po);
+    const state = full ? 'done' : idx === nowIdx ? 'now' : step ? 'part' : idx < nowIdx ? 'skip' : 'wait';
+    const badge = { done:'เสร็จ', now:'ตอนนี้', part:'บางส่วน', skip:'ไม่มีข้อมูล', wait:'รอ' }[state];
+    const pct = step && po ? Math.min(100, Math.round(step.total / po * 100)) : 0;
+    const body = step
+      ? `<p class="text-lg font-bold text-slate-800 mt-1" style="font-variant-numeric:tabular-nums">${fmt(step.total)}${po ? ' <span class="text-[12px] font-normal text-slate-500">/ ' + fmt(po) + '</span>' : ''}</p>
+         <div class="pr-track"><div class="pr-fill" style="width:${pct}%"></div></div>
+         <p class="text-[12px] text-slate-500 mt-2">${thRange(step.first, step.last)}${step.lines ? ' · Line ' + esc(step.lines.split('').join(', ')) : ''}</p>${extra || ''}`
+      : `<p class="text-[12px] text-slate-500 mt-2">${emptyText}</p>`;
+    return `<div class="pr-step ${state}"><div class="flex items-center justify-between gap-2"><span class="text-[13px] font-semibold text-slate-700">${title}</span><span class="pr-badge">${badge}</span></div>${body}</div>`;
+  }
+  function processCard(l){
+    const st = STAGE[l.stage] || STAGE.sewing;
+    const po = l.poQty;
+    const sewLines = l.sew ? l.sew.lines : '';
+    const cutEmpty = sewLines && !/[BCD]/.test(sewLines) ? 'ไลน์ ' + esc(sewLines) + ' ยังไม่ได้บันทึกเข้าโหลด' : 'ยังไม่มีข้อมูลเข้าโหลด';
+    const cutExtra = l.cut ? `<p class="text-[12px] mt-1 ${l.cutComplete ? 'text-emerald-700' : 'text-slate-500'}">${l.cutComplete ? 'เข้าครบตาม PO ' + thDate(l.cut.last) : 'ยังเข้าไม่ครบ PO'}</p>` : '';
+    const remain = po ? Math.max(0, po - (l.sew ? l.sew.total : 0)) : 0;
+    const sewExtra = l.sew && remain && l.stage === 'sewing' ? `<p class="text-[12px] text-slate-500 mt-1">เหลือเย็บ ${fmt(remain)} ตัว</p>` : '';
+    let due = '';
+    if (l.delivery){
+      const n = daysTo(l.delivery);
+      const late = l.stage !== 'out_done' && n <= 7;
+      due = `<span class="text-[12px] ${late ? 'text-rose-600 font-semibold' : 'text-slate-500'}">กำหนดส่ง ${thDate(l.delivery, true)} · ${n >= 0 ? 'อีก ' + n + ' วัน' : 'เลยมา ' + (-n) + ' วัน'}</span>`;
+    }
+    return `<div class="card soft p-4 md:p-5 flex flex-col gap-3">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div><p class="text-[11px] text-slate-400">LOT</p><p class="text-xl font-bold text-slate-800">${esc(l.lot)}</p><p class="text-[13px] text-slate-500">${esc(l.model)}${po ? ' · PO ' + fmt(po) + ' ตัว' : ''}</p></div>
+        <div class="flex flex-col items-end gap-1"><span class="text-[12px] font-bold px-3 py-1.5 rounded-full ${l.stage === 'out_done' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${st.text}</span>${due}</div>
+      </div>
+      <div class="pr-steps">
+        ${stepBox(0, st.now, 'ตัด · เข้าโหลด', l.cut, po, cutEmpty, cutExtra)}
+        ${stepBox(1, st.now, 'เย็บ', l.sew, po, 'ยังไม่เริ่มเย็บ', sewExtra)}
+        ${stepBox(2, st.now, 'ส่ง Finishing · ออกโหลด', l.out, po, 'ยังไม่ได้ส่ง')}
+        ${stepBox(3, st.now, 'Finishing', null, po, 'รอข้อมูลแผนก Finishing')}
+      </div>
+      <div class="flex flex-wrap gap-2"><a href="#plan/${encodeURIComponent(l.style)}" class="inline-flex items-center h-10 px-4 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-100">ประวัติรุ่น ${esc(l.style)} &amp; วางแผน</a></div>
+    </div>`;
+  }
+  async function renderSearch(){
+    const list = el('mhProcList'), hint = el('mhSearchHint');
+    if (!data){ hint.textContent = 'กำลังโหลด...'; list.innerHTML = ''; await load(); }
+    if (!data){ hint.textContent = ''; list.innerHTML = msgCard(loadError, 'warn'); return; }
+    const lots = data.lots || [];
+    const q = el('mhSearchInput').value.trim().toUpperCase().replace(/\s+/g, '');
+    if (!q){
+      const act = lots.filter(l => l.active);
+      hint.textContent = `กำลังผลิตอยู่ตอนนี้ ${act.length} LOT · พิมพ์เลข LOT หรือรุ่นเพื่อดู LOT อื่น`;
+      list.innerHTML = act.length ? act.map(processCard).join('') : msgCard('ช่วง 3 วันที่ผ่านมาไม่มี LOT ที่กำลังผลิต');
+      return;
+    }
+    const items = lots.filter(l => l.lot.indexOf(q) >= 0 || l.style.indexOf(styleOf(q)) >= 0 || String(l.model).toUpperCase().replace(/\s+/g, '').indexOf(q) >= 0);
+    hint.textContent = items.length ? `พบ ${items.length} LOT` : '';
+    list.innerHTML = items.length ? items.slice(0, 30).map(processCard).join('') : msgCard('ยังไม่พบในข้อมูลการผลิต กด "ค้นหา" เพื่อดูใน Master_LOT');
+  }
+  let searchTimer = null;
+  function onSearchInput(){ clearTimeout(searchTimer); searchTimer = setTimeout(renderSearch, 150); }
+  // LOT ที่ยังไม่มีข้อมูลการผลิต → ดูจาก Master_LOT (ยังไม่เริ่ม)
+  async function searchLotNow(){
+    const val = el('mhSearchInput').value.trim();
+    if (!val) return;
+    await renderSearch();
+    if (data && (data.lots || []).some(l => l.lot.indexOf(val.toUpperCase().replace(/\s+/g, '')) >= 0)) return;
+    const list = el('mhProcList');
+    list.innerHTML = msgCard('กำลังค้นหา ' + val + ' ใน Master_LOT...');
+    try{
+      const res = await fetch(`${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`, { method:'GET', redirect:'follow' });
+      const d = await res.json();
+      if (d.error){ list.innerHTML = msgCard('ไม่พบ ' + val + ' ทั้งในข้อมูลการผลิตและ Master_LOT ลองตรวจตัวสะกดอีกครั้ง', 'warn'); return; }
+      el('mhSearchHint').textContent = 'มีใน Master_LOT แต่ยังไม่มีข้อมูลการผลิต';
+      list.innerHTML = `<div class="card soft p-5"><p class="text-[11px] text-slate-400">LOT</p><p class="text-xl font-bold text-slate-800">${esc(d.lot_number || val)}</p>
+        <p class="text-[13px] text-slate-500">${esc(d.model || '-')} · PO ${fmt(num(d.po_target))} ตัว · กำหนดส่ง ${esc(d.delivery_date || '-')}</p>
+        <span class="inline-block mt-3 text-[12px] font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">ยังไม่เริ่ม (ยังไม่มีเข้าโหลด / ยอดเย็บ)</span></div>`;
+    }catch(err){ list.innerHTML = msgCard('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ลองอีกครั้ง', 'warn'); }
+  }
+
+  /* ---------- คำนวณ ---------- */
+  // SAM ที่ใช้คิด: เลือกไลน์ = SAM ของไลน์นั้น → ไลน์ประเภทเดียวกัน (ไม่เอาข้าม Lean / Load) · ไม่เลือก = SAM ล่าสุดของรุ่น
+  function samFor(s, line){
+    if (!s) return null;
+    if (!line) return s.sam || null;
+    const bl = (s.byLine || []).find(b => b.key === line && b.sam);
+    if (bl) return bl.sam;
+    const bt = (s.byType || []).find(b => b.key === LINE_TYPE(line) && b.sam);
+    return bt ? bt.sam : null;
+  }
+  // ความเร็วที่ใช้คิด: ไลน์นั้น → ไลน์ประเภทเดียวกัน → SAM × ประสิทธิภาพของประเภทนั้น → ประวัติอีกประเภท → ค่ากลาง
+  function rateInfo(s, line){
+    const p = data.plant || {};
+    const type = line ? LINE_TYPE(line) : '';
+    const pt = (type && p.byType && p.byType[type]) || {};
+    if (s && line){
+      const bl = (s.byLine || []).find(b => b.key === line && b.rate);
+      if (bl) return { rate: bl.rate, lo: bl.rate * 0.9, hi: bl.rate * 1.1, source: `จากประวัติ Line ${line} (${bl.days} วัน, ${bl.lots} LOT) · ช่วง ±10%` };
+      const bt = (s.byType || []).find(b => b.key === type && b.rate);
+      if (bt) return { rate: bt.rate, lo: bt.rate * 0.85, hi: bt.rate * 1.15, source: `Line ${line} ยังไม่เคยเย็บรุ่นนี้ · ใช้ประวัติไลน์ ${type} อื่น (${bt.days} วัน)` };
+    }
+    if (s && s.rate && !line){
+      const one = s.runs.filter(r => r.rate).length === 1;
+      return { rate: s.rate, lo: one ? s.rate * 0.9 : s.rateMin, hi: one ? s.rate * 1.1 : s.rateMax, source: one ? 'จากประวัติรุ่นนี้ 1 ครั้ง ทุกไลน์รวมกัน (ช่วง ±10%)' : 'จากประวัติรุ่นนี้ ' + s.runs.filter(r => r.rate).length + ' ครั้ง ทุกไลน์รวมกัน' };
+    }
+    const sam = samFor(s, line);
+    const eff = pt.samEfficiency || p.samEfficiency;
+    if (sam && eff){
+      const r = 60 / sam * eff;
+      return { rate: r, lo: r * 0.85, hi: r * 1.15, source: `ยังไม่มีประวัติจริง${type ? 'ในไลน์ ' + type : ''} · คิดจาก SAM ${sam} × ประสิทธิภาพเฉลี่ย${type ? 'ไลน์ ' + type : 'ทั้งโรง'} ${Math.round(eff * 100)}%` };
+    }
+    if (s && s.rate){
+      return { rate: s.rate, lo: s.rate * 0.8, hi: s.rate * 1.2, source: `ยังไม่เคยเย็บรุ่นนี้ในไลน์ ${type} · ใช้ประวัติไลน์อีกประเภทแทน (ช่วง ±20%) ควรเผื่อเวลา` };
+    }
+    const r = pt.medianRate || p.medianRate || 2.2;
+    return { rate: r, lo: r * 0.8, hi: r * 1.2, source: 'ยังไม่มีประวัติจริง · ใช้ค่ากลาง' + (type ? 'ไลน์ ' + type : 'ทั้งโรง') };
+  }
+  function firstDayFactor(s){
+    const ratios = (s ? s.runs : []).filter(r => r.rate && r.firstRate && r.days >= 2).map(r => r.firstRate / r.rate);
+    if (ratios.length) return { f: Math.min(1, ratios.reduce((a, b) => a + b, 0) / ratios.length), own: true };
+    return { f: Math.min(1, (data.plant && data.plant.firstDayRatio) || 0.8), own: false };
+  }
+  function simulate(qty, mp, hours, rate, f1){
+    const full = mp * hours * rate;
+    const curve = [f1, (1 + f1) / 2];
+    const days = [];
+    let left = qty;
+    while (left > 0.5 && days.length < 120){
+      const cap = full * (days.length < curve.length ? curve[days.length] : 1);
+      const made = Math.min(cap, left);
+      days.push({ made, part: made / cap, ramp: days.length < curve.length });
+      left -= made;
+    }
+    const exact = days.length ? days.length - 1 + days[days.length - 1].part : 0;
+    return { full, days, exact };
+  }
+  function workdays(startStr, n){
+    const out = [];
+    const d = parseYmd(startStr);
+    while (out.length < n){ if (d.getDay() !== 0) out.push(ymd(d)); d.setDate(d.getDate() + 1); }
+    return out;
+  }
+
+  /* ---------- หน้า: ประวัติรุ่น & วางแผน ---------- */
+  function insights(s, ri, fd){
+    const out = [];
+    const rated = s ? s.runs.filter(r => r.rate) : [];
+    if (!s || !s.runs.length) out.push({ tone:'slate', text:'รุ่นใหม่ ยังไม่เคยเย็บในระบบ ตัวเลขประมาณการจึงคิดจาก SAM หรือค่ากลางทั้งโรง ควรเผื่อเวลาไว้' });
+    if (s && s.runs.length){
+      const last = s.runs[0];
+      const used = (last.byLine || []).map(b => `Line ${b.key} ${b.days} วัน`).join(' + ');
+      out.push({ tone:'slate', text:`รอบล่าสุด LOT ${last.lot} (${thRange(last.from, last.to)}) ใช้ ${used}${last.mpAvg ? ' · คนเฉลี่ย ' + last.mpAvg : ''} · เย็บได้ ${fmt(last.qty)} ตัว` });
+    }
+    const lines = (s ? s.byLine || [] : []).filter(b => b.rate).sort((a, b) => b.rate - a.rate);
+    if (lines.length >= 2) out.push({ tone:'ok', text:`Line ${lines[0].key} ทำรุ่นนี้ได้เร็วสุด ${f2(lines[0].rate)} ตัว/คน/ชม. เร็วกว่า Line ${lines[lines.length - 1].key} ราว ${Math.round((lines[0].rate / lines[lines.length - 1].rate - 1) * 100)}%` });
+    const ld = s && (s.byType || []).find(b => b.key === 'Load' && b.rate), ln = s && (s.byType || []).find(b => b.key === 'Lean' && b.rate);
+    if (ld && ln) out.push({ tone:'slate', text:`ไลน์ Load ทำได้ ${f2(ld.rate)} · ไลน์ Lean ${f2(ln.rate)} ตัว/คน/ชม.${ld.sam && ln.sam ? ' · SAM Load ' + ld.sam + ' / Lean ' + ln.sam : ''} เลือกไลน์ให้ตรงประเภทตอนวางแผน` });
+    if (rated.length >= 2){
+      const chron = rated.slice().sort((a, b) => a.from < b.from ? -1 : 1);
+      const ch = Math.round((chron[chron.length - 1].rate / chron[0].rate - 1) * 100);
+      if (Math.abs(ch) >= 5) out.push({ tone: ch > 0 ? 'ok' : 'warn', text: ch > 0 ? `ครั้งล่าสุดเร็วขึ้น ${ch}% เทียบครั้งแรก (คนชินมือ)` : `ครั้งล่าสุดช้าลง ${-ch}% เทียบครั้งแรก ควรถามหน้างานว่าเพราะอะไร` });
+    }
+    out.push({ tone:'warn', text:`วันแรกของรุ่น${fd.own ? 'นี้' : ' (ค่ากลางทั้งโรง)'} มักได้ราว ${Math.round(fd.f * 100)}% ของความเร็วปกติ ควรตั้งเป้าวันแรกต่ำลง ไม่งั้นแดงทั้งวัน` });
+    if (s && s.eff){
+      const eff = Math.round(s.eff * 100);
+      out.push({ tone: eff < 90 ? 'bad' : 'ok', text: eff < 90 ? `ที่ผ่านมาทำได้ ${eff}% ของเป้าตาม SAM ถ้าตั้งเป้าตาม SAM ตรง ๆ ไลน์จะต่ำกว่าเป้าเกือบทุกวัน` : `ที่ผ่านมาทำได้ ${eff}% ของเป้าตาม SAM เป้าตาม SAM ใช้ได้จริง` });
+    }
+    if (s && s.samMin && s.samMax && s.samMax - s.samMin >= 0.1) out.push({ tone:'slate', text:`SAM ของรุ่นนี้เคยขยับระหว่าง ${s.samMin} – ${s.samMax} นาที (แบ่งขั้นตอนให้ไลน์อื่น / จับ SAM ใหม่) ดูเหตุผลได้ในตารางประวัติ` });
+    const miss = s ? s.runs.reduce((a, r) => a + (r.daysMissingMp || 0), 0) : 0;
+    if (miss) out.push({ tone:'slate', text:`มี ${miss} วันในประวัติที่ไม่มีจำนวนคน วันนั้นคิดความเร็วไม่ได้` });
+    if (rated.length === 1) out.push({ tone:'slate', text:'มีประวัติที่คิดความเร็วได้ครั้งเดียว ตัวเลขยังเป็นแนวโน้ม ยิ่งเย็บซ้ำยิ่งแม่น' });
+    return out;
+  }
+
+  function renderPlanResults(){
+    const box = el('mhPlanResults');
+    if (!box || !data) return;
+    const s = data.styles.find(x => x.style === plan.style) || null;
+    const ri = rateInfo(s, plan.line), fd = firstDayFactor(s);
+    const qty = Math.max(0, Number(plan.qty) || 0), mp = Math.max(0, Number(plan.mp) || 0), hours = plan.hours;
+    if (!qty || !mp){ box.innerHTML = msgCard('กรอกจำนวนที่ต้องเย็บ และจำนวนคน', 'warn'); return; }
+    const mid = simulate(qty, mp, hours, ri.rate, fd.f), lo = simulate(qty, mp, hours, ri.lo, fd.f), hi = simulate(qty, mp, hours, ri.hi, fd.f);
+    const dates = workdays(plan.start, mid.days.length);
+    const end = dates[dates.length - 1];
+    const lastPart = mid.days.length ? mid.days[mid.days.length - 1].part : 1;
+    const sam = samFor(s, plan.line);
+    const samDay = sam ? PAID[hours] * mp / sam : 0;
+    let dueHtml = '';
+    if (plan.due){
+      const late = end > plan.due;
+      const spare = workdays(end, 400).indexOf(plan.due);
+      dueHtml = `<p class="text-sm mt-2 font-semibold ${late ? 'text-rose-600' : 'text-emerald-700'}">${late ? 'ไม่ทันกำหนดส่ง ' + thDate(plan.due, true) + ' ต้องเพิ่มคนหรือชั่วโมง' : 'ทันกำหนดส่ง ' + thDate(plan.due, true) + (spare > 0 ? ' · เผื่อได้ ~' + spare + ' วันทำงาน' : '')}</p>`;
+    }
+    const maxMade = Math.max.apply(null, mid.days.map(x => x.made).concat([1]));
+    const bars = mid.days.slice(0, 14).map((x, i) => `<div style="flex:1 1 0;min-width:28px;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%">
+        <span class="text-[11px] text-slate-500" style="font-variant-numeric:tabular-nums">${fmt(x.made)}</span>
+        <div class="mh-bar ${x.ramp ? 'ramp' : ''}" style="width:100%;max-width:56px;height:${Math.max(4, Math.round(x.made / maxMade * 84))}px"></div>
+        <span class="text-[11px] text-slate-400" style="white-space:nowrap">${thDate(dates[i]).replace(/ (ม|ก|มี|เม|พ|มิ|ส|ต|น|ธ)\..*$/, '')}</span></div>`).join('');
+    const tone = { ok:'bg-emerald-500', warn:'bg-amber-500', bad:'bg-rose-500', slate:'bg-slate-400' };
+    box.innerHTML = `
+      <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
+        <div class="bg-slate-50 rounded-2xl p-5">
+          <p class="text-[12px] text-slate-500">คาดว่าใช้</p>
+          <p class="mt-1"><span class="mh-big">≈ ${mid.exact.toFixed(1)}</span> <span class="text-slate-700">วันทำงาน</span></p>
+          <p class="text-[12px] text-slate-500 mt-1">ช่วงที่น่าจะเป็น ${hi.exact.toFixed(1)} – ${lo.exact.toFixed(1)} วัน</p>
+          <p class="text-sm text-slate-700 mt-3">เริ่ม ${thDate(plan.start)} → จบราว <b>${thDate(end, true)}</b>${lastPart < 0.5 ? ' (ช่วงเช้า)' : ''}</p>
+          ${dueHtml}
+          <p class="text-[11px] text-slate-400 mt-2">ข้ามวันอาทิตย์ · ยังไม่หักวันหยุดพิเศษ</p>
+        </div>
+        <div class="bg-slate-50 rounded-2xl p-5 flex flex-col gap-2 text-sm">
+          <div class="flex justify-between gap-3"><span class="text-slate-500">ความเร็วที่ใช้คิด</span><b class="text-slate-800">${f2(ri.rate)} ตัว/คน/ชม.</b></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">ยอดต่อวัน (เมื่อเข้าที่)</span><b class="text-slate-800">${fmt(mid.full)} ตัว</b></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">เป้าตามสูตร SAM (TG)</span><b class="text-slate-800">${sam ? fmt(samDay) + ' ตัว/วัน (SAM ' + sam + ')' : (plan.line ? 'ยังไม่มี SAM ไลน์ ' + LINE_TYPE(plan.line) : 'ไม่มีค่า SAM')}</b></div>
+          ${sam ? `<div class="flex justify-between gap-3"><span class="text-slate-500">ถ้าทำได้ตาม SAM 100%</span><b class="text-slate-800">≈ ${(qty / samDay).toFixed(1)} วัน</b></div>` : ''}
+          <p class="text-[12px] text-slate-500 border-t border-slate-200 pt-2 mt-1">${esc(ri.source)} · เผื่อช่วงเริ่มรุ่น วันแรก ~${Math.round(fd.f * 100)}% วันที่ 2 ~${Math.round((1 + fd.f) / 2 * 100)}%</p>
+        </div>
+      </div>
+      <div>
+        <p class="text-[12px] text-slate-500 mb-2">ยอดรายวันที่คาด ${mid.days.length > 14 ? '(แสดง 14 วันแรก)' : ''} · แท่งสีอ่อน = ช่วงเริ่มรุ่น</p>
+        <div style="display:flex;gap:8px;align-items:flex-end;height:130px;overflow-x:auto">${bars}</div>
+      </div>
+      <div class="flex flex-col gap-2">
+        <p class="text-sm font-semibold text-slate-700">สรุปจากประวัติ</p>
+        ${insights(s, ri, fd).map(i => `<div class="flex gap-3 bg-slate-50 rounded-xl px-4 py-3"><span class="mh-dot ${tone[i.tone]}"></span><span class="text-sm text-slate-700">${esc(i.text)}</span></div>`).join('')}
+      </div>`;
+  }
+
+  function historyTable(s){
+    if (!s || !s.runs.length) return '';
+    const rows = s.runs.map(r => {
+      const maxQ = Math.max.apply(null, r.daily.map(x => x.qty).concat([1]));
+      const spark = r.daily.slice(0, 12).map(x => `<div title="${esc(thDate(x.d) + ' · ' + x.line + ' · ' + fmt(x.qty))}" style="flex:1 1 0;height:${Math.max(3, Math.round(x.qty / maxQ * 28))}px" class="${x.mp ? 'bg-slate-800' : 'bg-slate-300'} rounded-sm"></div>`).join('');
+      const eff = r.eff ? Math.round(r.eff * 100) + '% SAM' + (r.samMin && r.samMax - r.samMin >= 0.1 ? ' (SAM ' + r.samMin + '–' + r.samMax + ')' : r.sam ? ' (SAM ' + r.sam + ')' : '') : '';
+      const open = openRun === r.lot;
+      const detail = open ? `<div class="px-5 pb-4 text-[12px] text-slate-600 overflow-x-auto">
+        ${r.notes && r.notes.length ? `<p class="mb-2 text-slate-700">หมายเหตุ: ${esc(r.notes.join(' · '))}</p>` : ''}
+        ${r.mpFromPaper ? '<p class="mb-2 text-slate-500">จำนวนคนบางวันมาจากบันทึกกระดาษ (SAM_History)</p>' : ''}
+        <table class="w-full" style="min-width:560px"><thead class="text-slate-400"><tr><th class="text-left py-1">วันที่</th><th class="text-left">ไลน์</th><th class="text-right">ยอด</th><th class="text-right">คน</th><th class="text-right">ชม.</th><th class="text-right">SAM</th><th class="text-right">ตัว/คน/ชม.</th><th class="text-right">% SAM</th></tr></thead><tbody>
+        ${r.daily.map(x => `<tr class="border-t border-slate-100"><td class="py-1">${thDate(x.d, true)}</td><td>${esc(x.line)}</td><td class="text-right">${fmt(x.qty)}</td><td class="text-right">${x.mp || '-'}</td><td class="text-right">${x.hours || '-'}</td><td class="text-right">${x.sam || '-'}</td><td class="text-right">${x.mp && x.hours ? f2(x.qty / (x.mp * x.hours)) : '-'}</td><td class="text-right">${x.mp && x.hours && x.sam ? Math.round(x.qty * x.sam / (x.mp * x.hours * 60) * 100) + '%' : '-'}</td></tr>`).join('')}
+        </tbody></table></div>` : '';
+      return `<div class="border-t border-slate-100"><button type="button" class="mh-click mh-row hover:bg-slate-100" onclick="F1MH.toggleRun('${esc(r.lot)}')" aria-expanded="${open}">
+        <span class="font-semibold text-slate-800">${esc(r.lot)}</span>
+        <span class="text-[13px] text-slate-600">${thRange(r.from, r.to)}</span>
+        <span class="text-[13px]"><b>${esc((r.byLine || []).map(b => b.key).join(', ') || r.lines)}</b><br><span class="text-slate-500">${esc((r.byLine || []).map(b => b.key + ' ' + b.days + ' วัน').join(' · '))}</span></span>
+        <span>${r.mpAvg || '-'}</span>
+        <span>${fmt(r.qty)}</span>
+        <span>${r.days} วัน</span>
+        <span class="font-semibold">${f2(r.rate)}</span>
+        <span class="text-[12px] text-slate-500">${esc(r.model)}${eff ? '<br>' + eff : ''}</span>
+        <span style="display:flex;gap:3px;align-items:flex-end;height:30px">${spark}</span>
+      </button>${detail}</div>`;
+    }).join('');
+    return `<div class="card soft overflow-hidden">
+      <div class="px-5 py-4 flex flex-wrap items-baseline justify-between gap-2"><p class="font-semibold text-slate-800">ประวัติการเย็บ ${esc(s.style)}</p><p class="text-[12px] text-slate-400">กดแถวเพื่อดูยอดรายวัน · แท่งสีอ่อน = วันที่ไม่มีจำนวนคน</p></div>
+      <div style="overflow-x:auto"><div style="min-width:1000px">
+        <div class="mh-row text-[12px] text-slate-400"><span>LOT</span><span>ช่วงวันที่</span><span>ไลน์</span><span>คน</span><span>จำนวน</span><span>ใช้เวลา</span><span>ตัว/คน/ชม.</span><span>รุ่น / สี</span><span>ยอดรายวัน</span></div>
+        ${rows}
+      </div></div></div>`;
+  }
+
+  async function renderPlan(){
+    const rootEl = el('mhPlanRoot');
+    if (!data){ rootEl.innerHTML = msgCard('กำลังโหลดประวัติรุ่น...'); await load(); }
+    if (!data){ rootEl.innerHTML = `<h1 class="pg-title">ประวัติรุ่น &amp; วางแผน</h1>` + msgCard(loadError, 'warn'); return; }
+    if (!plan.start) plan.start = ymd(nextWorkday(new Date()));
+    const s = data.styles.find(x => x.style === plan.style) || null;
+    const options = data.styles.map(x => `<option value="${esc(x.style)}"${x.style === plan.style ? ' selected' : ''}>${esc(x.style)}${x.runs.length > 1 ? ' · เคยเย็บ ' + x.runs.length + ' ครั้ง' : ''}</option>`).join('');
+    const rated = s ? s.runs.filter(r => r.rate) : [];
+    const ratedLines = (s ? s.byLine || [] : []).filter(b => b.rate).sort((a, b) => b.rate - a.rate);
+    const best = ratedLines[0];
+    const tile = (label, value, sub) => `<div class="card soft p-4"><p class="text-[12px] text-slate-500">${label}</p><p class="text-2xl font-bold text-slate-800 mt-1">${value}</p><p class="text-[12px] text-slate-500 mt-1">${sub}</p></div>`;
+    const hourBtns = [8, 9, 10, 11].map(h => `<button type="button" class="mh-seg ${h === plan.hours ? 'on' : ''}" data-k="hours" data-v="${h}" onclick="F1MH.setPlan('hours',${h})">${h} ชม.</button>`).join('');
+    const lineBtns = ['', 'B', 'C', 'D', 'E', 'F'].map(c => `<button type="button" class="mh-seg ${c === plan.line ? 'on' : ''}" data-k="line" data-v="${c}" onclick="F1MH.setPlan('line','${c}')" title="${c ? 'Line ' + c + ' · ' + LINE_TYPE(c) : 'ยังไม่ระบุไลน์'}">${c || 'ไม่ระบุ'}</button>`).join('');
+    // แยกตามไลน์: รอบก่อน ๆ เย็บรุ่นนี้ที่ไลน์ไหน กี่วัน คนเท่าไหร่ เร็วแค่ไหน SAM เท่าไหร่
+    const lineTable = s && (s.byLine || []).length ? `<div class="card soft overflow-hidden">
+      <div class="px-5 py-4 flex flex-wrap items-baseline justify-between gap-2"><p class="font-semibold text-slate-800">แยกตามไลน์</p><p class="text-[12px] text-slate-400">กดแถวเพื่อวางแผนด้วยไลน์นั้น · B C D = Load · E F = Lean</p></div>
+      <div style="overflow-x:auto"><div style="min-width:860px">
+        <div class="mh-lrow text-[12px] text-slate-400"><span>ไลน์</span><span>ประเภท</span><span>เย็บ</span><span>คนเฉลี่ย</span><span>จำนวน</span><span>ตัว/คน/ชม.</span><span>SAM</span><span>% SAM</span></div>
+        ${s.byLine.map(b => `<div class="border-t border-slate-100"><button type="button" class="mh-click mh-lrow hover:bg-slate-100${b.key === plan.line ? ' bg-slate-100' : ''}" onclick="F1MH.pickLine('${esc(b.key)}')">
+          <span class="font-semibold text-slate-800">Line ${esc(b.key)}</span>
+          <span class="text-[12px] px-2 py-0.5 rounded-full ${b.type === 'Load' ? 'bg-sky-50 text-sky-600' : 'bg-violet-50 text-violet-600'}" style="justify-self:start">${b.type}</span>
+          <span>${b.days} วัน · ${b.lots} LOT</span>
+          <span>${b.mpAvg || '-'}</span>
+          <span>${fmt(b.qty)}</span>
+          <span class="font-semibold">${f2(b.rate)}</span>
+          <span>${b.sam ? b.sam + (b.samMax - b.samMin >= 0.1 ? ' (' + b.samMin + '–' + b.samMax + ')' : '') : '-'}</span>
+          <span>${b.eff ? Math.round(b.eff * 100) + '%' : '-'}</span>
+        </button></div>`).join('')}
+      </div></div></div>` : '';
+    rootEl.innerHTML = `
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div><h1 class="pg-title">ประวัติรุ่น &amp; วางแผน</h1><p class="text-sm text-slate-500 mt-1">เลือกรุ่น กรอกแผน แล้วระบบประมาณการจากประวัติจริง · ข้อมูลถึง ${esc(data.generatedAt)}</p></div>
+        <div style="min-width:260px"><label for="mhStyleSelect" class="text-[12px] text-slate-500">รุ่น (รวมทุกสีตามรหัสหน้าขีด)</label>
+          <select id="mhStyleSelect" class="mh-input mt-1" onchange="F1MH.openStyle(this.value)"><option value="">— รุ่นใหม่ / ยังไม่เลือก —</option>${options}</select></div>
+      </div>
+      ${s ? `<div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        ${tile('เคยเย็บ', s.runs.length + ' ครั้ง', 'รวม ' + fmt(s.totalQty) + ' ตัว · ล่าสุด ' + thDate(s.lastDate, true))}
+        ${tile('ความเร็วจริงเฉลี่ย', s.rate ? f2(s.rate) + ' <span class="text-sm font-normal text-slate-500">ตัว/คน/ชม.</span>' : '-', rated.length > 1 ? 'ช่วงที่เคยทำได้ ' + f2(s.rateMin) + ' – ' + f2(s.rateMax) : (rated.length ? 'จาก 1 ครั้ง' : 'ยังไม่มีจำนวนคนในประวัติ'))}
+        ${tile('ความยาก (SAM ล่าสุด)', s.sam ? s.sam + ' <span class="text-sm font-normal text-slate-500">นาที/ตัว</span>' : '-', s.sam ? (s.samMax - s.samMin >= 0.1 ? 'เคยอยู่ ' + s.samMin + ' – ' + s.samMax + ' · ' : '') + (s.eff ? 'ทำได้ ~' + Math.round(s.eff * 100) + '% ของ SAM' : 'ยังคิด % ไม่ได้') : 'ยังไม่มีค่า SAM ของรุ่นนี้')}
+        ${tile('ไลน์ที่ทำได้ดีสุด', best ? 'Line ' + esc(best.key) + ' <span class="text-sm font-normal text-slate-500">' + best.type + '</span>' : '-', best ? f2(best.rate) + ' ตัว/คน/ชม.' + (ratedLines.length > 1 ? '' : ' · มีข้อมูลไลน์เดียว') : 'ข้อมูลยังไม่พอ')}
+      </div>
+      ${lineTable}` : msgCard('ยังไม่ได้เลือกรุ่น ตัวคำนวณจะใช้ค่ากลางทั้งโรง (' + f2(data.plant.medianRate) + ' ตัว/คน/ชม.) — เลือกรุ่นด้านบน หรือไปที่ "ค้นหารุ่นงาน / LOT"')}
+      <div class="card soft p-5 flex flex-col gap-5">
+        <p class="font-semibold text-slate-800 text-lg">ประมาณการ: ต้องใช้กี่วัน</p>
+        <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+          <div><label for="mhQty" class="text-[12px] text-slate-500">จำนวนที่ต้องเย็บ (ตัว)</label><input id="mhQty" type="number" inputmode="numeric" min="1" step="100" class="mh-input mt-1" value="${plan.qty}" oninput="F1MH.setPlan('qty',this.value)"></div>
+          <div><label for="mhMp" class="text-[12px] text-slate-500">จำนวนคน (Manpower)</label><input id="mhMp" type="number" inputmode="numeric" min="1" step="1" class="mh-input mt-1" value="${plan.mp}" oninput="F1MH.setPlan('mp',this.value)"></div>
+          <div style="grid-column:1/-1;display:flex;flex-wrap:wrap;gap:16px 28px">
+            <div><span class="text-[12px] text-slate-500">ไลน์ที่จะเย็บ (B C D = Load · E F = Lean)</span><div class="flex flex-wrap gap-2 mt-1" role="group" aria-label="ไลน์ที่จะเย็บ">${lineBtns}</div></div>
+            <div><span class="text-[12px] text-slate-500">ชั่วโมงทำงาน / วัน</span><div class="flex flex-wrap gap-2 mt-1" role="group" aria-label="ชั่วโมงต่อวัน">${hourBtns}</div></div>
+          </div>
+          <div><label for="mhStart" class="text-[12px] text-slate-500">วันเริ่ม</label><input id="mhStart" type="date" class="mh-input mt-1" value="${plan.start}" oninput="F1MH.setPlan('start',this.value)"></div>
+          <div><label for="mhDue" class="text-[12px] text-slate-500">กำหนดส่ง (ถ้ามี)</label><input id="mhDue" type="date" class="mh-input mt-1" value="${plan.due}" oninput="F1MH.setPlan('due',this.value)"></div>
+        </div>
+        <div id="mhPlanResults" class="flex flex-col gap-5"></div>
+      </div>
+      ${historyTable(s)}
+      ${data.lotsNotInMaster && data.lotsNotInMaster.length ? `<p class="text-[12px] text-slate-400">LOT ที่ไม่อยู่ใน Master_LOT จึงไม่ถูกนับในประวัติ: ${esc(data.lotsNotInMaster.join(', '))} (แก้ได้ด้วยปุ่ม "แก้เลข LOT" ในหน้าแอดมิน)</p>` : ''}`;
+    renderPlanResults();
+  }
+
+  function setPlan(key, value){
+    if (key === 'hours' || key === 'line'){
+      plan[key] = key === 'hours' ? Number(value) : String(value || '');
+      document.querySelectorAll(`#mhPlanRoot .mh-seg[data-k="${key}"]`).forEach(b => b.classList.toggle('on', b.getAttribute('data-v') === String(value)));
+    } else if (key === 'start' || key === 'due'){
+      plan[key] = value || (key === 'start' ? ymd(nextWorkday(new Date())) : '');
+    } else {
+      plan[key] = value;
+    }
+    renderPlanResults();
+  }
+  function openStyle(style){
+    const target = '#plan' + (style ? '/' + encodeURIComponent(style) : '');
+    if (location.hash !== target) location.hash = target; else renderPlan();
+  }
+  function toggleRun(lot){ openRun = openRun === lot ? '' : lot; renderPlan(); }
+  function pickLine(code){ plan.line = plan.line === code ? '' : code; renderPlan(); }
+  function enter(view, arg){
+    if (view === 'search') renderSearch();
+    if (view === 'plan'){
+      const st = styleOf(arg);
+      if (st !== plan.style){ plan.style = st; openRun = ''; }
+      renderPlan();
+    }
+  }
+  return { enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine };
+})();
+
+F1Nav.init();
 </script>
 </body>
 </html>
