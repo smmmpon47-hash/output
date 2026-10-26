@@ -2081,6 +2081,14 @@ async function resolveLotModelFallback_(lot){
     return __lotModelFallbackCache.get(key) || '';
   }
 
+  // จำผลค้น LOT ไว้ในเครื่อง 6 ชม. เปิดหน้าใหม่ไม่ต้องยิง searchLot ซ้ำทุก LOT (ลดคิว Apps Script)
+  const saved = readLotLookupStore_(key);
+  if (saved){
+    __lotModelFallbackCache.set(key, saved.model);
+    __lotShipmentCache.set(key, saved.delivery);
+    return saved.model;
+  }
+
   // รุ่นสำรองกับ Shipment ขอ LOT เดียวกันพร้อมกัน → ใช้ request เดียว
   if (__lotLookupInflight.has(key)) return __lotLookupInflight.get(key);
   const p = lookupLotOnce_(key, lot);
@@ -2089,6 +2097,26 @@ async function resolveLotModelFallback_(lot){
 }
 
 const __lotLookupInflight = new Map();
+const LOT_LOOKUP_STORE_KEY = 'dash_lot_lookup_v1';
+const LOT_LOOKUP_TTL_MS = 6 * 60 * 60 * 1000;
+
+function readLotLookupStore_(key){
+  try{
+    const all = JSON.parse(localStorage.getItem(LOT_LOOKUP_STORE_KEY) || '{}');
+    const hit = all[key];
+    return hit && Date.now() - hit.t < LOT_LOOKUP_TTL_MS ? hit : null;
+  }catch(_){ return null; }
+}
+
+function writeLotLookupStore_(key, model, delivery){
+  try{
+    const all = JSON.parse(localStorage.getItem(LOT_LOOKUP_STORE_KEY) || '{}');
+    const now = Date.now();
+    Object.keys(all).forEach(k => { if (!all[k] || now - all[k].t >= LOT_LOOKUP_TTL_MS) delete all[k]; });
+    all[key] = { model, delivery, t: now };
+    localStorage.setItem(LOT_LOOKUP_STORE_KEY, JSON.stringify(all));
+  }catch(_){}
+}
 
 async function lookupLotOnce_(key, lot){
   try{
@@ -2100,8 +2128,10 @@ async function lookupLotOnce_(key, lot){
 
     const data = await res.json();
     const model = data && !data.error ? String(data.model || '').trim() : '';
+    const delivery = data && !data.error ? String(data.delivery_date || '').trim() : '';
     __lotModelFallbackCache.set(key, model);
-    __lotShipmentCache.set(key, data && !data.error ? String(data.delivery_date || '').trim() : '');
+    __lotShipmentCache.set(key, delivery);
+    if (data && !data.error) writeLotLookupStore_(key, model, delivery);
     return model;
   }catch(err){
     console.warn('LOT model fallback failed:', lot, err);
