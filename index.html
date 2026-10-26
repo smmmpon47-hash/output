@@ -1860,6 +1860,16 @@ async function resolveLotModelFallback_(lot){
     return __lotModelFallbackCache.get(key) || '';
   }
 
+  // รุ่นสำรองกับ Shipment ขอ LOT เดียวกันพร้อมกัน → ใช้ request เดียว
+  if (__lotLookupInflight.has(key)) return __lotLookupInflight.get(key);
+  const p = lookupLotOnce_(key, lot);
+  __lotLookupInflight.set(key, p);
+  try{ return await p; } finally { __lotLookupInflight.delete(key); }
+}
+
+const __lotLookupInflight = new Map();
+
+async function lookupLotOnce_(key, lot){
   try{
     const res = await fetch(
       `${GAS_API_URL}?searchLot=${encodeURIComponent(key)}&_=${Date.now()}`,
@@ -1870,11 +1880,45 @@ async function resolveLotModelFallback_(lot){
     const data = await res.json();
     const model = data && !data.error ? String(data.model || '').trim() : '';
     __lotModelFallbackCache.set(key, model);
+    __lotShipmentCache.set(key, data && !data.error ? String(data.delivery_date || '').trim() : '');
     return model;
   }catch(err){
     console.warn('LOT model fallback failed:', lot, err);
     return '';
   }
+}
+
+// Shipment = Delivery Date ของ LOT ใน Master_LOT (ดึงผ่าน searchLot เหมือนรุ่นสำรอง)
+const __lotShipmentCache = new Map();
+
+function formatShipmentDate_(v){
+  const s = String(v || '').trim();
+  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m && /T/.test(s)){
+    const d = new Date(s);
+    if (!isNaN(d)) return d.toLocaleDateString('en-GB', { timeZone:'Asia/Bangkok' });
+  }
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : s;
+}
+
+async function resolveLotShipment_(lot){
+  const key = normalizeLotLookupKey_(lot);
+  if (!key) return '';
+  if (!__lotShipmentCache.has(key)) await resolveLotModelFallback_(key);
+  return __lotShipmentCache.get(key) || '';
+}
+
+async function hydrateCardShipments_(){
+  const nodes = Array.from(document.querySelectorAll('[data-lot-shipment]'));
+  if (!nodes.length) return;
+
+  await Promise.all(nodes.map(async node => {
+    const date = formatShipmentDate_(await resolveLotShipment_(node.getAttribute('data-lot-shipment') || ''));
+    if (!date || !node.isConnected) return;
+
+    node.querySelector('span').textContent = date;
+    node.classList.remove('hidden');
+  }));
 }
 
 async function hydrateMissingCardModels_(){
@@ -1941,6 +1985,7 @@ function renderCards(lines, isRange){
   // บาง LOT ใน Summary อาจมีช่องว่างไม่ตรงกับ Master_LOT
   // ถ้า backend ส่ง model ว่าง ให้ค้นจาก LOT แบบ normalize เฉพาะหน้า Dashboard
   void hydrateMissingCardModels_();
+  void hydrateCardShipments_();
 }
 
 function createCardHtml(line, modelName, lotName, target, actual, remarks, live, manpower, loadIn, loadOut){
@@ -2008,6 +2053,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
           <div class="font-semibold text-slate-500">ผลิตจริง/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
           <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
           ${manpowerValue !== null ? `<div class="font-semibold text-slate-500">กำลังคน <span class="ml-1 font-extrabold text-indigo-600">${manpowerValue.toLocaleString()} คน</span></div>` : ''}
+          ${lotName ? `<div class="hidden font-semibold text-slate-500" data-lot-shipment="${esc(lotName)}">Shipment <span class="ml-1 font-extrabold text-sky-600"></span></div>` : ''}
           ${loadInValue !== null ? `<div class="font-semibold text-slate-500">เข้าโหลดวันนี้ <span class="ml-1 font-extrabold text-violet-600">${loadInValue.toLocaleString()} ตัว</span></div>` : ''}
           ${loadOutValue !== null ? `<div class="font-semibold text-slate-500">ออกโหลดวันนี้ <span class="ml-1 font-extrabold text-fuchsia-600">${loadOutValue.toLocaleString()} ตัว</span></div>` : ''}
         </div>
