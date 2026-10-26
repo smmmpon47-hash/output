@@ -583,6 +583,10 @@
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 4 7l3 2v12h10V9l3-2-4-4"/><path d="M8 3c0 2 2 3 4 3s4-1 4-3"/></svg>
       <span class="nav-text">Sewing Dept</span>
     </a>
+    <a class="nav-item" href="#washing" data-nav="washing" title="Washing Dept">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z"/></svg>
+      <span class="nav-text">Washing Dept</span><span class="nav-tag">เร็ว ๆ นี้</span>
+    </a>
     <a class="nav-item" href="#finishing" data-nav="finishing" title="Finishing Dept">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
       <span class="nav-text">Finishing Dept</span><span class="nav-tag">เร็ว ๆ นี้</span>
@@ -1048,7 +1052,7 @@
     <ul class="mt-4 space-y-2 text-sm text-slate-600 list-disc pl-5">
       <li>ตอนนี้แต่ละไลน์กำลังทำรุ่นอะไร · รุ่นไหนใกล้ Shipment</li>
       <li>แผนการผลิตคร่าว ๆ และรุ่นงานที่กำลังขึ้น</li>
-      <li>ผังโรงงาน 3D แบบเคลื่อนไหว จิ้มแล้วเห็นว่า ตัด / เย็บ / Finishing รุ่นอะไรอยู่</li>
+      <li>ผังโรงงาน 3D แบบเคลื่อนไหว จิ้มแล้วเห็นว่า Cutting / Sewing / Washing / Finishing ทำรุ่นอะไรอยู่</li>
     </ul>
     <a href="#sewing" class="inline-flex items-center mt-5 h-11 px-4 rounded-xl bg-slate-900 text-white text-sm font-semibold">ไปที่ Sewing Dept (Dashboard ตอนนี้)</a>
   </div>
@@ -1059,6 +1063,14 @@
     <p class="text-xs font-semibold text-amber-700">กำลังพัฒนา</p>
     <h1 class="pg-title mt-1">Cutting Dept</h1>
     <p class="text-sm text-slate-500 mt-2">พื้นที่สำหรับข้อมูลแผนกตัด จะเพิ่มเมื่อเริ่มเก็บข้อมูลของแผนก</p>
+  </div>
+</div>
+
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="washing">
+  <div class="card soft p-6 md:p-8 max-w-3xl">
+    <p class="text-xs font-semibold text-amber-700">กำลังพัฒนา</p>
+    <h1 class="pg-title mt-1">Washing Dept</h1>
+    <p class="text-sm text-slate-500 mt-2">พื้นที่สำหรับข้อมูลแผนกฟอก จะเพิ่มเมื่อเริ่มเก็บข้อมูลของแผนก</p>
   </div>
 </div>
 
@@ -1074,7 +1086,7 @@
   <div class="flex flex-col gap-4">
     <div>
       <h1 class="pg-title">ค้นหารุ่นงาน / LOT</h1>
-      <p class="text-sm text-slate-500 mt-1">ดูว่างานอยู่ขั้นตอนไหน: ตัด (เข้าโหลด) → เย็บ → ส่ง Finishing</p>
+      <p class="text-sm text-slate-500 mt-1">ดูว่างานอยู่ขั้นตอนไหน: Cutting → Sewing → Washing → Finishing</p>
     </div>
     <div class="card soft p-4 flex flex-wrap gap-3 items-center">
       <label for="mhSearchInput" class="sr-only">เลข LOT หรือ รหัสรุ่น</label>
@@ -3869,7 +3881,7 @@ main();
    APP NAV — เมนูซ้าย + สลับหน้า (#sewing = Dashboard เดิม เป็นหน้าเริ่มต้น)
    ======================================================= */
 const F1Nav = (function(){
-  const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', finishing:'Finishing Dept' };
+  const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', washing:'Washing Dept', finishing:'Finishing Dept' };
   const NAV_OF = { plan:'sewing' }; // ประวัติรุ่น & วางแผน = แท็บย่อยของ Sewing Dept
   // ประวัติรุ่น & วางแผน: ปุ่มไอคอนข้างแว่นขยายบนหัว Dashboard เดิม (สร้างด้วย JS ไม่แก้ markup เดิม)
   // หน้าประวัติรุ่นมีแท็บกลับไปภาพรวมวันนี้
@@ -3995,19 +4007,12 @@ const F1MH = (function(){
   }
 
   /* ---------- หน้า: ค้นหารุ่นงาน / LOT (Process) ---------- */
-  const STAGE = {
-    cut_in:   { text:'ตัดแล้ว รอเย็บ', now:0 },
-    sewing:   { text:'กำลังเย็บ', now:1 },
-    sew_done: { text:'เย็บครบ รอส่ง Finishing', now:2 },
-    out_only: { text:'ส่ง Finishing แล้วบางส่วน', now:2 },
-    out_done: { text:'ส่ง Finishing ครบแล้ว', now:3 }
-  };
+  // ตอนนี้มีข้อมูลแค่แผนกเย็บ (ยอดรายชั่วโมง) · Cutting / Washing / Finishing เป็นช่องรอข้อมูลแผนก
   const daysTo = s => Math.round((parseYmd(s) - new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate())) / 86400000);
-  // ป้ายตามจำนวนจริง: ครบ PO = เสร็จ · ขั้นปัจจุบัน = ตอนนี้ · มีบางส่วน = บางส่วน · ผ่านมาแล้วแต่ไม่มีข้อมูล = ไม่มีข้อมูล
-  function stepBox(idx, nowIdx, title, step, po, emptyText, extra){
+  function stepBox(title, step, po, emptyText, extra){
     const full = !!(step && po && step.total >= po);
-    const state = full ? 'done' : idx === nowIdx ? 'now' : step ? 'part' : idx < nowIdx ? 'skip' : 'wait';
-    const badge = { done:'เสร็จ', now:'ตอนนี้', part:'บางส่วน', skip:'ไม่มีข้อมูล', wait:'รอ' }[state];
+    const state = !step ? 'wait' : full ? 'done' : 'now';
+    const badge = { done:'เสร็จ', now:'ตอนนี้', wait:'รอข้อมูล' }[state];
     const pct = step && po ? Math.min(100, Math.round(step.total / po * 100)) : 0;
     const body = step
       ? `<p class="text-lg font-bold text-slate-800 mt-1" style="font-variant-numeric:tabular-nums">${fmt(step.total)}${po ? ' <span class="text-[12px] font-normal text-slate-500">/ ' + fmt(po) + '</span>' : ''}</p>
@@ -4017,29 +4022,26 @@ const F1MH = (function(){
     return `<div class="pr-step ${state}"><div class="flex items-center justify-between gap-2"><span class="text-[13px] font-semibold text-slate-700">${title}</span><span class="pr-badge">${badge}</span></div>${body}</div>`;
   }
   function processCard(l){
-    const st = STAGE[l.stage] || STAGE.sewing;
     const po = l.poQty;
-    const sewLines = l.sew ? l.sew.lines : '';
-    const cutEmpty = sewLines && !/[BCD]/.test(sewLines) ? 'ไลน์ ' + esc(sewLines) + ' ยังไม่ได้บันทึกเข้าโหลด' : 'ยังไม่มีข้อมูลเข้าโหลด';
-    const cutExtra = l.cut ? `<p class="text-[12px] mt-1 ${l.cutComplete ? 'text-emerald-700' : 'text-slate-500'}">${l.cutComplete ? 'เข้าครบตาม PO ' + thDate(l.cut.last) : 'ยังเข้าไม่ครบ PO'}</p>` : '';
+    const sewDone = !!(l.sew && po && l.sew.total >= po);
     const remain = po ? Math.max(0, po - (l.sew ? l.sew.total : 0)) : 0;
-    const sewExtra = l.sew && remain && l.stage === 'sewing' ? `<p class="text-[12px] text-slate-500 mt-1">เหลือเย็บ ${fmt(remain)} ตัว</p>` : '';
+    const sewExtra = l.sew && remain ? `<p class="text-[12px] text-slate-500 mt-1">เหลือเย็บ ${fmt(remain)} ตัว</p>` : '';
     let due = '';
     if (l.delivery){
       const n = daysTo(l.delivery);
-      const late = l.stage !== 'out_done' && n <= 7;
+      const late = !sewDone && n <= 7;
       due = `<span class="text-[12px] ${late ? 'text-rose-600 font-semibold' : 'text-slate-500'}">กำหนดส่ง ${thDate(l.delivery, true)} · ${n >= 0 ? 'อีก ' + n + ' วัน' : 'เลยมา ' + (-n) + ' วัน'}</span>`;
     }
     return `<div class="card soft p-4 md:p-5 flex flex-col gap-3">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div><p class="text-[11px] text-slate-400">LOT</p><p class="text-xl font-bold text-slate-800">${esc(l.lot)}</p><p class="text-[13px] text-slate-500">${esc(l.model)}${po ? ' · PO ' + fmt(po) + ' ตัว' : ''}</p></div>
-        <div class="flex flex-col items-end gap-1"><span class="text-[12px] font-bold px-3 py-1.5 rounded-full ${l.stage === 'out_done' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${st.text}</span>${due}</div>
+        <div class="flex flex-col items-end gap-1"><span class="text-[12px] font-bold px-3 py-1.5 rounded-full ${sewDone ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${sewDone ? 'เย็บครบแล้ว' : 'กำลังเย็บ'}</span>${due}</div>
       </div>
       <div class="pr-steps">
-        ${stepBox(0, st.now, 'ตัด · เข้าโหลด', l.cut, po, cutEmpty, cutExtra)}
-        ${stepBox(1, st.now, 'เย็บ', l.sew, po, 'ยังไม่เริ่มเย็บ', sewExtra)}
-        ${stepBox(2, st.now, 'ส่ง Finishing · ออกโหลด', l.out, po, 'ยังไม่ได้ส่ง')}
-        ${stepBox(3, st.now, 'Finishing', null, po, 'รอข้อมูลแผนก Finishing')}
+        ${stepBox('Cutting', null, po, 'รอข้อมูลแผนก Cutting')}
+        ${stepBox('Sewing', l.sew, po, 'ยังไม่เริ่มเย็บ', sewExtra)}
+        ${stepBox('Washing', null, po, 'รอข้อมูลแผนก Washing')}
+        ${stepBox('Finishing', null, po, 'รอข้อมูลแผนก Finishing')}
       </div>
       <div class="flex flex-wrap gap-2"><a href="#plan/${encodeURIComponent(l.style)}" class="inline-flex items-center h-10 px-4 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-100">ประวัติรุ่น ${esc(l.style)} &amp; วางแผน</a></div>
     </div>`;
@@ -4048,7 +4050,7 @@ const F1MH = (function(){
     const list = el('mhProcList'), hint = el('mhSearchHint');
     if (!data){ hint.textContent = 'กำลังโหลด...'; list.innerHTML = ''; await load(); }
     if (!data){ hint.textContent = ''; list.innerHTML = msgCard(loadError, 'warn'); return; }
-    const lots = data.lots || [];
+    const lots = (data.lots || []).filter(l => l.sew); // หน้านี้ใช้ข้อมูลแผนกเย็บเท่านั้น
     const q = el('mhSearchInput').value.trim().toUpperCase().replace(/\s+/g, '');
     if (!q){
       const act = lots.filter(l => l.active);
@@ -4077,7 +4079,7 @@ const F1MH = (function(){
       el('mhSearchHint').textContent = 'มีใน Master_LOT แต่ยังไม่มีข้อมูลการผลิต';
       list.innerHTML = `<div class="card soft p-5"><p class="text-[11px] text-slate-400">LOT</p><p class="text-xl font-bold text-slate-800">${esc(d.lot_number || val)}</p>
         <p class="text-[13px] text-slate-500">${esc(d.model || '-')} · PO ${fmt(num(d.po_target))} ตัว · กำหนดส่ง ${esc(d.delivery_date || '-')}</p>
-        <span class="inline-block mt-3 text-[12px] font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">ยังไม่เริ่ม (ยังไม่มีเข้าโหลด / ยอดเย็บ)</span></div>`;
+        <span class="inline-block mt-3 text-[12px] font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">ยังไม่เริ่มเย็บ</span></div>`;
     }catch(err){ list.innerHTML = msgCard('เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ลองอีกครั้ง', 'warn'); }
   }
 
