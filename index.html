@@ -716,6 +716,13 @@
   html:not(.dark) #appTopbar{ background:rgba(255,255,255,.80) !important; color:#0F172A !important; box-shadow:0 10px 30px -20px rgba(49,46,129,.45); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
   html:not(.dark) #appTopbar .nav-toggle{ color:#0F172A !important; }
   html.dark #appTopbar{ background:rgba(10,14,23,.86); box-shadow:inset 0 -1px 0 rgba(214,185,123,.30); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+  /* มือถือ / แท็บเล็ต: เมนูลิ้นชักเป็นแผ่นทึบ (กระจกใสซ้อนกับเนื้อหาข้างหลังจนอ่านไม่ออก) */
+  @media (max-width:1023px){
+    html:not(.dark) #appNav{ background:linear-gradient(180deg,#F7F8FF 0%,#EEF1FF 100%); border-right:1px solid #E0E7FF; }
+    html.dark #appNav{ background:linear-gradient(180deg,#0D121D 0%,#080B13 100%); border-right:1px solid rgba(214,185,123,.18); }
+    html:not(.dark) .nav-user{ background:#fff; }
+    html.dark .nav-user{ background:#121a2a; }
+  }
 
   /* ---------- สลับธีม: สีค่อยๆ เปลี่ยน (สำรอง) / วงกลมขยาย (View Transition) ---------- */
   html.theme-fade, html.theme-fade *{ transition:background-color .6s ease, border-color .6s ease, color .6s ease, box-shadow .6s ease !important; }
