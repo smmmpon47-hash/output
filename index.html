@@ -609,8 +609,140 @@
   html.dark .pr-track{ background:#1E2A3E; }
   html.dark .pr-fill{ background:#D6B97B; }
 </style>
+<style>
+  /* ================= GLASS THEME — สว่าง: กระจกขาวบนฟ้าม่วงอ่อน · มืด: กระจกดำตัดทองแชมเปญ =================
+     ไม่ใช้ backdrop-filter กับการ์ด (พื้นหลังฟุ้งอยู่แล้ว ดูเหมือนกัน แต่เครื่องโรงงาน/ทีวีไม่หน่วง) */
+  html{ background:linear-gradient(135deg,#EEF2FF 0%,#E0E7FF 35%,#F5F3FF 70%,#ECFEFF 100%) fixed; }
+  html.dark{ background:#06080E; }
+  body, html.dark body{ background:transparent; }
+  #f1Aurora{ position:fixed; inset:0; z-index:-1; pointer-events:none; overflow:hidden; }
+  /* แสงฟุ้ง = radial-gradient (ไม่ใช้ filter:blur — เครื่องไม่มีการ์ดจอต้องวาด blur ใหม่ทุกเฟรม หน้าหน่วงมาก) */
+  #f1Aurora i{ position:absolute; display:block; border-radius:50%; will-change:transform; background:radial-gradient(closest-side, var(--c), transparent); }
+  #f1Aurora .a1{ --c:rgba(99,102,241,.30); width:1000px; height:1000px; left:-380px; top:-440px; }
+  #f1Aurora .a2{ --c:rgba(103,232,249,.36); width:900px; height:900px; right:-360px; top:calc(30vh - 170px); }
+  #f1Aurora .a3{ --c:rgba(196,181,253,.48); width:900px; height:900px; left:calc(38vw - 170px); bottom:-450px; }
+  html.dark #f1Aurora .a1{ --c:rgba(56,78,130,.42); width:1300px; height:900px; left:-340px; top:-500px; }
+  html.dark #f1Aurora .a2{ --c:rgba(214,185,123,.13); width:1000px; height:800px; right:-340px; top:-360px; }
+  html.dark #f1Aurora .a3{ --c:rgba(214,185,123,.09); width:1100px; height:760px; left:calc(38vw - 200px); bottom:-470px; }
+  .is-embed #f1Aurora{ display:none; }
+
+  /* ---------- การ์ด: สว่าง ---------- */
+  html:not(.dark) .card, html:not(.dark) .floorMain, html:not(.dark) .guideColumn{
+    background:rgba(255,255,255,.60); border:1px solid rgba(255,255,255,.88);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.95), 0 18px 40px -26px rgba(49,46,129,.38);
+  }
+  html:not(.dark) .soft{ box-shadow:inset 0 1px 0 rgba(255,255,255,.95), 0 18px 40px -26px rgba(49,46,129,.38); }
+  html:not(.dark) .bg-slate-100{ background-color:rgba(148,163,184,.20); }
+  html:not(.dark) .floorSwitch{ background:rgba(255,255,255,.55); }
+  /* หน้าต่างลอย (ค้นหา LOT / รายละเอียดไลน์) ทึบกว่า อ่านง่าย */
+  html:not(.dark) .fixed .card{ background:rgba(255,255,255,.97); }
+
+  /* ---------- การ์ด: มืด ดำตัดทอง ---------- */
+  html.dark .card, html.dark .floorMain, html.dark .guideColumn, html.dark .guideTitle, html.dark .lineShortcutBody, html.dark .guideBody{
+    background:linear-gradient(180deg, rgba(255,255,255,.035), rgba(255,255,255,.01) 45%), rgba(13,18,29,.74);
+    border:1px solid rgba(255,255,255,.07);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 28px 56px -34px rgba(0,0,0,.95);
+  }
+  html.dark .fixed .card{ background:#0D121D; }
+
+  /* ---------- หัว Dashboard ---------- */
+  .shell > header{ position:relative; overflow:hidden; }
+  html:not(.dark) .shell > header{
+    background:rgba(255,255,255,.60) !important; color:#0F172A;
+    border:1px solid rgba(255,255,255,.9);
+    box-shadow:inset 0 1px 0 #fff, 0 18px 40px -26px rgba(49,46,129,.38);
+  }
+  html:not(.dark) .shell > header .text-white\/60, html:not(.dark) .shell > header .text-white\/55{ color:#475569; }
+  html:not(.dark) .shell > header .bg-white\/10{ background-color:rgba(255,255,255,.75); }
+  html:not(.dark) .shell > header .hover\:bg-white\/20:hover{ background-color:#fff; }
+  html:not(.dark) .shell > header .border-white\/15{ border-color:rgba(255,255,255,.95); }
+  html:not(.dark) .shell > header .bg-white\/10, html:not(.dark) #sewPlanBtn{ box-shadow:0 8px 18px -14px rgba(49,46,129,.45); color:#334155; }
+  html:not(.dark) .hd-logo{ background:linear-gradient(140deg,#6366F1,#22D3EE) !important; border-color:transparent !important; color:#fff; box-shadow:0 10px 20px -10px #6366F1; }
+  html.dark .shell > header{
+    background:linear-gradient(120deg, rgba(11,15,25,.88) 0%, rgba(17,26,44,.82) 60%, rgba(22,34,58,.80) 100%) !important;
+    border:1px solid rgba(255,255,255,.07);
+    box-shadow:inset 0 -1px 0 rgba(214,185,123,.45), 0 28px 56px -34px rgba(0,0,0,.95);
+  }
+  html.dark .hd-logo{ color:#D6B97B; background:rgba(214,185,123,.10) !important; border-color:rgba(214,185,123,.35) !important; }
+  html.dark .shell > header .hd-ico, html.dark #themeBtn{ color:#D6B97B; }
+  .hd-ico{ display:inline-flex; }
+  .live-dot{ width:8px; height:8px; border-radius:50%; background:#10B981; box-shadow:0 0 0 0 rgba(16,185,129,.55); flex:0 0 8px; }
+
+  /* ---------- เมนูซ้าย ---------- */
+  html:not(.dark) #appNav{
+    background:rgba(255,255,255,.55); color:#1E293B;
+    border-right:1px solid rgba(255,255,255,.85);
+    box-shadow:inset -1px 0 0 rgba(255,255,255,.6), 12px 0 40px -30px rgba(49,46,129,.35);
+  }
+  html:not(.dark) .nav-logo{ background:linear-gradient(140deg,#6366F1,#22D3EE); border-color:transparent; box-shadow:0 10px 20px -10px #6366F1; }
+  html:not(.dark) .nav-logo svg{ stroke:#fff; }
+  html:not(.dark) .nav-brand .nav-text div:last-child{ color:#475569 !important; }
+  html:not(.dark) .nav-toggle{ color:#475569; }
+  html:not(.dark) .nav-toggle:hover{ background:rgba(255,255,255,.7); color:#0F172A; }
+  html:not(.dark) .nav-group{ color:#64748B; }
+  html:not(.dark) .nav-item{ color:#334155; }
+  html:not(.dark) .nav-item:hover{ background:rgba(255,255,255,.65); color:#0F172A; }
+  html:not(.dark) .nav-item.is-active{ background:rgba(255,255,255,.92); color:#1E1B4B; font-weight:600; box-shadow:0 10px 22px -16px rgba(49,46,129,.7), inset 0 1px 0 #fff; }
+  html:not(.dark) .nav-item.is-active svg{ color:#6366F1; }
+  html:not(.dark) .nav-tag{ background:rgba(99,102,241,.10); color:#4F46E5; }
+  html:not(.dark) .nav-foot{ color:#64748B; }
+  html.dark #appNav{
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0) 40%), rgba(10,14,23,.78);
+    border-right:1px solid rgba(255,255,255,.06);
+  }
+  html.dark .nav-brand{ box-shadow:inset 0 -1px 0 rgba(214,185,123,.18); }
+  html.dark .nav-logo{ background:rgba(214,185,123,.10); border-color:rgba(214,185,123,.35); }
+  html.dark .nav-item.is-active{ background:linear-gradient(180deg,#D6B97B,#B8975A); color:#14110A; font-weight:600; box-shadow:0 8px 20px -12px rgba(214,185,123,.8); }
+  @media (min-width:1024px){
+    /* เมนูลอยเป็นแผ่นกระจก มีขอบโค้ง */
+    html.has-nav #appNav{ top:14px; bottom:14px; left:14px; width:calc(var(--nav-w) - 18px); border-radius:26px; border:1px solid rgba(255,255,255,.85); }
+    html.has-nav.nav-collapsed #appNav{ width:calc(var(--nav-rail) - 8px); }
+    html.dark.has-nav #appNav{ border-color:rgba(255,255,255,.07); }
+  }
+  html:not(.dark) #appTopbar{ background:rgba(255,255,255,.80) !important; color:#0F172A !important; box-shadow:0 10px 30px -20px rgba(49,46,129,.45); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+  html:not(.dark) #appTopbar .nav-toggle{ color:#0F172A !important; }
+  html.dark #appTopbar{ background:rgba(10,14,23,.86); box-shadow:inset 0 -1px 0 rgba(214,185,123,.30); backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+
+  /* ---------- สลับธีม: สีค่อยๆ เปลี่ยน (สำรอง) / วงกลมขยาย (View Transition) ---------- */
+  html.theme-fade, html.theme-fade *{ transition:background-color .6s ease, border-color .6s ease, color .6s ease, box-shadow .6s ease !important; }
+  ::view-transition-old(root), ::view-transition-new(root){ animation:none; mix-blend-mode:normal; }
+
+  /* ---------- MOTION จัดเต็ม ---------- */
+  @keyframes f1Drift1{ from{ transform:translate(0,0) scale(1); } to{ transform:translate(120px,70px) scale(1.12); } }
+  @keyframes f1Drift2{ from{ transform:translate(0,0) scale(1.05); } to{ transform:translate(-110px,-60px) scale(.94); } }
+  @keyframes f1Drift3{ from{ transform:translate(0,0) scale(1); } to{ transform:translate(-140px,-40px) scale(1.15); } }
+  @keyframes f1Sheen{ from{ transform:translateX(-120%) skewX(-18deg); } to{ transform:translateX(260%) skewX(-18deg); } }
+  @keyframes f1Live{ 0%{ box-shadow:0 0 0 0 rgba(16,185,129,.55); } 70%{ box-shadow:0 0 0 8px rgba(16,185,129,0); } 100%{ box-shadow:0 0 0 0 rgba(16,185,129,0); } }
+  @media (prefers-reduced-motion: no-preference){
+    #f1Aurora .a1{ animation:f1Drift1 22s ease-in-out infinite alternate; }
+    #f1Aurora .a2{ animation:f1Drift2 26s ease-in-out infinite alternate; }
+    #f1Aurora .a3{ animation:f1Drift3 30s ease-in-out infinite alternate; }
+    .live-dot{ animation:f1Live 2s ease-out infinite; }
+    /* แสงกวาดผ่านหัวเว็บตอนเข้าหน้า */
+    .shell > header.f1-sheen::after{
+      content:""; position:absolute; top:-20%; bottom:-20%; left:0; width:28%; pointer-events:none;
+      background:linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+      animation:f1Sheen 1.2s cubic-bezier(.3,.6,.2,1) both; animation-delay:calc(var(--f1d0, 0ms) + 150ms);
+    }
+    html.dark .shell > header.f1-sheen::after{ background:linear-gradient(90deg, transparent, rgba(214,185,123,.30), transparent); }
+    /* ปุ่มบนหัวเว็บ: ลอยขึ้นตอนชี้ ยุบตอนกด */
+    .shell > header button, .shell > header #sewPlanBtn{ transition:transform .18s cubic-bezier(.2,.75,.25,1), background-color .2s ease, box-shadow .2s ease; }
+    .shell > header button:hover, .shell > header #sewPlanBtn:hover{ transform:translateY(-2px); }
+    .shell > header button:active, .shell > header #sewPlanBtn:active{ transform:scale(.95); }
+    /* การ์ดไลน์ / การ์ดเล็ก: ชี้แล้วลอย + เรืองขอบ */
+    html:not(.dark) .lineCard:hover, html:not(.dark) .kpi:hover, html:not(.dark) .app-view .card.p-4:hover{ transform:translateY(-4px); box-shadow:inset 0 1px 0 #fff, 0 24px 44px -24px rgba(79,70,229,.50); border-color:#fff; }
+    html.dark .lineCard:hover, html.dark .kpi:hover, html.dark .app-view .card.p-4:hover{ transform:translateY(-4px); border-color:rgba(214,185,123,.38); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 0 0 1px rgba(214,185,123,.10), 0 26px 50px -30px rgba(214,185,123,.35); }
+    .kpi{ transition:transform .22s cubic-bezier(.2,.75,.25,1), box-shadow .22s ease, border-color .22s ease; }
+    .lineCard{ transition:transform .22s cubic-bezier(.2,.75,.25,1), box-shadow .22s ease, border-color .22s ease; }
+    /* เมนู: ไอคอนขยับนิดตอนชี้ */
+    .nav-item{ transition:background-color .2s ease, color .2s ease, box-shadow .25s ease; }
+    .nav-item svg{ transition:transform .2s cubic-bezier(.2,.75,.25,1); }
+    .nav-item:hover svg{ transform:translateX(2px) scale(1.06); }
+  }
+</style>
 </head>
 <body class="pb-10">
+<div id="f1Aurora" aria-hidden="true"><i class="a1"></i><i class="a2"></i><i class="a3"></i></div>
 
 <!-- ======================= APP NAV (เมนูซ้าย) ======================= -->
 <div id="appTopbar">
@@ -660,7 +792,7 @@
       <span class="nav-text">Finishing Dept</span><span class="nav-tag">เร็ว ๆ นี้</span>
     </a>
   </nav>
-  <div class="nav-foot">โรง 1 · โรงเย็บ</div>
+  <div class="nav-foot">โรง 1</div>
 </aside>
 
 <div class="shell px-3 md:px-6 pt-4 md:pt-6" data-view="sewing">
@@ -670,7 +802,7 @@
           style="background:linear-gradient(120deg,#0F172A 0%,#16233F 55%,#1E3356 100%)">
     <div class="flex flex-wrap items-center gap-3 justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center text-xl">🏭</div>
+        <div class="hd-logo w-11 h-11 rounded-2xl bg-white/10 border border-white/15 flex items-center justify-center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 20h20"/><path d="M4 20V9l5 3V9l5 3V5h6v15"/></svg></div>
         <div>
           <h1 class="text-lg md:text-xl font-bold leading-tight">Production Dashboard</h1>
           <p class="text-[11px] text-white/60">ติดตามการผลิตแบบเรียลไทม์ • ชั้น 3 และ ชั้น 4</p>
@@ -679,20 +811,20 @@
 
       <div class="flex flex-wrap items-center gap-2">
         <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 h-[48px]">
-          <span class="text-sm">📅</span>
+          <span class="hd-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></span>
           <div class="leading-tight">
             <p id="hdDate" class="text-xs font-semibold">-</p>
             <p id="hdDay" class="text-[10px] text-white/55">-</p>
           </div>
         </div>
         <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 h-[48px]">
-          <span class="text-sm">🕒</span>
+          <span class="live-dot" aria-hidden="true"></span>
           <p id="hdClock" class="text-sm font-bold tabular-nums">--:--:--</p>
         </div>
-        <button onclick="openLotSearch()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px]" title="ค้นหา LOT">🔍</button>
-        <button id="themeBtn" type="button" onclick="toggleDashTheme()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px]" title="สลับโหมดกลางวัน / กลางคืน" aria-label="สลับโหมดกลางวัน / กลางคืน"><span class="ico-moon">🌙</span><span class="ico-sun">☀️</span></button>
+        <button onclick="openLotSearch()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px]" title="ค้นหา LOT" aria-label="ค้นหา LOT"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+        <button id="themeBtn" type="button" onclick="toggleDashTheme()" class="bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px]" title="สลับโหมดกลางวัน / กลางคืน" aria-label="สลับโหมดกลางวัน / กลางคืน"><span class="ico-moon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 13A9 9 0 1 1 11 3a7 7 0 0 0 10 10z"/></svg></span><span class="ico-sun"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span></button>
         <div class="flex items-center gap-2 bg-white/10 border border-white/15 rounded-2xl px-3 py-2 h-[48px]">
-          <span class="text-sm">👤</span>
+          <span class="hd-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></span>
           <span id="displayName" class="text-xs font-semibold">กำลังเชื่อมต่อ LINE...</span>
         </div>
       </div>
@@ -741,14 +873,14 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-1 gap-3">
       <div class="card soft kpi flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-lg">✅</div>
+        <div class="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="2"><path d="M5 12l4 4 10-10"/></svg></div>
         <div>
           <p class="text-[11px] text-slate-400 font-semibold">ผลิตได้แล้ววันนี้</p>
           <p class="text-xl font-extrabold text-emerald-600"><span id="kpiActual">-</span> <span class="text-xs font-semibold text-slate-400">ชิ้น</span></p>
         </div>
       </div>
       <div class="card soft kpi flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg">🎯</div>
+        <div class="w-10 h-10 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></div>
         <div>
           <p class="text-[11px] text-slate-400 font-semibold">เป้าหมายรวม</p>
           <p class="text-xl font-extrabold text-slate-800"><span id="kpiTarget">-</span> <span class="text-xs font-semibold text-slate-400">ชิ้น</span><span id="kpiAvgHoursWrap" class="hidden"> <span class="text-slate-300 font-semibold">/</span> <span id="kpiAvgHours">-</span> <span class="text-xs font-semibold text-slate-400">ชม.</span></span></p>
@@ -757,7 +889,7 @@
       </div>
       <div class="card soft kpi">
         <div class="flex items-center gap-3">
-          <div class="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center text-lg">📈</div>
+          <div class="w-10 h-10 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg></div>
           <div>
             <p class="text-[11px] text-slate-400 font-semibold">คืบหน้าทั้งโรงงาน</p>
             <p class="text-xl font-extrabold text-slate-800"><span id="kpiPct">-</span></p>
@@ -1217,6 +1349,26 @@ function applyDashChartTheme(){
   });
 }
 function toggleDashTheme(){
+  // สลับธีมแบบวงกลมขยายจากปุ่ม (เบราว์เซอร์ที่รองรับ) · ไม่รองรับ = สีค่อยๆ เปลี่ยนทั้งหน้า
+  const btn = document.getElementById('themeBtn');
+  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!calm && document.startViewTransition && btn && !toggleDashTheme._busy){
+    const r = btn.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    const end = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+    toggleDashTheme._busy = true;
+    const vt = document.startViewTransition(() => applyDashThemeNow_());
+    vt.ready.then(() => document.documentElement.animate(
+      { clipPath: ['circle(0px at ' + x + 'px ' + y + 'px)', 'circle(' + end + 'px at ' + x + 'px ' + y + 'px)'] },
+      { duration: 700, easing: 'cubic-bezier(.2,.75,.25,1)', pseudoElement: '::view-transition-new(root)' }
+    )).catch(() => {});
+    vt.finished.finally(() => { toggleDashTheme._busy = false; });
+    return;
+  }
+  const html = document.documentElement;
+  if (!calm){ html.classList.add('theme-fade'); setTimeout(() => html.classList.remove('theme-fade'), 650); }
+  applyDashThemeNow_();
+}
+function applyDashThemeNow_(){
   const dark = !isDashDark();
   document.documentElement.classList.toggle('dark', dark);
   try{ localStorage.setItem('dashTheme', dark ? 'dark' : 'light'); }catch(e){}
@@ -4166,6 +4318,9 @@ const F1Motion = (function(){
     watchBoxes(root, boxes, d0);
     void root.offsetWidth;
     root.classList.add(soft ? 'f1-fade' : 'f1-enter');
+    // หัวเว็บ: แสงกวาดผ่านหนึ่งครั้ง
+    const hd = root.querySelector(':scope > header');
+    if (hd){ hd.classList.remove('f1-sheen'); void hd.offsetWidth; hd.classList.add('f1-sheen'); setTimeout(() => hd.classList.remove('f1-sheen'), d0 + 1800); hd.style.setProperty('--f1d0', d0 + 'ms'); }
     if (!soft) countUp(root, d0);
     root._f1t = setTimeout(() => {
       root.classList.remove('f1-enter', 'f1-fade');
@@ -4211,7 +4366,7 @@ const F1Nav = (function(){
       a.className = 'bg-white/10 hover:bg-white/20 border border-white/15 rounded-2xl px-3 text-sm transition h-[48px] inline-flex items-center justify-center';
       a.title = 'ประวัติรุ่น & วางแผน';
       a.setAttribute('aria-label', 'ประวัติรุ่น & วางแผน');
-      a.textContent = '📈';
+      a.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg>';
       search.insertAdjacentElement('afterend', a);
     }
     const planTabs = document.getElementById('sewTabsPlan');
