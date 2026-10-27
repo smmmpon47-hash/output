@@ -510,6 +510,35 @@
   .mh-lrow{ display:grid; grid-template-columns:120px 70px 90px 70px 80px 110px 130px 90px; gap:12px; align-items:center; padding:10px 18px; }
   .mh-click{ cursor:pointer; text-align:left; width:100%; font:inherit; color:inherit; background:none; border:0; }
   .mh-dot{ width:8px; height:8px; border-radius:50%; flex:0 0 8px; margin-top:8px; }
+  /* กราฟยอดรายวันที่คาด (กระชับ) */
+  .mh-strip{ display:flex; gap:4px; align-items:flex-end; overflow-x:auto; padding:6px 2px 2px; }
+  .mh-col{ flex:0 0 42px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 0; border-radius:10px; }
+  .mh-col .mh-bar{ width:26px; border-radius:6px 6px 2px 2px; }
+  .mh-col-q{ font-size:11px; color:#64748B; font-variant-numeric:tabular-nums; }
+  .mh-col-d{ font-size:10px; line-height:1.15; color:#94A3B8; text-align:center; }
+  .mh-col-d b{ font-size:12px; color:#475569; font-weight:600; }
+  .mh-col-tag{ font-size:10px; height:16px; line-height:16px; padding:0 6px; border-radius:999px; }
+  .mh-col-tag.end{ background:#0F172A; color:#fff; }
+  .mh-col-tag.ship{ background:#FEE2E2; color:#B91C1C; font-weight:600; }
+  .mh-col.due{ background:#FEF2F2; box-shadow:inset 0 0 0 1px #FCA5A5; }
+  .mh-key{ display:inline-block; width:10px; height:10px; border-radius:3px; background:#0F172A; }
+  .mh-key.ramp{ background:#94A3B8; } .mh-key.ship{ background:#FCA5A5; }
+  html.dark .mh-col-q{ color:var(--d-t2); } html.dark .mh-col-d b{ color:var(--d-t1); }
+  html.dark .mh-col-tag.end{ background:#D6B97B; color:#1A1407; }
+  html.dark .mh-col-tag.ship{ background:#3A1517; color:#F87171; }
+  html.dark .mh-col.due{ background:#2A1416; box-shadow:inset 0 0 0 1px #7F1D1D; }
+  html.dark .mh-key{ background:#D6B97B; } html.dark .mh-key.ramp{ background:#3A4762; }
+  /* ช่องค้นหารุ่น */
+  .mh-sug{ position:absolute; z-index:30; left:0; right:0; top:100%; margin-top:6px; max-height:340px; overflow-y:auto; background:#fff; border:1px solid #E2E8F0; border-radius:14px; box-shadow:0 18px 40px -18px rgba(15,23,42,.45); padding:6px; }
+  .mh-sug button{ display:block; width:100%; text-align:left; padding:10px 12px; border-radius:10px; border:0; background:transparent; font:inherit; color:#0F172A; cursor:pointer; }
+  .mh-sug button:hover, .mh-sug button.on{ background:#F1F5F9; }
+  html.dark .mh-sug{ background:var(--d-card); border-color:var(--d-line2); }
+  html.dark .mh-sug button{ color:var(--d-hi); }
+  html.dark .mh-sug button:hover, html.dark .mh-sug button.on{ background:#172236; }
+  /* ประวัติแบบสรุป */
+  .mh-run{ display:flex; flex-direction:column; gap:4px; padding:12px 18px; border-top:1px solid #F1F5F9; }
+  html.dark .mh-run{ border-color:var(--d-line); }
+  .mh-chip{ display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; white-space:nowrap; }
   /* แท็บย่อย Sewing Dept */
   .sew-tabs{ display:inline-flex; flex-wrap:wrap; gap:6px; padding:5px; border-radius:16px; background:#fff; border:1px solid #E6EBF2; }
   .sew-tab{ display:inline-flex; align-items:center; min-height:40px; padding:0 16px; border-radius:12px; font-size:14px; font-weight:500; color:#475569; text-decoration:none; }
@@ -3961,7 +3990,7 @@ const F1MH = (function(){
   let plan = { style:'', qty:3000, mp:25, hours:10, start:'', due:'', line:'' };
   // Load = ไลน์ที่มีงานเข้าโหลด (B C D) · Lean = E F · SAM / ความเร็วรุ่นเดียวกันคนละประเภทไม่เท่ากัน
   const LINE_TYPE = c => ['B', 'C', 'D'].indexOf(c) >= 0 ? 'Load' : 'Lean';
-  let openRun = '';
+  let openRun = '', showAllRuns = false;
 
   const esc = s => String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const fmt = n => Math.round(Number(n) || 0).toLocaleString('en-US');
@@ -4196,11 +4225,24 @@ const F1MH = (function(){
       const spare = workdays(end, 400).indexOf(plan.due);
       dueHtml = `<p class="text-sm mt-2 font-semibold ${late ? 'text-rose-600' : 'text-emerald-700'}">${late ? 'ไม่ทันกำหนดส่ง ' + thDate(plan.due, true) + ' ต้องเพิ่มคนหรือชั่วโมง' : 'ทันกำหนดส่ง ' + thDate(plan.due, true) + (spare > 0 ? ' · เผื่อได้ ~' + spare + ' วันทำงาน' : '')}</p>`;
     }
+    // กราฟรายวันแบบกระชับ: แท่งกว้างเท่ากันชิดกัน · ช่วงเริ่มรุ่นสีอ่อน · วันจบเย็บ / วัน Ship มาร์กในแถวเดียว
+    const SHOW = 21;
     const maxMade = Math.max.apply(null, mid.days.map(x => x.made).concat([1]));
-    const bars = mid.days.slice(0, 14).map((x, i) => `<div style="flex:1 1 0;min-width:28px;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end;height:100%">
-        <span class="text-[11px] text-slate-500" style="font-variant-numeric:tabular-nums">${fmt(x.made)}</span>
-        <div class="mh-bar ${x.ramp ? 'ramp' : ''}" style="width:100%;max-width:56px;height:${Math.max(4, Math.round(x.made / maxMade * 84))}px"></div>
-        <span class="text-[11px] text-slate-400" style="white-space:nowrap">${thDate(dates[i]).replace(/ (ม|ก|มี|เม|พ|มิ|ส|ต|น|ธ)\..*$/, '')}</span></div>`).join('');
+    const dueIdx = plan.due ? dates.indexOf(plan.due) : -1;
+    let cum = 0;
+    const cols = mid.days.slice(0, SHOW).map((x, i) => {
+      cum += x.made;
+      const isEnd = i === mid.days.length - 1, isDue = i === dueIdx;
+      const day = thDate(dates[i]).split(' ');
+      return `<div class="mh-col${isDue ? ' due' : ''}" title="${esc(thDate(dates[i], true) + ' · ' + fmt(x.made) + ' ตัว · สะสม ' + fmt(cum) + ' (' + Math.round(cum / qty * 100) + '%)')}">
+        <span class="mh-col-q">${fmt(x.made)}</span>
+        <div class="mh-bar ${x.ramp ? 'ramp' : ''}" style="height:${Math.max(4, Math.round(x.made / maxMade * 56))}px"></div>
+        <span class="mh-col-d">${day[0]}<br><b>${day[1]}</b></span>
+        ${isEnd ? '<span class="mh-col-tag end">จบ</span>' : isDue ? '<span class="mh-col-tag ship">Ship</span>' : '<span class="mh-col-tag"></span>'}
+      </div>`;
+    }).join('');
+    const dueAfter = plan.due && dueIdx < 0 && plan.due > end;
+    const legend = `<span class="inline-flex items-center gap-1"><i class="mh-key ramp"></i>ช่วงเริ่มรุ่น</span><span class="inline-flex items-center gap-1"><i class="mh-key"></i>เย็บปกติ</span>${plan.due ? '<span class="inline-flex items-center gap-1"><i class="mh-key ship"></i>วัน Ship</span>' : ''}`;
     const tone = { ok:'bg-emerald-500', warn:'bg-amber-500', bad:'bg-rose-500', slate:'bg-slate-400' };
     box.innerHTML = `
       <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))">
@@ -4221,8 +4263,11 @@ const F1MH = (function(){
         </div>
       </div>
       <div>
-        <p class="text-[12px] text-slate-500 mb-2">ยอดรายวันที่คาด ${mid.days.length > 14 ? '(แสดง 14 วันแรก)' : ''} · แท่งสีอ่อน = ช่วงเริ่มรุ่น</p>
-        <div style="display:flex;gap:8px;align-items:flex-end;height:130px;overflow-x:auto">${bars}</div>
+        <div class="flex flex-wrap items-baseline justify-between gap-2 mb-2">
+          <p class="text-sm font-semibold text-slate-700">ยอดรายวันที่คาด${mid.days.length > SHOW ? ' <span class="text-[12px] font-normal text-slate-500">(' + SHOW + ' วันแรกจาก ' + mid.days.length + ')</span>' : ''}</p>
+          <div class="flex flex-wrap gap-3 text-[12px] text-slate-500">${legend}</div>
+        </div>
+        <div class="mh-strip">${cols}${dueAfter ? `<div class="mh-col due after"><span class="mh-col-q"></span><div style="height:4px"></div><span class="mh-col-d">${thDate(plan.due).split(' ')[0]}<br><b>${thDate(plan.due).split(' ')[1]}</b></span><span class="mh-col-tag ship">Ship</span></div>` : ''}</div>
       </div>
       <div class="flex flex-col gap-2">
         <p class="text-sm font-semibold text-slate-700">สรุปจากประวัติ</p>
@@ -4230,12 +4275,37 @@ const F1MH = (function(){
       </div>`;
   }
 
+  // ทัน / ตก Ship ของรอบนั้น: ใช้ Ship ของแผนกเย็บถ้ามี (sewShip) ไม่งั้นใช้กำหนดส่งของ LOT (Master_LOT)
+  function shipStatus(r){
+    const ship = r.sewShip || r.delivery;
+    const label = r.sewShip ? 'Ship เย็บ' : 'Ship';
+    if (!ship) return { cls:'bg-slate-100 text-slate-500', text:'ไม่มีกำหนด Ship' };
+    const today = ymd(new Date());
+    const finished = (r.poQty && r.qty >= r.poQty) || daysBetween(r.to, today) > 3;
+    if (!finished){
+      const left = daysBetween(today, ship);
+      return left < 0
+        ? { cls:'bg-rose-100 text-rose-700', text:'กำลังเย็บ · เลย ' + label + ' มา ' + (-left) + ' วัน' }
+        : { cls:'bg-amber-100 text-amber-800', text:'กำลังเย็บ · อีก ' + left + ' วันถึง ' + label };
+    }
+    const diff = daysBetween(r.to, ship);
+    return diff >= 0
+      ? { cls:'bg-emerald-100 text-emerald-700', text:'ทัน ' + label + (diff > 0 ? ' · เย็บเสร็จก่อน ' + diff + ' วัน' : ' · เสร็จวันเดียวกัน') }
+      : { cls:'bg-rose-100 text-rose-700', text:'ตก ' + label + ' · เลย ' + (-diff) + ' วัน' };
+  }
+  const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
+
+  // ประวัติแบบสรุป: รอบละบรรทัด · กด "รายวัน" ถึงจะเห็นตาราง
   function historyTable(s){
     if (!s || !s.runs.length) return '';
-    const rows = s.runs.map(r => {
-      const maxQ = Math.max.apply(null, r.daily.map(x => x.qty).concat([1]));
-      const spark = r.daily.slice(0, 12).map(x => `<div title="${esc(thDate(x.d) + ' · ' + x.line + ' · ' + fmt(x.qty))}" style="flex:1 1 0;height:${Math.max(3, Math.round(x.qty / maxQ * 28))}px" class="${x.mp ? 'bg-slate-800' : 'bg-slate-300'} rounded-sm"></div>`).join('');
-      const eff = r.eff ? Math.round(r.eff * 100) + '% SAM' + (r.samMin && r.samMax - r.samMin >= 0.1 ? ' (SAM ' + r.samMin + '–' + r.samMax + ')' : r.sam ? ' (SAM ' + r.sam + ')' : '') : '';
+    const MAX = 5;
+    const list = showAllRuns ? s.runs : s.runs.slice(0, MAX);
+    const stats = s.runs.map(shipStatus);
+    const onTime = stats.filter(x => x.text.indexOf('ทัน') === 0).length, late = stats.filter(x => x.text.indexOf('ตก') === 0).length;
+    const rows = list.map(r => {
+      const st = shipStatus(r);
+      const used = (r.byLine || []).map(b => 'Line ' + b.key + ' ' + b.days + ' วัน').join(' + ') || ('Line ' + r.lines);
+      const bits = [thRange(r.from, r.to) + ' (' + r.days + ' วัน)', used, r.mpAvg ? 'คนเฉลี่ย ' + r.mpAvg : '', fmt(r.qty) + (r.poQty ? ' / ' + fmt(r.poQty) : '') + ' ตัว', r.rate ? f2(r.rate) + ' ตัว/คน/ชม.' : '', r.eff ? Math.round(r.eff * 100) + '% SAM' : ''].filter(Boolean);
       const open = openRun === r.lot;
       const detail = open ? `<div class="px-5 pb-4 text-[12px] text-slate-600 overflow-x-auto">
         ${r.notes && r.notes.length ? `<p class="mb-2 text-slate-700">หมายเหตุ: ${esc(r.notes.join(' · '))}</p>` : ''}
@@ -4243,24 +4313,24 @@ const F1MH = (function(){
         <table class="w-full" style="min-width:560px"><thead class="text-slate-400"><tr><th class="text-left py-1">วันที่</th><th class="text-left">ไลน์</th><th class="text-right">ยอด</th><th class="text-right">คน</th><th class="text-right">ชม.</th><th class="text-right">SAM</th><th class="text-right">ตัว/คน/ชม.</th><th class="text-right">% SAM</th></tr></thead><tbody>
         ${r.daily.map(x => `<tr class="border-t border-slate-100"><td class="py-1">${thDate(x.d, true)}</td><td>${esc(x.line)}</td><td class="text-right">${fmt(x.qty)}</td><td class="text-right">${x.mp || '-'}</td><td class="text-right">${x.hours || '-'}</td><td class="text-right">${x.sam || '-'}</td><td class="text-right">${x.mp && x.hours ? f2(x.qty / (x.mp * x.hours)) : '-'}</td><td class="text-right">${x.mp && x.hours && x.sam ? Math.round(x.qty * x.sam / (x.mp * x.hours * 60) * 100) + '%' : '-'}</td></tr>`).join('')}
         </tbody></table></div>` : '';
-      return `<div class="border-t border-slate-100"><button type="button" class="mh-click mh-row hover:bg-slate-100" onclick="F1MH.toggleRun('${esc(r.lot)}')" aria-expanded="${open}">
-        <span class="font-semibold text-slate-800">${esc(r.lot)}</span>
-        <span class="text-[13px] text-slate-600">${thRange(r.from, r.to)}</span>
-        <span class="text-[13px]"><b>${esc((r.byLine || []).map(b => b.key).join(', ') || r.lines)}</b><br><span class="text-slate-500">${esc((r.byLine || []).map(b => b.key + ' ' + b.days + ' วัน').join(' · '))}</span></span>
-        <span>${r.mpAvg || '-'}</span>
-        <span>${fmt(r.qty)}</span>
-        <span>${r.days} วัน</span>
-        <span class="font-semibold">${f2(r.rate)}</span>
-        <span class="text-[12px] text-slate-500">${esc(r.model)}${eff ? '<br>' + eff : ''}</span>
-        <span style="display:flex;gap:3px;align-items:flex-end;height:30px">${spark}</span>
-      </button>${detail}</div>`;
+      return `<div class="mh-run">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-baseline gap-2"><b class="text-slate-800">LOT ${esc(r.lot)}</b><span class="text-[13px] text-slate-500">${esc(r.model)}</span></div>
+          <div class="flex items-center gap-2"><span class="mh-chip ${st.cls}">${esc(st.text)}</span>
+            <button type="button" class="text-[12px] text-slate-500 hover:text-slate-800 underline" onclick="F1MH.toggleRun('${esc(r.lot)}')" aria-expanded="${open}">${open ? 'ซ่อนรายวัน' : 'รายวัน'}</button></div>
+        </div>
+        <p class="text-[13px] text-slate-600">${esc(bits.join(' · '))}</p>
+        ${open ? detail : ''}
+      </div>`;
     }).join('');
     return `<div class="card soft overflow-hidden">
-      <div class="px-5 py-4 flex flex-wrap items-baseline justify-between gap-2"><p class="font-semibold text-slate-800">ประวัติการเย็บ ${esc(s.style)}</p><p class="text-[12px] text-slate-400">กดแถวเพื่อดูยอดรายวัน · แท่งสีอ่อน = วันที่ไม่มีจำนวนคน</p></div>
-      <div style="overflow-x:auto"><div style="min-width:1000px">
-        <div class="mh-row text-[12px] text-slate-400"><span>LOT</span><span>ช่วงวันที่</span><span>ไลน์</span><span>คน</span><span>จำนวน</span><span>ใช้เวลา</span><span>ตัว/คน/ชม.</span><span>รุ่น / สี</span><span>ยอดรายวัน</span></div>
-        ${rows}
-      </div></div></div>`;
+      <div class="px-5 py-4 flex flex-wrap items-baseline justify-between gap-2">
+        <p class="font-semibold text-slate-800">ประวัติการเย็บ ${esc(s.style)} <span class="text-[13px] font-normal text-slate-500">· ${s.runs.length} ครั้ง${onTime + late ? ' · ทัน Ship ' + onTime + ' · ตก Ship ' + late : ''}</span></p>
+        <p class="text-[12px] text-slate-400">Ship = กำหนดส่งของ LOT (Master_LOT)</p>
+      </div>
+      ${rows}
+      ${s.runs.length > MAX ? `<div class="px-5 py-3 border-t border-slate-100"><button type="button" class="text-sm font-semibold text-slate-700 underline" onclick="F1MH.toggleAllRuns()">${showAllRuns ? 'ย่อเหลือ ' + MAX + ' ครั้งล่าสุด' : 'ดูทั้งหมด ' + s.runs.length + ' ครั้ง'}</button></div>` : ''}
+    </div>`;
   }
 
   async function renderPlan(){
@@ -4269,7 +4339,6 @@ const F1MH = (function(){
     if (!data){ rootEl.innerHTML = `<h1 class="pg-title">ประวัติรุ่น &amp; วางแผน</h1>` + msgCard(loadError, 'warn'); return; }
     if (!plan.start) plan.start = ymd(nextWorkday(new Date()));
     const s = data.styles.find(x => x.style === plan.style) || null;
-    const options = data.styles.map(x => `<option value="${esc(x.style)}"${x.style === plan.style ? ' selected' : ''}>${esc(x.style)}${x.runs.length > 1 ? ' · เคยเย็บ ' + x.runs.length + ' ครั้ง' : ''}</option>`).join('');
     const rated = s ? s.runs.filter(r => r.rate) : [];
     const ratedLines = (s ? s.byLine || [] : []).filter(b => b.rate).sort((a, b) => b.rate - a.rate);
     const best = ratedLines[0];
@@ -4295,8 +4364,10 @@ const F1MH = (function(){
     rootEl.innerHTML = `
       <div class="flex flex-wrap items-end justify-between gap-3">
         <div><h1 class="pg-title">ประวัติรุ่น &amp; วางแผน</h1><p class="text-sm text-slate-500 mt-1">เลือกรุ่น กรอกแผน แล้วระบบประมาณการจากประวัติจริง · ข้อมูลถึง ${esc(data.generatedAt)}</p></div>
-        <div style="min-width:260px"><label for="mhStyleSelect" class="text-[12px] text-slate-500">รุ่น (รวมทุกสีตามรหัสหน้าขีด)</label>
-          <select id="mhStyleSelect" class="mh-input mt-1" onchange="F1MH.openStyle(this.value)"><option value="">— รุ่นใหม่ / ยังไม่เลือก —</option>${options}</select></div>
+        <div style="min-width:300px;flex:0 1 420px;position:relative"><label for="mhStyleInput" class="text-[12px] text-slate-500">ค้นหารุ่น หรือ เลข LOT (รวมทุกสีตามรหัสหน้าขีด)</label>
+          <input id="mhStyleInput" class="mh-input mt-1" placeholder="พิมพ์ เช่น MFIZ284 หรือ 26121008" value="${esc(plan.style)}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="mhStyleSug"
+            oninput="F1MH.styleSuggest(this.value)" onfocus="this.select();F1MH.styleSuggest(this.value)" onkeydown="F1MH.styleKey(event)">
+          <div id="mhStyleSug" class="mh-sug hide" role="listbox"></div></div>
       </div>
       ${s ? `<div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
         ${tile('เคยเย็บ', s.runs.length + ' ครั้ง', 'รวม ' + fmt(s.totalQty) + ' ตัว · ล่าสุด ' + thDate(s.lastDate, true))}
@@ -4340,16 +4411,65 @@ const F1MH = (function(){
     if (location.hash !== target) location.hash = target; else renderPlan();
   }
   function toggleRun(lot){ openRun = openRun === lot ? '' : lot; renderPlan(); }
+  function toggleAllRuns(){ showAllRuns = !showAllRuns; renderPlan(); }
+
+  // ช่องค้นหารุ่น: พิมพ์รหัสรุ่น / สี / เลข LOT → รายการให้กด · Enter = อันแรก · Esc = ปิด
+  let sugItems = [], sugIdx = 0;
+  function styleSuggest(text){
+    const box = el('mhStyleSug'), input = el('mhStyleInput');
+    if (!box || !data) return;
+    const q = String(text || '').trim().toUpperCase().replace(/\s+/g, '');
+    const score = s => {
+      if (!q) return 3;
+      if (s.style.indexOf(q) === 0) return 0;
+      if (s.style.indexOf(q) > 0 || s.models.some(m => m.toUpperCase().replace(/\s+/g, '').indexOf(q) >= 0)) return 1;
+      if (s.runs.some(r => r.lot.indexOf(q) >= 0)) return 2;
+      return -1;
+    };
+    sugItems = data.styles.map(s => ({ s, k: score(s) })).filter(x => x.k >= 0)
+      .sort((a, b) => a.k - b.k || (b.s.lastDate > a.s.lastDate ? 1 : -1)).slice(0, 8).map(x => x.s);
+    sugIdx = 0;
+    const rows = sugItems.map((s, i) => {
+      const lot = q && s.runs.find(r => r.lot.indexOf(q) >= 0 && s.style.indexOf(q) < 0);
+      return `<button type="button" role="option" class="${i === 0 ? 'on' : ''}" onmousedown="event.preventDefault();F1MH.openStyle('${esc(s.style)}')">
+        <div class="flex items-baseline justify-between gap-2"><b>${esc(s.style)}</b><span class="text-[12px] text-slate-500">${s.runs.length > 1 ? 'เคยเย็บ ' + s.runs.length + ' ครั้ง' : 'เย็บ 1 ครั้ง'} · ล่าสุด ${thDate(s.lastDate, true)}</span></div>
+        <div class="text-[12px] text-slate-500">${esc(s.models.join(' · '))}${lot ? ' · พบ LOT ' + esc(lot.lot) : ''}</div></button>`;
+    }).join('');
+    box.innerHTML = (rows || '<p class="text-sm text-slate-500 px-3 py-2">ไม่พบรุ่นนี้ในประวัติ</p>') +
+      `<button type="button" onmousedown="event.preventDefault();F1MH.openStyle('')"><span class="text-[13px] text-slate-600">รุ่นใหม่ / ไม่มีประวัติ (ใช้ค่ากลางโรง)</span></button>`;
+    box.classList.remove('hide');
+    if (input) input.setAttribute('aria-expanded', 'true');
+  }
+  function styleKey(e){
+    const box = el('mhStyleSug');
+    if (!box) return;
+    const btns = box.querySelectorAll('button[role=option]');
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+      e.preventDefault();
+      if (!btns.length) return;
+      sugIdx = (sugIdx + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length;
+      btns.forEach((b, i) => b.classList.toggle('on', i === sugIdx));
+    } else if (e.key === 'Enter'){
+      e.preventDefault();
+      if (sugItems[sugIdx]) openStyle(sugItems[sugIdx].style);
+    } else if (e.key === 'Escape'){
+      box.classList.add('hide');
+    }
+  }
+  document.addEventListener('click', e => {
+    const box = el('mhStyleSug');
+    if (box && !box.contains(e.target) && e.target.id !== 'mhStyleInput') box.classList.add('hide');
+  });
   function pickLine(code){ plan.line = plan.line === code ? '' : code; renderPlan(); }
   function enter(view, arg){
     if (view === 'search') renderSearch();
     if (view === 'plan'){
       const st = styleOf(arg);
-      if (st !== plan.style){ plan.style = st; openRun = ''; }
+      if (st !== plan.style){ plan.style = st; openRun = ''; showAllRuns = false; }
       renderPlan();
     }
   }
-  return { enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine };
+  return { enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleAllRuns, styleSuggest, styleKey };
 })();
 
 F1Nav.init();
