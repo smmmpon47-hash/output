@@ -1137,9 +1137,9 @@
 
 <!-- ======================= LOT SEARCH MODAL ======================= -->
 <div id="lotModal" class="hide fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto">
-  <div class="card soft max-w-lg mx-auto mt-10 p-5">
+  <div class="card soft max-w-2xl mx-auto mt-10 p-5">
     <div class="flex justify-between items-center mb-3">
-      <h2 class="font-bold text-slate-800">ค้นหาและติดตามสถานะ LOT</h2>
+      <div><h2 class="font-bold text-slate-800">ค้นหาและติดตามสถานะ LOT</h2><p class="text-[11px] text-slate-400 mt-0.5">ยอดสะสมรวมทุกไลน์ในโรงงาน 1</p></div>
       <button onclick="closeLotSearch()" class="text-slate-400 hover:text-slate-700 text-lg leading-none">✕</button>
     </div>
     <div class="flex gap-2">
@@ -1147,41 +1147,7 @@
       <button onclick="searchLot()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-5 py-3 rounded-xl text-sm transition">ค้นหา</button>
     </div>
 
-    <div class="mt-4 space-y-4">
-      <div class="flex justify-between items-start border-b border-slate-100 pb-3">
-        <div>
-          <span class="text-[10px] font-semibold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md">ข้อมูล LOT</span>
-          <h3 id="resLotNo" class="text-lg font-extrabold text-slate-800 mt-1">พิมพ์รหัส LOT ด้านบนเพื่อเริ่มค้นหา</h3>
-        </div>
-        <span id="resStatusBadge" class="text-[10px] font-bold px-3 py-1.5 rounded-full bg-slate-100 text-slate-500">รอค้นหา</span>
-      </div>
-      <div class="grid grid-cols-2 gap-3 text-sm">
-        <div class="bg-slate-50 p-3 rounded-2xl">
-          <p class="text-[11px] text-slate-400">จำนวนตาม PO</p>
-          <p id="resPoTarget" class="font-bold text-slate-700 mt-0.5">-</p>
-        </div>
-        <div class="bg-slate-50 p-3 rounded-2xl">
-          <p class="text-[11px] text-slate-400">ผลิตสะสมแล้ว</p>
-          <p id="resCumulativeActual" class="font-bold text-slate-700 mt-0.5">-</p>
-        </div>
-        <div class="bg-slate-50 p-3 rounded-2xl">
-          <p class="text-[11px] text-slate-400">รุ่น</p>
-          <p id="resModel" class="font-bold text-slate-700 mt-0.5">-</p>
-        </div>
-        <div class="bg-slate-50 p-3 rounded-2xl">
-          <p class="text-[11px] text-slate-400">กำหนดส่งมอบ</p>
-          <p id="resDeliveryDate" class="font-bold text-slate-700 mt-0.5">-</p>
-        </div>
-        <div class="bg-slate-50 p-3 rounded-2xl col-span-2">
-          <p class="text-[11px] text-slate-400">ขึ้นไลน์</p>
-          <p id="resLines" class="font-bold text-slate-700 mt-0.5">-</p>
-        </div>
-      </div>
-      <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
-        <span class="text-xl">🏭</span>
-        <span id="resRealtimeStatus">พร้อมค้นหาข้อมูลล็อตการผลิต</span>
-      </div>
-    </div>
+    <div id="lotSearchResult" class="mt-4 text-sm"><p class="text-slate-400">พิมพ์รหัส LOT ด้านบนเพื่อเริ่มค้นหา</p></div>
   </div>
 </div>
 
@@ -3863,57 +3829,84 @@ function closeLotSearch(){ el('lotModal').classList.add('hide'); }
 el('lotModal').addEventListener('click', e => { if (e.target.id === 'lotModal') closeLotSearch(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLotSearch(); });
 
-// ไลน์ที่ LOT นี้ขึ้น = ไลน์ที่มี LOT นี้ในข้อมูลวันนี้ + ไลน์จากประวัติการเย็บ (getModelHistory) · ไม่มีข้อมูล = -
-async function fillLotLines_(lot){
-  const key = normalizeLotLookupKey_(lot);
-  const lines = new Set();
-  if (!currentDashboardIsRange){
-    globalLinesData.forEach(item => {
-      const code = String(item.line || item.lineName || '').replace(/LINE/i,'').trim().toUpperCase();
-      if (code && getLotPlan(item).some(lp => normalizeLotLookupKey_(lp.lot) === key)) lines.add(code);
-    });
+// หน้าค้นหา LOT (หน้าตาเดียวกับโรง 2): ยอด PO / สะสม / คงเหลือ / ส่งมอบ + ปุ่มเปิดไลน์วันนี้ + ประวัติรายวัน
+// ข้อมูลหลักจาก searchLot · ประวัติรายวันจาก getModelHistory (โหลดไม่ได้ = ใช้แค่ไลน์ของวันนี้)
+let lotSearchSeq = 0;
+
+function lotLinesToday_(key){
+  if (currentDashboardIsRange) return [];
+  const lines = [];
+  globalLinesData.forEach(item => {
+    const code = String(item.line || item.lineName || '').replace(/LINE/i,'').trim().toUpperCase();
+    if (code && getLotPlan(item).some(lp => normalizeLotLookupKey_(lp.lot) === key)) lines.push(code);
+  });
+  return lines;
+}
+
+function ymdToDmy_(d){
+  const m = String(d || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : String(d || '');
+}
+
+function renderLotSearchResult_(d, key, hist){
+  const po = num(d.po_target), cum = num(d.cumulative_actual);
+  const remain = po ? Math.max(0, po - cum) : null;
+  const done = po > 0 && cum >= po;
+  const pct = po ? Math.min(100, cum / po * 100) : 0;
+  const status = done ? '<span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600">ครบออเดอร์</span>'
+    : cum > 0 ? '<span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600">กำลังผลิต</span>'
+    : '<span class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-100 text-slate-500">ยังไม่เริ่ม</span>';
+  const cell = (label, value, cls) => `<div class="bg-slate-50 border border-slate-100 rounded-xl p-3"><p class="text-[11px] text-slate-400">${label}</p><p class="text-base font-extrabold mt-0.5 ${cls || 'text-slate-800'}">${value}</p></div>`;
+  const today = lotLinesToday_(key);
+  const lines = [...new Set(today.concat(hist.lines))].sort();
+
+  let html = `<div class="flex flex-wrap items-center gap-2 mb-1"><span class="text-lg font-extrabold text-indigo-600">LOT ${esc(d.lot_number || key)}</span>${status}</div>
+    <p class="text-xs text-slate-500 mb-3">${esc(d.model || '-')} · ขึ้นไลน์ ${lines.length ? 'Line ' + esc(lines.join(', ')) : '-'}</p>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      ${cell('จำนวนตาม PO', po ? fmt(po) : '-')}
+      ${cell('ผลิตสะสมแล้ว', fmt(cum), 'text-emerald-600')}
+      ${cell('คงเหลือ', remain === null ? '-' : fmt(remain), done ? 'text-emerald-600' : 'text-amber-600')}
+      ${cell('กำหนดส่งมอบ', esc(d.delivery_date || '-'))}
+    </div>`;
+  if (po){
+    html += `<div class="flex items-center gap-2 mt-3"><div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden"><div class="bg-indigo-500 h-2 rounded-full" style="width:${pct}%"></div></div><span class="text-xs font-extrabold text-slate-700">${pct.toFixed(1)}%</span></div>`;
   }
-  const shown = () => { if (normalizeLotLookupKey_(el('resLotNo').innerText) === key) el('resLines').innerText = lines.size ? 'Line ' + [...lines].sort().join(', ') : '-'; };
-  shown();
-  (await F1MH.lotLines(key)).forEach(c => lines.add(c));
-  shown();
+  if (today.length){
+    html += `<div class="flex flex-wrap gap-2 mt-3">${today.map(code =>
+      `<button onclick="closeLotSearch();openLine('${esc(code)}')" class="text-xs font-bold bg-slate-900 text-white rounded-xl px-3 py-1.5">เปิด LINE ${esc(code)}</button>`).join('')}</div>`;
+  }
+  html += `<p class="text-xs font-bold text-slate-600 mt-4 mb-1.5">ประวัติการผลิต${hist.daily.length ? ' • ' + new Set(hist.daily.map(x => x.d)).size + ' วัน' : ''}</p>`;
+  if (!hist.daily.length){
+    html += `<p class="text-xs text-slate-400">${hist.loading ? 'กำลังโหลดประวัติ...' : 'ยังไม่มีประวัติรายวันของ LOT นี้'}</p>`;
+  } else {
+    html += `<div class="max-h-56 overflow-auto border border-slate-100 rounded-xl"><table class="w-full text-xs"><thead class="bg-slate-50 text-slate-400"><tr><th class="text-left font-semibold px-3 py-1.5">วันที่</th><th class="text-left font-semibold">LINE</th><th class="text-right font-semibold">ชม.</th><th class="text-right font-semibold px-3">ผลิต</th></tr></thead><tbody>
+      ${hist.daily.map(x => `<tr class="border-t border-slate-100"><td class="px-3 py-1.5 font-semibold text-slate-700">${esc(ymdToDmy_(x.d))}</td><td class="text-slate-600">${esc(x.line || '-')}</td><td class="text-right text-slate-500">${x.hours ? fmt(x.hours) : '-'}</td><td class="text-right px-3 font-extrabold text-slate-700">${fmt(x.qty)}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
+  return html;
 }
 
 async function searchLot(){
+  const box = el('lotSearchResult');
   const val = el('lotInput').value.trim();
-  if (!val){ el('resRealtimeStatus').innerText = 'กรอกรหัส LOT ก่อนเริ่มค้นหา'; return; }
-  el('resRealtimeStatus').innerText = 'กำลังค้นหาข้อมูล...';
+  const key = normalizeLotLookupKey_(val);
+  if (!key){ box.innerHTML = '<p class="text-slate-400">พิมพ์รหัส LOT ด้านบนเพื่อเริ่มค้นหา</p>'; return; }
+  const seq = ++lotSearchSeq;
+  box.innerHTML = `<p class="text-slate-400">กำลังค้นหา LOT ${esc(key)}...</p>`;
 
   try{
-    const res = await fetch(`${GAS_API_URL}?searchLot=${encodeURIComponent(val)}`, { method:"GET", redirect:"follow" });
+    const res = await fetch(`${GAS_API_URL}?searchLot=${encodeURIComponent(key)}`, { method:"GET", redirect:"follow" });
     const data = await res.json();
+    if (seq !== lotSearchSeq) return;
+    if (!data || data.error){ box.innerHTML = `<p class="text-rose-600 font-semibold">ไม่พบ LOT ${esc(key)} ใน Master_LOT ลองตรวจตัวสะกดอีกครั้ง</p>`; return; }
 
-    if (data.error){
-      el('resLotNo').innerText = val;
-      el('resStatusBadge').innerText = 'ไม่พบข้อมูล';
-      el('resStatusBadge').className = 'text-[10px] font-bold px-3 py-1.5 rounded-full bg-rose-100 text-rose-700';
-      ['resPoTarget','resCumulativeActual','resModel','resDeliveryDate','resLines'].forEach(id => el(id).innerText = '-');
-      el('resRealtimeStatus').innerText = 'ไม่พบ LOT นี้ใน Master_LOT ลองตรวจตัวสะกดอีกครั้ง';
-      return;
-    }
-
-    const poTarget = num(data.po_target), cum = num(data.cumulative_actual);
-    const pct = poTarget > 0 ? (cum/poTarget*100).toFixed(1) : 0;
-
-    el('resLotNo').innerText = data.lot_number || val;
-    el('resStatusBadge').innerText = `คืบหน้า ${pct}%`;
-    el('resStatusBadge').className = 'text-[10px] font-bold px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700';
-    el('resPoTarget').innerText = `${poTarget.toLocaleString()} ชิ้น`;
-    el('resCumulativeActual').innerText = `${cum.toLocaleString()} ชิ้น`;
-    el('resModel').innerText = data.model || '-';
-    el('resDeliveryDate').innerText = data.delivery_date || '-';
-    el('resLines').innerText = '-';
-    void fillLotLines_(data.lot_number || val);
-    el('resRealtimeStatus').innerText = `ผลิตสะสม ${cum.toLocaleString()} จากเป้า ${poTarget.toLocaleString()} ชิ้น`;
-
+    box.innerHTML = renderLotSearchResult_(data, key, { lines:[], daily:[], loading:true });
+    const hist = await F1MH.lotHistory(key);
+    if (seq !== lotSearchSeq) return;
+    box.innerHTML = renderLotSearchResult_(data, key, hist);
   }catch(err){
     console.error('Search Lot Error:', err);
-    el('resRealtimeStatus').innerText = 'เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ลองอีกครั้ง';
+    if (seq === lotSearchSeq) box.innerHTML = '<p class="text-rose-600 font-semibold">เชื่อมต่อเซิร์ฟเวอร์ไม่สำเร็จ ลองอีกครั้ง</p>';
   }
 }
 
@@ -4550,14 +4543,18 @@ const F1MH = (function(){
       renderPlan();
     }
   }
-  // ไลน์ที่เคยเย็บ LOT นี้ จากประวัติ (โหลดไม่ได้ = [])
-  async function lotLines(lot){
+  // ประวัติของ LOT นี้: ไลน์ที่เคยเย็บ + ยอดรายวัน (ใหม่ → เก่า) · โหลดไม่ได้ = ว่าง
+  async function lotHistory(lot){
     await load();
     const l = data && (data.lots || []).find(x => x.lot === lot);
-    return l && l.sew && l.sew.lines ? String(l.sew.lines).replace(/[^A-Z]/gi, '').toUpperCase().split('') : [];
+    const lines = l && l.sew && l.sew.lines ? String(l.sew.lines).replace(/[^A-Z]/gi, '').toUpperCase().split('') : [];
+    const daily = [];
+    (data ? data.styles : []).forEach(s => s.runs.forEach(r => { if (r.lot === lot) (r.daily || []).forEach(x => daily.push(x)); }));
+    daily.sort((a, b) => String(b.d).localeCompare(String(a.d)) || String(a.line).localeCompare(String(b.line)));
+    return { lines, daily };
   }
 
-  return { lotLines, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleAllRuns, styleSuggest, styleKey };
+  return { lotHistory, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleAllRuns, styleSuggest, styleKey };
 })();
 
 F1Nav.init();
