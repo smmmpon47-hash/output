@@ -567,6 +567,7 @@
     .f1-enter .f1-drop{ animation:f1Drop .45s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--i, 0) * 55ms + 140ms + var(--r, 0) * 65ms); }
     .f1-enter .f1-fill{ animation:f1Fill 1s cubic-bezier(.3,.7,.2,1) both; animation-delay:calc(var(--i, 0) * 55ms + 140ms + var(--r, 0) * 65ms); }
     .f1-fade{ animation:f1Fade .35s ease both; }
+    .f1-late{ animation:f1Drop .45s cubic-bezier(.2,.75,.25,1) both; }
     /* เอาเมาส์ชี้การ์ดเล็ก: ยกขึ้นนิดนึง */
     .lineCard, .app-view .card.p-4, .pr-step, .mh-col{ transition:transform .22s cubic-bezier(.2,.75,.25,1), box-shadow .22s ease; }
     .lineCard:hover, .app-view .card.p-4:hover, .pr-step:hover{ transform:translateY(-3px); box-shadow:0 16px 32px -22px rgba(15,23,42,.55); }
@@ -2171,24 +2172,46 @@ async function hydrateCardShipments_(){
   await Promise.all(nodes.map(async node => {
     const date = formatShipmentDate_(await resolveLotShipment_(node.getAttribute('data-lot-shipment') || ''));
     if (!date || !node.isConnected) return;
-
-    // เลยกำหนด = แดง · เหลือ ≤ 3 วัน = ส้ม · นอกนั้นสีปกติ
-    // (Tailwind: text-rose-600 text-amber-600 bg-rose-100 text-rose-700 bg-amber-100 text-amber-700)
-    const span = node.querySelector('span'), pill = node.querySelector('em');
-    const left = shipmentDaysLeft_(date);
-    let note = '', tone = '';
-    if (left !== null && left < 0){ note = `เลย ${-left} วัน`; tone = 'rose'; }
-    else if (left === 0){ note = 'ส่งวันนี้'; tone = 'amber'; }
-    else if (left !== null && left <= 3){ note = `อีก ${left} วัน`; tone = 'amber'; }
-    span.textContent = date;
-    span.className = 'ml-1 font-extrabold ' + (tone ? `text-${tone}-600` : 'text-sky-600');
-    if (note){
-      pill.textContent = note;
-      pill.className = `not-italic whitespace-nowrap text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-${tone}-100 text-${tone}-700`;
-    }
-    node.classList.remove('hidden');
-    node.classList.add('flex');
+    paintCardShipment_(node, date);
   }));
+}
+
+// Shipment ที่จำไว้แล้ว (ในหน้า/ในเครื่อง) → ใส่ทันทีตอนวาดการ์ด ไม่ต้องรอ แถวเลยเทลงมาพร้อมบรรทัดอื่น
+function paintCachedShipments_(){
+  document.querySelectorAll('[data-lot-shipment].hidden').forEach(node => {
+    const key = normalizeLotLookupKey_(node.getAttribute('data-lot-shipment'));
+    if (!key) return;
+    if (!__lotShipmentCache.has(key)){
+      const saved = readLotLookupStore_(key);
+      if (!saved) return;
+      __lotModelFallbackCache.set(key, saved.model);
+      __lotShipmentCache.set(key, saved.delivery);
+    }
+    const date = formatShipmentDate_(__lotShipmentCache.get(key));
+    if (date) paintCardShipment_(node, date, true);
+  });
+}
+
+function paintCardShipment_(node, date, instant){
+  const wasHidden = node.classList.contains('hidden');
+  // เลยกำหนด = แดง · เหลือ ≤ 3 วัน = ส้ม · นอกนั้นสีปกติ
+  // (Tailwind: text-rose-600 text-amber-600 bg-rose-100 text-rose-700 bg-amber-100 text-amber-700)
+  const span = node.querySelector('span'), pill = node.querySelector('em');
+  const left = shipmentDaysLeft_(date);
+  let note = '', tone = '';
+  if (left !== null && left < 0){ note = `เลย ${-left} วัน`; tone = 'rose'; }
+  else if (left === 0){ note = 'ส่งวันนี้'; tone = 'amber'; }
+  else if (left !== null && left <= 3){ note = `อีก ${left} วัน`; tone = 'amber'; }
+  span.textContent = date;
+  span.className = 'ml-1 font-extrabold ' + (tone ? `text-${tone}-600` : 'text-sky-600');
+  if (note){
+    pill.textContent = note;
+    pill.className = `not-italic whitespace-nowrap text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-${tone}-100 text-${tone}-700`;
+  }
+  node.classList.remove('hidden');
+  node.classList.add('flex');
+  // ข้อมูลมาทีหลัง (ยังไม่เคยจำ) → ค่อยๆ เทลงมาเบาๆ แทนการโผล่พรวด
+  if (wasHidden && !instant){ node.classList.add('f1-late'); setTimeout(() => node.classList.remove('f1-late'), 600); }
 }
 
 async function hydrateMissingCardModels_(){
@@ -2253,6 +2276,7 @@ function renderCards(lines, isRange){
     });
   });
 
+  paintCachedShipments_();
   // บาง LOT ใน Summary อาจมีช่องว่างไม่ตรงกับ Master_LOT
   // ถ้า backend ส่ง model ว่าง ให้ค้นจาก LOT แบบ normalize เฉพาะหน้า Dashboard
   void hydrateMissingCardModels_();
