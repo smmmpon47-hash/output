@@ -539,6 +539,25 @@
   .mh-run{ display:flex; flex-direction:column; gap:4px; padding:12px 18px; border-top:1px solid #F1F5F9; }
   html.dark .mh-run{ border-color:var(--d-line); }
   .mh-chip{ display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; padding:3px 10px; border-radius:999px; white-space:nowrap; }
+
+  /* ================= MOTION — เล่นตอนเข้าหน้า / Dashboard โหลดเสร็จครั้งแรก (ไม่เล่นตอนรีเฟรชข้อมูล) ================= */
+  @keyframes f1Up{ from{ opacity:0; transform:translateY(16px); } to{ opacity:1; transform:none; } }
+  @keyframes f1Fade{ from{ opacity:0; } to{ opacity:1; } }
+  @keyframes f1GrowY{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
+  @keyframes f1GrowX{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+  @media (prefers-reduced-motion: no-preference){
+    .f1-enter .f1-anim{ animation:f1Up .55s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--i, 0) * 55ms); }
+    .f1-enter .mh-bar{ transform-origin:bottom; animation:f1GrowY .7s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(240ms + var(--b, 0) * 40ms); }
+    .f1-enter .pr-fill{ transform-origin:left; animation:f1GrowX .8s cubic-bezier(.2,.75,.25,1) .25s both; }
+    .f1-fade{ animation:f1Fade .35s ease both; }
+    /* เอาเมาส์ชี้การ์ดเล็ก: ยกขึ้นนิดนึง */
+    .lineCard, .app-view .card.p-4, .pr-step, .mh-col{ transition:transform .22s cubic-bezier(.2,.75,.25,1), box-shadow .22s ease; }
+    .lineCard:hover, .app-view .card.p-4:hover, .pr-step:hover{ transform:translateY(-3px); box-shadow:0 16px 32px -22px rgba(15,23,42,.55); }
+    .mh-col:hover{ transform:translateY(-2px); }
+    .mh-run{ transition:background-color .2s ease; }
+    .mh-run:hover{ background:rgba(148,163,184,.08); }
+    .nav-item{ transition:background-color .2s ease, color .2s ease; }
+  }
   /* แท็บย่อย Sewing Dept */
   .sew-tabs{ display:inline-flex; flex-wrap:wrap; gap:6px; padding:5px; border-radius:16px; background:#fff; border:1px solid #E6EBF2; }
   .sew-tab{ display:inline-flex; align-items:center; min-height:40px; padding:0 16px; border-radius:12px; font-size:14px; font-weight:500; color:#475569; text-decoration:none; }
@@ -3907,6 +3926,70 @@ main();
 
 <script>
 /* =======================================================
+   MOTION — การ์ดลอยขึ้นไล่กัน · ตัวเลขวิ่ง · แท่งกราฟโต
+   เล่นเฉพาะตอนเข้าหน้า / Dashboard โหลดเสร็จครั้งแรก (ไม่เล่นตอนรีเฟรชข้อมูลหรือกดปุ่มในหน้า)
+   เครื่องที่ตั้ง "ลดภาพเคลื่อนไหว" = ไม่เล่น
+   ======================================================= */
+const F1Motion = (function(){
+  const SEL = '.card, .pr-step, .mh-run, .sew-tabs, .pg-title, .mh-strip';
+  const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function countUp(root){
+    root.querySelectorAll('.mh-big, .text-2xl.font-bold, .text-3xl, .pr-step .text-lg').forEach(el => {
+      const node = Array.prototype.find.call(el.childNodes, n => n.nodeType === 3 && /\d/.test(n.nodeValue));
+      if (!node) return;
+      const m = node.nodeValue.match(/^([^\d]*)([\d,]+(?:\.\d+)?)([\s\S]*)$/);
+      if (!m) return;
+      const target = parseFloat(m[2].replace(/,/g, ''));
+      if (!isFinite(target) || target === 0) return;
+      const dec = (m[2].split('.')[1] || '').length;
+      const comma = m[2].indexOf(',') >= 0;
+      const show = v => comma ? v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : v.toFixed(dec);
+      const t0 = performance.now(), dur = 750;
+      const step = now => {
+        const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+        node.nodeValue = m[1] + show(p < 1 ? target * e : target) + m[3];
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    });
+  }
+  function enter(root){
+    if (!root || reduced()) return;
+    clearTimeout(root._f1t);
+    root.classList.remove('f1-enter');
+    // ไล่เฉพาะกล่องชั้นนอก (กล่องที่อยู่ในกล่องที่ไล่แล้ว ไม่ไล่ซ้ำ) · ใบที่ 13 ขึ้นไปมาพร้อมกัน
+    const items = Array.prototype.filter.call(root.querySelectorAll(SEL), el => {
+      const p = el.parentElement && el.parentElement.closest(SEL);
+      return !p || !root.contains(p);
+    });
+    items.forEach((el, i) => { el.classList.add('f1-anim'); el.style.setProperty('--i', Math.min(i, 12)); });
+    root.querySelectorAll('.mh-bar').forEach((b, i) => b.style.setProperty('--b', Math.min(i, 14)));
+    void root.offsetWidth;
+    root.classList.add('f1-enter');
+    countUp(root);
+    root._f1t = setTimeout(() => {
+      root.classList.remove('f1-enter');
+      items.forEach(el => el.classList.remove('f1-anim'));
+    }, 2000);
+  }
+  return { enter };
+})();
+
+// Dashboard เดิม: เล่น motion ครั้งเดียวตอนโหลดข้อมูลรอบแรกเสร็จ (ห่อฟังก์ชันเดิม ไม่แก้โค้ดเดิม)
+if (typeof hideDashboardLoading === 'function'){
+  const f1OrigHideLoading = hideDashboardLoading;
+  window.hideDashboardLoading = async function(){
+    const out = await f1OrigHideLoading.apply(this, arguments);
+    if (!window.__f1DashReady){
+      window.__f1DashReady = true;
+      const v = document.documentElement.getAttribute('data-view');
+      if (!v || v === 'sewing') F1Motion.enter(document.querySelector('.shell[data-view="sewing"]'));
+    }
+    return out;
+  };
+}
+
+/* =======================================================
    APP NAV — เมนูซ้าย + สลับหน้า (#sewing = Dashboard เดิม เป็นหน้าเริ่มต้น)
    ======================================================= */
 const F1Nav = (function(){
@@ -3956,6 +4039,10 @@ const F1Nav = (function(){
     close();
     if (view === 'sewing') setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
     if (view === 'search' || view === 'plan') F1MH.enter(view, arg);
+    // motion ตอนสลับหน้า: หน้าค้นหา / แผน เล่นหลังข้อมูลขึ้น (ใน F1MH) · Dashboard เล่นเมื่อโหลดรอบแรกเสร็จแล้ว
+    const node = document.querySelector('.shell[data-view="' + view + '"]');
+    if (view === 'sewing'){ if (window.__f1DashReady) F1Motion.enter(node); }
+    else if (view !== 'search' && view !== 'plan') F1Motion.enter(node);
     window.scrollTo(0, 0);
   }
   function toggleCollapse(){
@@ -4047,14 +4134,17 @@ const F1MH = (function(){
       ? `<p class="text-lg font-bold text-slate-800 mt-1" style="font-variant-numeric:tabular-nums">${fmt(step.total)}${po ? ' <span class="text-[12px] font-normal text-slate-500">/ ' + fmt(po) + '</span>' : ''}</p>
          <div class="pr-track"><div class="pr-fill" style="width:${pct}%"></div></div>
          <p class="text-[12px] text-slate-500 mt-2">${thRange(step.first, step.last)}${step.lines ? ' · Line ' + esc(step.lines.split('').join(', ')) : ''}</p>${extra || ''}`
-      : `<p class="text-[12px] text-slate-500 mt-2">${emptyText}</p>`;
+      : `<p class="text-[12px] text-slate-500 mt-2">${emptyText}</p>${extra || ''}`;
     return `<div class="pr-step ${state}"><div class="flex items-center justify-between gap-2"><span class="text-[13px] font-semibold text-slate-700">${title}</span><span class="pr-badge">${badge}</span></div>${body}</div>`;
   }
   function processCard(l){
     const po = l.poQty;
     const sewDone = !!(l.sew && po && l.sew.total >= po);
     const remain = po ? Math.max(0, po - (l.sew ? l.sew.total : 0)) : 0;
-    const sewExtra = l.sew && remain ? `<p class="text-[12px] text-slate-500 mt-1">เหลือเย็บ ${fmt(remain)} ตัว</p>` : '';
+    const finished = sewDone || !!(l.sew && daysBetween(l.sew.last, ymd(new Date())) > 3);
+    const pc = planCompare(l.plan, finished);
+    const planHtml = pc ? `<p class="text-[12px] text-slate-500 mt-1">${esc(pc.plan)}</p><span class="mh-chip ${pc.cls}" style="margin-top:4px;white-space:normal">${esc(pc.text)}</span>` : '';
+    const sewExtra = (l.sew && remain ? `<p class="text-[12px] text-slate-500 mt-1">เหลือเย็บ ${fmt(remain)} ตัว</p>` : '') + planHtml;
     let due = '';
     if (l.delivery){
       const n = daysTo(l.delivery);
@@ -4064,7 +4154,7 @@ const F1MH = (function(){
     return `<div class="card soft p-4 md:p-5 flex flex-col gap-3">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div><p class="text-[11px] text-slate-400">LOT</p><p class="text-xl font-bold text-slate-800">${esc(l.lot)}</p><p class="text-[13px] text-slate-500">${esc(l.model)}${po ? ' · PO ' + fmt(po) + ' ตัว' : ''}</p></div>
-        <div class="flex flex-col items-end gap-1"><span class="text-[12px] font-bold px-3 py-1.5 rounded-full ${sewDone ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-800'}">${sewDone ? 'เย็บครบแล้ว' : 'กำลังเย็บ'}</span>${due}</div>
+        <div class="flex flex-col items-end gap-1"><span class="text-[12px] font-bold px-3 py-1.5 rounded-full ${sewDone ? 'bg-emerald-100 text-emerald-700' : l.sew ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'}">${sewDone ? 'เย็บครบแล้ว' : l.sew ? 'กำลังเย็บ' : 'ยังไม่เริ่มเย็บ'}</span>${due}</div>
       </div>
       <div class="pr-steps">
         ${stepBox('Cutting', null, po, 'รอข้อมูลแผนก Cutting')}
@@ -4079,12 +4169,18 @@ const F1MH = (function(){
     const list = el('mhProcList'), hint = el('mhSearchHint');
     if (!data){ hint.textContent = 'กำลังโหลด...'; list.innerHTML = ''; await load(); }
     if (!data){ hint.textContent = ''; list.innerHTML = msgCard(loadError, 'warn'); return; }
-    const lots = (data.lots || []).filter(l => l.sew); // หน้านี้ใช้ข้อมูลแผนกเย็บเท่านั้น
+    const lots = (data.lots || []).filter(l => l.sew || l.plan); // หน้านี้ใช้ข้อมูลแผนกเย็บ (ยอดเย็บ + แผนเย็บ)
     const q = el('mhSearchInput').value.trim().toUpperCase().replace(/\s+/g, '');
     if (!q){
+      const today = ymd(new Date());
       const act = lots.filter(l => l.active);
-      hint.textContent = `กำลังผลิตอยู่ตอนนี้ ${act.length} LOT · พิมพ์เลข LOT หรือรุ่นเพื่อดู LOT อื่น`;
-      list.innerHTML = act.length ? act.map(processCard).join('') : msgCard('ช่วง 3 วันที่ผ่านมาไม่มี LOT ที่กำลังผลิต');
+      // ตามแผนจะเริ่มเย็บภายใน 7 วัน แต่ยังไม่มียอด
+      const soon = lots.filter(l => !l.sew && l.plan && l.plan.start && daysBetween(today, l.plan.start) <= 7)
+        .sort((a, b) => a.plan.start < b.plan.start ? -1 : 1);
+      hint.textContent = `กำลังผลิตอยู่ตอนนี้ ${act.length} LOT${soon.length ? ' · ตามแผนจะเริ่มเย็บใน 7 วัน ' + soon.length + ' LOT' : ''} · พิมพ์เลข LOT หรือรุ่นเพื่อดู LOT อื่น`;
+      list.innerHTML = act.length || soon.length
+        ? act.map(processCard).join('') + (soon.length ? `<p class="text-sm font-semibold text-slate-600 mt-2">ตามแผนจะเริ่มเย็บ</p>` + soon.map(processCard).join('') : '')
+        : msgCard('ช่วง 3 วันที่ผ่านมาไม่มี LOT ที่กำลังผลิต');
       return;
     }
     const items = lots.filter(l => l.lot.indexOf(q) >= 0 || l.style.indexOf(styleOf(q)) >= 0 || String(l.model).toUpperCase().replace(/\s+/g, '').indexOf(q) >= 0);
@@ -4295,6 +4391,48 @@ const F1MH = (function(){
   }
   const daysBetween = (a, b) => Math.round((parseYmd(b) - parseYmd(a)) / 86400000);
 
+  // แผนเย็บ (Sewing_Plan) เทียบเย็บจริง · finished = เย็บจบแล้ว (ใช้วันสุดท้ายจริงเทียบวันเสร็จตามแผน)
+  const shortD = s => { if (!s) return '-'; const d = parseYmd(s); return d.getDate() + ' ' + TH_MON[d.getMonth()]; };
+  function planCompare(p, finished){
+    if (!p) return null;
+    const today = ymd(new Date());
+    const span = (a, b) => shortD(a) + (b && b !== a ? ' – ' + shortD(b) : '');
+    const okCls = 'bg-emerald-100 text-emerald-700', warnCls = 'bg-amber-100 text-amber-800', lateCls = 'bg-rose-100 text-rose-700';
+    const parts = [];
+    let cls = okCls;
+    if (!p.actualStart){
+      const n = p.start ? daysBetween(today, p.start) : null;
+      if (n !== null && n < 0){ parts.push('ยังไม่เริ่ม · เลยแผนเริ่ม ' + (-n) + ' วัน'); cls = lateCls; }
+      else { parts.push('ยังไม่เริ่ม' + (p.start ? ' · แผนเริ่ม ' + shortD(p.start) + (n > 0 ? ' (อีก ' + n + ' วัน)' : ' (วันนี้)') : '')); cls = 'bg-slate-100 text-slate-600'; }
+    } else {
+      if (p.start){
+        const s = daysBetween(p.start, p.actualStart);
+        parts.push(s > 0 ? 'เริ่มช้า ' + s + ' วัน' : s < 0 ? 'เริ่มก่อน ' + (-s) + ' วัน' : 'เริ่มตามแผน');
+        if (s > 0) cls = warnCls;
+      }
+      if (p.end){
+        if (finished){
+          const e = daysBetween(p.end, p.actualEnd);
+          parts.push(e > 0 ? 'เสร็จช้า ' + e + ' วัน' : e < 0 ? 'เสร็จก่อน ' + (-e) + ' วัน' : 'เสร็จตามแผน');
+          if (e > 0) cls = lateCls;
+        } else {
+          const left = daysBetween(today, p.end);
+          parts.push(left < 0 ? 'เลยแผนเสร็จ ' + (-left) + ' วัน' : 'แผนเสร็จ ' + shortD(p.end) + ' (อีก ' + left + ' วัน)');
+          if (left < 0) cls = lateCls;
+        }
+      }
+    }
+    const detail = (p.lines || []).length > 1
+      ? p.lines.map(l => (l.line ? 'Line ' + l.line : 'ทุกไลน์') + ': แผน ' + span(l.start, l.end) + ' · จริง ' + (l.actualStart ? span(l.actualStart, l.actualEnd) : 'ยังไม่เริ่ม')).join(' | ')
+      : '';
+    return { cls, text: parts.join(' · '), plan: 'แผน ' + span(p.start, p.end), actual: p.actualStart ? 'จริง ' + span(p.actualStart, p.actualEnd) : '', detail };
+  }
+  function planLine(p, finished){
+    const pc = planCompare(p, finished);
+    if (!pc) return '';
+    return `<p class="text-[13px] text-slate-600 flex flex-wrap items-center gap-2"><span>${esc(pc.plan)}${pc.actual ? ' · ' + esc(pc.actual) : ''}</span><span class="mh-chip ${pc.cls}">${esc(pc.text)}</span></p>${pc.detail ? `<p class="text-[12px] text-slate-500">${esc(pc.detail)}</p>` : ''}`;
+  }
+
   // ประวัติแบบสรุป: รอบละบรรทัด · กด "รายวัน" ถึงจะเห็นตาราง
   function historyTable(s){
     if (!s || !s.runs.length) return '';
@@ -4320,13 +4458,14 @@ const F1MH = (function(){
             <button type="button" class="text-[12px] text-slate-500 hover:text-slate-800 underline" onclick="F1MH.toggleRun('${esc(r.lot)}')" aria-expanded="${open}">${open ? 'ซ่อนรายวัน' : 'รายวัน'}</button></div>
         </div>
         <p class="text-[13px] text-slate-600">${esc(bits.join(' · '))}</p>
+        ${planLine(r.plan, (r.poQty && r.qty >= r.poQty) || daysBetween(r.to, ymd(new Date())) > 3)}
         ${open ? detail : ''}
       </div>`;
     }).join('');
     return `<div class="card soft overflow-hidden">
       <div class="px-5 py-4 flex flex-wrap items-baseline justify-between gap-2">
         <p class="font-semibold text-slate-800">ประวัติการเย็บ ${esc(s.style)} <span class="text-[13px] font-normal text-slate-500">· ${s.runs.length} ครั้ง${onTime + late ? ' · ทัน Ship ' + onTime + ' · ตก Ship ' + late : ''}</span></p>
-        <p class="text-[12px] text-slate-400">Ship = กำหนดส่งของ LOT (Master_LOT)</p>
+        <p class="text-[12px] text-slate-400">Ship = กำหนดส่งของ LOT (Master_LOT) · แผน = Sewing_Plan</p>
       </div>
       ${rows}
       ${s.runs.length > MAX ? `<div class="px-5 py-3 border-t border-slate-100"><button type="button" class="text-sm font-semibold text-slate-700 underline" onclick="F1MH.toggleAllRuns()">${showAllRuns ? 'ย่อเหลือ ' + MAX + ' ครั้งล่าสุด' : 'ดูทั้งหมด ' + s.runs.length + ' ครั้ง'}</button></div>` : ''}
@@ -4461,12 +4600,14 @@ const F1MH = (function(){
     if (box && !box.contains(e.target) && e.target.id !== 'mhStyleInput') box.classList.add('hide');
   });
   function pickLine(code){ plan.line = plan.line === code ? '' : code; renderPlan(); }
+  // เข้าหน้า: วาดแล้วค่อยเล่น motion (กดปุ่ม / พิมพ์ในหน้า วาดใหม่แต่ไม่เล่นซ้ำ)
+  const viewNode = v => document.querySelector('.shell[data-view="' + v + '"]');
   function enter(view, arg){
-    if (view === 'search') renderSearch();
+    if (view === 'search') renderSearch().then(() => F1Motion.enter(viewNode('search')));
     if (view === 'plan'){
       const st = styleOf(arg);
       if (st !== plan.style){ plan.style = st; openRun = ''; showAllRuns = false; }
-      renderPlan();
+      renderPlan().then(() => F1Motion.enter(viewNode('plan')));
     }
   }
   return { enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleAllRuns, styleSuggest, styleKey };
