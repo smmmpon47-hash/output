@@ -568,7 +568,7 @@
     .f1-wait .f1-drop{ opacity:0; }
     .lineCard.f1-go .rounded-full > div{ transition:background-color .35s ease; }
     .f1-go .f1-drop{ animation:f1Drop .6s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--cd, 0ms) + var(--r, 0) * 110ms); }
-    .f1-fade{ animation:f1Fade .35s ease both; }
+    .f1-fade{ animation:f1Fade .45s ease both; }
     .f1-late{ animation:f1Drop .45s cubic-bezier(.2,.75,.25,1) both; }
     /* เอาเมาส์ชี้การ์ดเล็ก: ยกขึ้นนิดนึง */
     .lineCard, .app-view .card.p-4, .pr-step, .mh-col{ transition:transform .22s cubic-bezier(.2,.75,.25,1), box-shadow .22s ease; }
@@ -4105,7 +4105,19 @@ const F1Motion = (function(){
     b.color = colorful ? BAR_TONES.find(c => fill.classList.contains(c)) : '';
     return b;
   }
+  // รอบก่อนยังมีการ์ดที่รอเล่นค้างอยู่ (ยังไม่เคยเลื่อนมาเห็น) → คืนค่าเดิมก่อนเริ่มรอบใหม่
+  function resetBoxes(root){
+    if (root._f1io) root._f1io.disconnect();
+    (root._f1boxes || []).forEach(b => {
+      if (!b.card.classList.contains('f1-wait')) return;
+      b.card.classList.remove('f1-wait');
+      if (b.fill){ b.fill.style.width = b.w + '%'; if (b.pctEl) b.pctEl.textContent = b.pctText; }
+    });
+    root.querySelectorAll('.f1-drop').forEach(e => e.classList.remove('f1-drop'));
+    root._f1boxes = [];
+  }
   function watchBoxes(root, boxes, d0){
+    root._f1boxes = boxes;
     // ระหว่างรอเลื่อนมาเห็น: หลอดว่าง 0%
     boxes.forEach(b => { if (b.fill){ b.fill.style.width = '0%'; if (b.pctEl) b.pctEl.textContent = '0%'; } });
     if (root._f1io) root._f1io.disconnect();
@@ -4125,11 +4137,14 @@ const F1Motion = (function(){
   function enter(root, opts){
     if (!root || reduced()) return;
     const d0 = (opts && opts.delay) || 0;
+    // soft = สลับกลับมาหน้าเดิม: ทั้งหน้าจางเข้ามาพร้อมกัน (ไม่ไล่ทีละกล่องจากมุมซ้ายบน) · หลอด % ยังวิ่งเหมือนเดิม
+    const soft = !!(opts && opts.soft);
     root.style.setProperty('--f1d0', d0 + 'ms');
     clearTimeout(root._f1t);
-    root.classList.remove('f1-enter');
+    root.classList.remove('f1-enter', 'f1-fade');
+    resetBoxes(root);
     // ไล่เฉพาะกล่องชั้นนอก (กล่องที่อยู่ในกล่องที่ไล่แล้ว ไม่ไล่ซ้ำ) · ใบที่ 13 ขึ้นไปมาพร้อมกัน
-    const items = Array.prototype.filter.call(root.querySelectorAll(SEL), el => {
+    const items = soft ? [] : Array.prototype.filter.call(root.querySelectorAll(SEL), el => {
       const p = el.parentElement && el.parentElement.closest(SEL);
       return !p || !root.contains(p);
     });
@@ -4138,7 +4153,7 @@ const F1Motion = (function(){
     // การ์ดไลน์: แต่ละบรรทัดเทลงมาตามลำดับ · แถบ % ไหลไปขวาหลังบรรทัดสุดท้าย · ตัวเลข % วิ่งไปพร้อมแถบ
     const boxes = [];
     root.querySelectorAll('.lineCard').forEach(card => {
-      const rows = card.querySelectorAll(':scope > div:first-child, :scope > .border-t > .grid, :scope > .border-t > .space-y-2 > div');
+      const rows = soft ? [] : card.querySelectorAll(':scope > div:first-child, :scope > .border-t > .grid, :scope > .border-t > .space-y-2 > div');
       rows.forEach((r, k) => { r.classList.add('f1-drop'); r.style.setProperty('--r', k); });
       const bar = card.querySelector(':scope > div:last-child');
       const fill = bar && bar.querySelector('.rounded-full > div');
@@ -4150,10 +4165,10 @@ const F1Motion = (function(){
     if (kpiCard) boxes.push(barBox(kpiCard, 1, kpiBar, null, false));
     watchBoxes(root, boxes, d0);
     void root.offsetWidth;
-    root.classList.add('f1-enter');
-    countUp(root, d0);
+    root.classList.add(soft ? 'f1-fade' : 'f1-enter');
+    if (!soft) countUp(root, d0);
     root._f1t = setTimeout(() => {
-      root.classList.remove('f1-enter');
+      root.classList.remove('f1-enter', 'f1-fade');
       items.forEach(el => el.classList.remove('f1-anim'));
     }, d0 + 2200);
   }
@@ -4227,7 +4242,7 @@ const F1Nav = (function(){
     if (view === 'search' || view === 'plan') F1MH.enter(view, arg);
     // motion ตอนสลับหน้า: หน้าค้นหา / แผน เล่นหลังข้อมูลขึ้น (ใน F1MH) · Dashboard เล่นเมื่อโหลดรอบแรกเสร็จแล้ว
     const node = document.querySelector('.shell[data-view="' + view + '"]');
-    if (view === 'sewing'){ if (window.__f1DashReady) F1Motion.enter(node); }
+    if (view === 'sewing'){ if (window.__f1DashReady) F1Motion.enter(node, { soft: true }); }
     else if (view !== 'search' && view !== 'plan') F1Motion.enter(node);
     window.scrollTo(0, 0);
   }
