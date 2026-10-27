@@ -557,10 +557,15 @@
   @keyframes f1Fade{ from{ opacity:0; } to{ opacity:1; } }
   @keyframes f1GrowY{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
   @keyframes f1GrowX{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
+  @keyframes f1Drop{ from{ opacity:0; transform:translateY(-12px); } to{ opacity:1; transform:none; } }
+  @keyframes f1Fill{ from{ clip-path:inset(0 100% 0 0 round 999px); } to{ clip-path:inset(0 0 0 0 round 999px); } }
   @media (prefers-reduced-motion: no-preference){
     .f1-enter .f1-anim{ animation:f1Up .55s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--i, 0) * 55ms); }
     .f1-enter .mh-bar{ transform-origin:bottom; animation:f1GrowY .7s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(240ms + var(--b, 0) * 40ms); }
     .f1-enter .pr-fill{ transform-origin:left; animation:f1GrowX .8s cubic-bezier(.2,.75,.25,1) .25s both; }
+    /* การ์ดไลน์: ตัวหนังสือเทลงมาทีละบรรทัด แล้วแถบ % ไหลไปขวา */
+    .f1-enter .f1-drop{ animation:f1Drop .45s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--i, 0) * 55ms + 140ms + var(--r, 0) * 65ms); }
+    .f1-enter .f1-fill{ animation:f1Fill 1s cubic-bezier(.3,.7,.2,1) both; animation-delay:calc(var(--i, 0) * 55ms + 140ms + var(--r, 0) * 65ms); }
     .f1-fade{ animation:f1Fade .35s ease both; }
     /* เอาเมาส์ชี้การ์ดเล็ก: ยกขึ้นนิดนึง */
     .lineCard, .app-view .card.p-4, .pr-step, .mh-col{ transition:transform .22s cubic-bezier(.2,.75,.25,1), box-shadow .22s ease; }
@@ -4008,7 +4013,7 @@ const F1Motion = (function(){
   const SEL = '.card, .pr-step, .mh-run, .sew-tabs, .pg-title, .mh-strip';
   const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   function countUp(root){
-    root.querySelectorAll('.mh-big, .text-2xl.font-bold, .text-3xl, .pr-step .text-lg').forEach(el => {
+    root.querySelectorAll('.mh-big, .text-2xl.font-bold, .text-3xl, .pr-step .text-lg, .f1-count').forEach(el => {
       const node = Array.prototype.find.call(el.childNodes, n => n.nodeType === 3 && /\d/.test(n.nodeValue));
       if (!node) return;
       const m = node.nodeValue.match(/^([^\d]*)([\d,]+(?:\.\d+)?)([\s\S]*)$/);
@@ -4018,9 +4023,10 @@ const F1Motion = (function(){
       const dec = (m[2].split('.')[1] || '').length;
       const comma = m[2].indexOf(',') >= 0;
       const show = v => comma ? v.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec }) : v.toFixed(dec);
-      const t0 = performance.now(), dur = 750;
+      const delay = +el.dataset.f1d || 0, t0 = performance.now() + delay, dur = delay ? 1000 : 750;
+      if (delay) node.nodeValue = m[1] + show(0) + m[3];
       const step = now => {
-        const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3);
+        const p = Math.max(0, Math.min(1, (now - t0) / dur)), e = 1 - Math.pow(1 - p, 3);
         node.nodeValue = m[1] + show(p < 1 ? target * e : target) + m[3];
         if (p < 1) requestAnimationFrame(step);
       };
@@ -4038,13 +4044,25 @@ const F1Motion = (function(){
     });
     items.forEach((el, i) => { el.classList.add('f1-anim'); el.style.setProperty('--i', Math.min(i, 12)); });
     root.querySelectorAll('.mh-bar').forEach((b, i) => b.style.setProperty('--b', Math.min(i, 14)));
+    // การ์ดไลน์: แต่ละบรรทัดเทลงมาตามลำดับ (ต่อจากจังหวะการ์ดใบนั้น) · แถบ % ไหลไปขวาหลังบรรทัดสุดท้าย · ตัวเลข % วิ่งไปพร้อมแถบ
+    root.querySelectorAll('.lineCard').forEach(card => {
+      const ci = +card.style.getPropertyValue('--i') || 0;
+      const rows = card.querySelectorAll(':scope > div:first-child, :scope > .border-t > .grid, :scope > .border-t > .space-y-2 > div');
+      rows.forEach((r, k) => { r.classList.add('f1-drop'); r.style.setProperty('--i', ci); r.style.setProperty('--r', k); });
+      const bar = card.querySelector(':scope > div:last-child');
+      const fill = bar && bar.querySelector('.rounded-full > div');
+      if (fill){ fill.classList.add('f1-fill'); fill.style.setProperty('--i', ci); fill.style.setProperty('--r', rows.length); }
+      const pctEl = bar && bar.querySelector(':scope > span');
+      if (pctEl){ pctEl.classList.add('f1-count'); pctEl.dataset.f1d = ci * 55 + 140 + rows.length * 65; }
+    });
     void root.offsetWidth;
     root.classList.add('f1-enter');
     countUp(root);
     root._f1t = setTimeout(() => {
       root.classList.remove('f1-enter');
       items.forEach(el => el.classList.remove('f1-anim'));
-    }, 2000);
+      root.querySelectorAll('.f1-drop, .f1-fill, .f1-count').forEach(el => el.classList.remove('f1-drop', 'f1-fill', 'f1-count'));
+    }, 3200);
   }
   return { enter };
 })();
