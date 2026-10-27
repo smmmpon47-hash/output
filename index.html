@@ -558,7 +558,6 @@
   @keyframes f1GrowY{ from{ transform:scaleY(0); } to{ transform:scaleY(1); } }
   @keyframes f1GrowX{ from{ transform:scaleX(0); } to{ transform:scaleX(1); } }
   @keyframes f1Drop{ from{ opacity:0; transform:translateY(-12px); } to{ opacity:1; transform:none; } }
-  @keyframes f1Fill{ from{ clip-path:inset(0 100% 0 0 round 999px); } to{ clip-path:inset(0 0 0 0 round 999px); } }
   @media (prefers-reduced-motion: no-preference){
     /* --f1d0 = รอให้จอโหลดจางหายก่อนค่อยเริ่ม (ตอนโหลด Dashboard รอบแรก) */
     .f1-enter .f1-anim{ animation:f1Up .65s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--f1d0, 0ms) + var(--i, 0) * 70ms); }
@@ -567,9 +566,8 @@
     /* การ์ดไลน์ / แถบ KPI: รอจนเลื่อนมาเห็นการ์ดจริง (f1-wait) แล้วค่อยเทตัวหนังสือลงทีละบรรทัด + แถบ % ไหลไปขวา (f1-go)
        --cd = จังหวะเริ่มของการ์ดใบนั้น · --r = ลำดับบรรทัด */
     .f1-wait .f1-drop{ opacity:0; }
-    .f1-wait .f1-fill{ clip-path:inset(0 100% 0 0 round 999px); }
+    .lineCard.f1-go .rounded-full > div{ transition:background-color .35s ease; }
     .f1-go .f1-drop{ animation:f1Drop .6s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(var(--cd, 0ms) + var(--r, 0) * 110ms); }
-    .f1-go .f1-fill{ animation:f1Fill 1.4s cubic-bezier(.3,.7,.2,1) both; animation-delay:calc(var(--cd, 0ms) + var(--r, 0) * 110ms); }
     .f1-fade{ animation:f1Fade .35s ease both; }
     .f1-late{ animation:f1Drop .45s cubic-bezier(.2,.75,.25,1) both; }
     /* เอาเมาส์ชี้การ์ดเล็ก: ยกขึ้นนิดนึง */
@@ -4067,14 +4065,49 @@ const F1Motion = (function(){
     b.card.style.setProperty('--cd', cd + 'ms');
     b.card.classList.remove('f1-wait');
     b.card.classList.add('f1-go');
-    if (b.pctEl) countEl(b.pctEl, cd + b.rows * 110, 1400);
+    if (b.fill) growBar(b, cd + b.rows * 110);
     clearTimeout(b.card._f1t);
     b.card._f1t = setTimeout(() => {
       b.card.classList.remove('f1-go');
-      b.card.querySelectorAll('.f1-drop, .f1-fill').forEach(e => e.classList.remove('f1-drop', 'f1-fill'));
-    }, cd + b.rows * 110 + 1700);
+      b.card.querySelectorAll('.f1-drop').forEach(e => e.classList.remove('f1-drop'));
+    }, cd + b.rows * 110 + 1900);
+  }
+  // หลอด %: ยาวขึ้นจากซ้ายไปขวา ตัวเลขวิ่งตาม · สีไล่ตาม % ระหว่างทาง แดง → เหลือง → เขียว (เกณฑ์เดียวกับจุดสีบนผัง)
+  const BAR_TONES = ['bg-rose-500', 'bg-amber-500', 'bg-emerald-500'];
+  function growBar(b, delay){
+    const dur = 1600, t0 = performance.now() + delay;
+    const tone = p => p >= STATUS_OK_PCT ? BAR_TONES[2] : p >= STATUS_WARN_PCT ? BAR_TONES[1] : BAR_TONES[0];
+    const paint = (p, w) => {
+      b.fill.style.width = w + '%';
+      if (b.pctEl) b.pctEl.textContent = Math.round(p) + '%';
+      if (b.color){ b.fill.classList.remove(...BAR_TONES); b.fill.classList.add(tone(p)); }
+    };
+    paint(0, 0);
+    const step = now => {
+      if (!b.fill.isConnected) return;
+      const k = Math.max(0, Math.min(1, (now - t0) / dur)), e = 1 - Math.pow(1 - k, 3);
+      if (k < 1){ paint(b.pct * e, b.w * e); requestAnimationFrame(step); return; }
+      // จบ: คืนค่าเดิมของการ์ดทุกอย่าง (กว้าง / ตัวเลข / สี)
+      b.fill.style.width = b.w + '%';
+      if (b.pctEl) b.pctEl.textContent = b.pctText;
+      if (b.color){ b.fill.classList.remove(...BAR_TONES); b.fill.classList.add(b.color); }
+    };
+    requestAnimationFrame(step);
+  }
+  function barBox(card, rows, fill, pctEl, colorful){
+    const b = { card, rows };
+    if (!fill) return b;
+    b.fill = fill;
+    b.w = parseFloat(fill.style.width) || 0;
+    b.pctText = pctEl ? pctEl.textContent : '';
+    b.pct = pctEl ? (parseFloat(b.pctText) || 0) : b.w;
+    b.pctEl = pctEl;
+    b.color = colorful ? BAR_TONES.find(c => fill.classList.contains(c)) : '';
+    return b;
   }
   function watchBoxes(root, boxes, d0){
+    // ระหว่างรอเลื่อนมาเห็น: หลอดว่าง 0%
+    boxes.forEach(b => { if (b.fill){ b.fill.style.width = '0%'; if (b.pctEl) b.pctEl.textContent = '0%'; } });
     if (root._f1io) root._f1io.disconnect();
     boxes.forEach(b => b.card.classList.add('f1-wait'));
     const startAt = performance.now() + d0;
@@ -4109,12 +4142,12 @@ const F1Motion = (function(){
       rows.forEach((r, k) => { r.classList.add('f1-drop'); r.style.setProperty('--r', k); });
       const bar = card.querySelector(':scope > div:last-child');
       const fill = bar && bar.querySelector('.rounded-full > div');
-      if (fill){ fill.classList.add('f1-fill'); fill.style.setProperty('--r', rows.length); }
-      boxes.push({ card, rows: rows.length, pctEl: bar && bar.querySelector(':scope > span') });
+      const pctEl = bar && bar.querySelector(':scope > span');
+      boxes.push(barBox(card, rows.length, fill, pctEl, true));
     });
-    // แถบคืบหน้าทั้งโรงงาน (KPI ขวาบน) ไหลไปขวาเหมือนกัน
+    // แถบคืบหน้าทั้งโรงงาน (KPI ขวาบน) ยาวขึ้นเหมือนกัน (สีฟ้าสีเดียว)
     const kpiBar = root.querySelector('#kpiBar'), kpiCard = kpiBar && kpiBar.closest('.card');
-    if (kpiCard){ kpiBar.classList.add('f1-fill'); kpiBar.style.setProperty('--r', 1); boxes.push({ card: kpiCard, rows: 1 }); }
+    if (kpiCard) boxes.push(barBox(kpiCard, 1, kpiBar, null, false));
     watchBoxes(root, boxes, d0);
     void root.offsetWidth;
     root.classList.add('f1-enter');
