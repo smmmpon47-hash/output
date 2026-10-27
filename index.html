@@ -1172,6 +1172,10 @@
           <p class="text-[11px] text-slate-400">กำหนดส่งมอบ</p>
           <p id="resDeliveryDate" class="font-bold text-slate-700 mt-0.5">-</p>
         </div>
+        <div class="bg-slate-50 p-3 rounded-2xl col-span-2">
+          <p class="text-[11px] text-slate-400">ขึ้นไลน์</p>
+          <p id="resLines" class="font-bold text-slate-700 mt-0.5">-</p>
+        </div>
       </div>
       <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-2xl text-emerald-800 text-sm font-semibold flex items-center gap-3">
         <span class="text-xl">🏭</span>
@@ -3859,6 +3863,22 @@ function closeLotSearch(){ el('lotModal').classList.add('hide'); }
 el('lotModal').addEventListener('click', e => { if (e.target.id === 'lotModal') closeLotSearch(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLotSearch(); });
 
+// ไลน์ที่ LOT นี้ขึ้น = ไลน์ที่มี LOT นี้ในข้อมูลวันนี้ + ไลน์จากประวัติการเย็บ (getModelHistory) · ไม่มีข้อมูล = -
+async function fillLotLines_(lot){
+  const key = normalizeLotLookupKey_(lot);
+  const lines = new Set();
+  if (!currentDashboardIsRange){
+    globalLinesData.forEach(item => {
+      const code = String(item.line || item.lineName || '').replace(/LINE/i,'').trim().toUpperCase();
+      if (code && getLotPlan(item).some(lp => normalizeLotLookupKey_(lp.lot) === key)) lines.add(code);
+    });
+  }
+  const shown = () => { if (normalizeLotLookupKey_(el('resLotNo').innerText) === key) el('resLines').innerText = lines.size ? 'Line ' + [...lines].sort().join(', ') : '-'; };
+  shown();
+  (await F1MH.lotLines(key)).forEach(c => lines.add(c));
+  shown();
+}
+
 async function searchLot(){
   const val = el('lotInput').value.trim();
   if (!val){ el('resRealtimeStatus').innerText = 'กรอกรหัส LOT ก่อนเริ่มค้นหา'; return; }
@@ -3872,7 +3892,7 @@ async function searchLot(){
       el('resLotNo').innerText = val;
       el('resStatusBadge').innerText = 'ไม่พบข้อมูล';
       el('resStatusBadge').className = 'text-[10px] font-bold px-3 py-1.5 rounded-full bg-rose-100 text-rose-700';
-      ['resPoTarget','resCumulativeActual','resModel','resDeliveryDate'].forEach(id => el(id).innerText = '-');
+      ['resPoTarget','resCumulativeActual','resModel','resDeliveryDate','resLines'].forEach(id => el(id).innerText = '-');
       el('resRealtimeStatus').innerText = 'ไม่พบ LOT นี้ใน Master_LOT ลองตรวจตัวสะกดอีกครั้ง';
       return;
     }
@@ -3887,6 +3907,8 @@ async function searchLot(){
     el('resCumulativeActual').innerText = `${cum.toLocaleString()} ชิ้น`;
     el('resModel').innerText = data.model || '-';
     el('resDeliveryDate').innerText = data.delivery_date || '-';
+    el('resLines').innerText = '-';
+    void fillLotLines_(data.lot_number || val);
     el('resRealtimeStatus').innerText = `ผลิตสะสม ${cum.toLocaleString()} จากเป้า ${poTarget.toLocaleString()} ชิ้น`;
 
   }catch(err){
@@ -4528,7 +4550,14 @@ const F1MH = (function(){
       renderPlan();
     }
   }
-  return { enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleAllRuns, styleSuggest, styleKey };
+  // ไลน์ที่เคยเย็บ LOT นี้ จากประวัติ (โหลดไม่ได้ = [])
+  async function lotLines(lot){
+    await load();
+    const l = data && (data.lots || []).find(x => x.lot === lot);
+    return l && l.sew && l.sew.lines ? String(l.sew.lines).replace(/[^A-Z]/gi, '').toUpperCase().split('') : [];
+  }
+
+  return { lotLines, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleAllRuns, styleSuggest, styleKey };
 })();
 
 F1Nav.init();
