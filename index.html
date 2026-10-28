@@ -836,8 +836,19 @@
     .fs-kicker, .fs-meta, .fs-status{ font-size:10px; }
     .fs-corner{ top:22px; right:32px; }
     .fs-count{ font-size:18px; }
-    .fs-plan{ width:min(820px, calc(100% - 220px)); margin-top:92px; }
-    html body .floorScene .fs-ruler{ right:28px; }
+    /* ผังใหญ่ขึ้นนิดนึง แต่กรอบการ์ดสูงเท่าเดิม: ดึงคำบรรยายขึ้นมาทับขอบล่างที่ว่างของรูป */
+    .fs-plan{ width:min(880px, calc(100% - 200px)); margin-top:92px; margin-bottom:-16px; }
+    .fs-side-l{ left:-30px; } .fs-side-r{ right:-30px; top:60%; }
+    .fs-aisle-b{ bottom:auto; top:85.5%; }
+    html body .floorScene .fs-ruler{ right:28px; top:112px; gap:2px; }
+    /* ปุ่มเลือกชั้นใหญ่ขึ้น + ป้าย "เลือกชั้น" ให้รู้ว่ากดได้ */
+    html body .floorScene .fs-ruler::before{ content:"เลือกชั้น"; display:block; margin-bottom:4px; text-align:right; font-size:10px; letter-spacing:.18em; color:#64748B; }
+    html.dark body .floorScene .fs-ruler::before{ color:#94A3B8; }
+    html body .floorScene .fs-ruler .floorTab{ min-width:84px; min-height:40px; gap:10px; font-size:22px; font-weight:600; font-family:'Cormorant Garamond', 'Kanit', serif; letter-spacing:.08em; }
+    html body .floorScene .fs-ruler .floorTab:hover:not(.active){ color:#475569; }
+    html.dark body .floorScene .fs-ruler .floorTab:hover:not(.active){ color:#CBD5E1; }
+    html body .floorScene .fs-ruler .floorTab span{ width:14px; }
+    html body .floorScene .fs-ruler .floorTab.active span{ width:40px; }
     .fs-skyline{ height:130px; }
     .floorScene .hot .hotLabel{ height:22px; padding:0 9px; font-size:11px; }
     .fs-foot{ gap:5px; margin-top:8px; }
