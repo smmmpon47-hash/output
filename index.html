@@ -2551,7 +2551,7 @@ function renderDailyChart(lines, rememberLines = true){
       },
       scales:{
         x:{ stacked, grid:{display:false}, border:{display:false}, ticks:{ font:{family:'Kanit', size:11, weight:'600'}, color:dashTick() } },
-        y:{ stacked, beginAtZero:true, border:{display:false, dash:[3,4]}, grid:{color:dashGrid(), drawTicks:false}, ticks:{ font:{family:'Kanit', size:10}, color:dashTick(), padding:8 } }
+        y:{ stacked, beginAtZero:true, border:{display:false, dash:[3,4]}, grid:{color:dark ? 'rgba(148,163,184,0.16)' : 'rgba(100,116,139,0.22)', drawTicks:false}, ticks:{ font:{family:'Kanit', size:10}, color:dashTick(), padding:8 } }
       }
     }
   });
