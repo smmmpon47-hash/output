@@ -900,6 +900,75 @@
     .nav-item svg{ transition:transform .2s cubic-bezier(.2,.75,.25,1); }
     .nav-item:hover svg{ transform:translateX(2px) scale(1.06); }
   }
+
+  /* ===== เลือกวันที่: ปุ่ม + ปฏิทินเลือกช่วง ===== */
+  .dp-btn{ display:inline-flex; align-items:center; gap:8px; height:38px; padding:0 12px 0 13px; border-radius:12px; font-size:12.5px; font-weight:600; white-space:nowrap; color:#1E1B4B; background:#fff; border:1px solid #DDE3F0; box-shadow:0 1px 2px rgba(15,23,42,.05); transition:border-color .2s ease, box-shadow .2s ease; cursor:pointer; }
+  .dp-btn svg{ color:#4F46E5; flex:none; }
+  .dp-btn .dp-caret{ color:#94A3B8; transition:transform .25s ease; }
+  .dp-btn:hover, .dp-btn[aria-expanded="true"]{ border-color:#A5B4FC; box-shadow:0 0 0 3px rgba(99,102,241,.14); }
+  .dp-btn[aria-expanded="true"] .dp-caret{ transform:rotate(180deg); }
+  .dp-pop{ position:fixed; z-index:200; width:340px; padding:16px; border-radius:18px; background:#fff; border:1px solid #E4E8F2; box-shadow:0 24px 60px -18px rgba(30,27,75,.35), 0 2px 6px rgba(15,23,42,.06); opacity:0; visibility:hidden; transform:translateY(-6px) scale(.98); transform-origin:top right; transition:opacity .18s ease, transform .22s cubic-bezier(.2,.75,.25,1), visibility 0s linear .22s; }
+  .dp-pop.show{ opacity:1; visibility:visible; transform:none; transition:opacity .18s ease, transform .22s cubic-bezier(.2,.75,.25,1), visibility 0s; }
+  .dp-title{ margin:0 0 10px; font-size:13px; font-weight:700; color:#0F172A; }
+  .dp-presets{ display:grid; grid-template-columns:repeat(3,1fr); gap:6px; padding-bottom:12px; margin-bottom:10px; border-bottom:1px solid #EEF1F6; }
+  .dp-preset{ height:30px; border-radius:9px; font-size:11.5px; font-weight:500; color:#475569; background:#fff; border:1px solid #E4E8F2; cursor:pointer; transition:all .15s ease; }
+  .dp-preset:hover{ border-color:#C7D2FE; color:#3730A3; }
+  .dp-preset.on{ background:#EEF2FF; border-color:#A5B4FC; color:#3730A3; font-weight:700; }
+  .dp-nav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+  .dp-month{ margin:0; font-size:13px; font-weight:700; color:#0F172A; }
+  .dp-arrow{ width:30px; height:30px; display:grid; place-items:center; border-radius:9px; color:#475569; cursor:pointer; }
+  .dp-arrow:hover:not(:disabled){ background:#F1F5F9; color:#0F172A; }
+  .dp-arrow:disabled{ opacity:.3; cursor:default; }
+  .dp-week, .dp-grid{ display:grid; grid-template-columns:repeat(7,1fr); }
+  .dp-week span{ text-align:center; font-size:10.5px; font-weight:500; color:#94A3B8; padding:4px 0 6px; }
+  .dp-day{ position:relative; height:38px; display:grid; place-items:center; font-size:12.5px; font-weight:500; color:#1E293B; cursor:pointer; background:transparent; border:0; }
+  .dp-day > i{ position:relative; z-index:1; width:34px; height:34px; display:grid; place-items:center; border-radius:10px; font-style:normal; transition:background-color .12s ease, color .12s ease; }
+  .dp-day:hover:not(:disabled) > i{ background:#F1F5F9; }
+  .dp-day.out{ color:#CBD5E1; }
+  .dp-day:disabled{ color:#D5DAE3; cursor:default; }
+  .dp-day.today > i{ box-shadow:inset 0 0 0 1px #A5B4FC; }
+  .dp-day.in::before{ content:""; position:absolute; inset:2px 0; background:#EEF2FF; }
+  .dp-day.start::before{ left:50%; } .dp-day.end::before{ right:50%; }
+  .dp-day.start.end::before{ display:none; }
+  .dp-day.start > i, .dp-day.end > i{ background:#4F46E5 !important; color:#fff; font-weight:700; box-shadow:0 6px 14px -6px rgba(79,70,229,.7); }
+  .dp-foot{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; padding-top:12px; border-top:1px solid #EEF1F6; }
+  .dp-range{ margin:0; font-size:11px; color:#64748B; line-height:1.35; }
+  .dp-range b{ color:#0F172A; font-weight:700; }
+  .dp-actions{ display:flex; gap:6px; flex:none; }
+  .dp-cancel, .dp-apply{ height:32px; padding:0 14px; border-radius:9px; font-size:12px; font-weight:600; cursor:pointer; }
+  .dp-cancel{ color:#475569; background:#fff; border:1px solid #E4E8F2; }
+  .dp-cancel:hover{ background:#F8FAFC; }
+  .dp-apply{ color:#fff; background:#4F46E5; border:1px solid #4F46E5; box-shadow:0 6px 14px -6px rgba(79,70,229,.7); }
+  .dp-apply:hover{ background:#4338CA; }
+  .dp-shade{ position:fixed; inset:0; z-index:199; background:rgba(15,23,42,.35); opacity:0; visibility:hidden; transition:opacity .2s ease, visibility 0s linear .2s; }
+  .dp-shade.show{ opacity:1; visibility:visible; transition:opacity .2s ease, visibility 0s; }
+  /* มืด: ดำตัดทอง */
+  html.dark .dp-btn{ color:#F1F5F9; background:rgba(255,255,255,.04); border-color:rgba(214,185,123,.28); box-shadow:none; }
+  html.dark .dp-btn svg{ color:#D6B97B; } html.dark .dp-btn .dp-caret{ color:#94A3B8; }
+  html.dark .dp-btn:hover, html.dark .dp-btn[aria-expanded="true"]{ border-color:rgba(214,185,123,.6); box-shadow:0 0 0 3px rgba(214,185,123,.12); }
+  html.dark .dp-pop{ background:#0E131F; border-color:rgba(214,185,123,.22); box-shadow:0 30px 70px -20px rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.03) inset; }
+  html.dark .dp-title, html.dark .dp-month, html.dark .dp-range b{ color:#F8FAFC; }
+  html.dark .dp-presets, html.dark .dp-foot{ border-color:rgba(255,255,255,.08); }
+  html.dark .dp-preset, html.dark .dp-cancel{ color:#CBD5E1; background:rgba(255,255,255,.03); border-color:rgba(255,255,255,.12); }
+  html.dark .dp-preset:hover{ border-color:rgba(214,185,123,.5); color:#F3E3BC; }
+  html.dark .dp-preset.on{ background:rgba(214,185,123,.14); border-color:rgba(214,185,123,.6); color:#F3E3BC; }
+  html.dark .dp-arrow{ color:#94A3B8; } html.dark .dp-arrow:hover:not(:disabled){ background:rgba(255,255,255,.06); color:#fff; }
+  html.dark .dp-day{ color:#E2E8F0; } html.dark .dp-day.out{ color:#475569; } html.dark .dp-day:disabled{ color:#334155; }
+  html.dark .dp-day:hover:not(:disabled) > i{ background:rgba(255,255,255,.07); }
+  html.dark .dp-day.today > i{ box-shadow:inset 0 0 0 1px rgba(214,185,123,.6); }
+  html.dark .dp-day.in::before{ background:rgba(214,185,123,.12); }
+  html.dark .dp-day.start > i, html.dark .dp-day.end > i{ background:linear-gradient(135deg,#E9D29A,#C9A55C) !important; color:#1A1408; box-shadow:0 6px 16px -6px rgba(214,185,123,.7); }
+  html.dark .dp-cancel:hover{ background:rgba(255,255,255,.07); }
+  html.dark .dp-apply{ color:#1A1408; background:linear-gradient(135deg,#E9D29A,#C9A55C); border-color:#D6B97B; box-shadow:0 6px 16px -6px rgba(214,185,123,.6); }
+  html.dark .dp-apply:hover{ filter:brightness(1.07); }
+  /* มือถือ: เด้งขึ้นจากด้านล่าง */
+  @media (max-width:639px){
+    .dp, .dp-btn{ width:100%; } .dp-btn{ justify-content:flex-start; } .dp-btn .dp-caret{ margin-left:auto; }
+    .dp-pop{ left:0 !important; right:0; top:auto !important; bottom:0; width:auto; border-radius:22px 22px 0 0; padding:18px 16px calc(16px + env(safe-area-inset-bottom)); transform:translateY(100%); transition:transform .32s cubic-bezier(.2,.75,.25,1), visibility 0s linear .32s; opacity:1; }
+    .dp-pop.show{ transform:none; transition:transform .32s cubic-bezier(.2,.75,.25,1), visibility 0s; }
+    .dp-day{ height:42px; } .dp-day > i{ width:38px; height:38px; }
+    .dp-preset{ height:34px; }
+  }
 </style>
 </head>
 <body class="pb-10">
@@ -1018,14 +1087,32 @@
             </button>
           </div>
 
-          <div class="flex flex-col sm:flex-row sm:items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-2 rounded-2xl">
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-semibold text-slate-500 w-9 shrink-0">From</span>
-              <input type="date" id="datePicker" onchange="onFromDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-400">
-            </div>
-            <div class="flex items-center gap-2">
-              <span class="text-xs font-semibold text-slate-500 w-6 shrink-0">To</span>
-              <input type="date" id="datePickerTo" onchange="onToDateChange()" class="flex-1 min-w-0 bg-white border border-slate-200 rounded-xl px-2 py-1.5 text-xs font-semibold focus:outline-none focus:border-indigo-400">
+          <!-- เลือกวันที่: ปุ่มเดียว เปิดปฏิทินเลือกช่วง + ทางลัด (ช่อง input เดิมซ่อนไว้ โค้ดอื่นยังอ่านค่าจากมันเหมือนเดิม) -->
+          <div class="dp" id="dpRoot">
+            <input type="date" id="datePicker" onchange="onFromDateChange()" class="hide" tabindex="-1" aria-hidden="true">
+            <input type="date" id="datePickerTo" onchange="onToDateChange()" class="hide" tabindex="-1" aria-hidden="true">
+            <button type="button" id="dpBtn" class="dp-btn" onclick="F1DatePick.toggle()" aria-haspopup="dialog" aria-expanded="false">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+              <span id="dpBtnText">วันนี้</span>
+              <svg class="dp-caret" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+            <div id="dpPop" class="dp-pop" role="dialog" aria-label="เลือกช่วงวันที่">
+              <p class="dp-title">เลือกช่วงวันที่</p>
+              <div class="dp-presets" id="dpPresets"></div>
+              <div class="dp-nav">
+                <button type="button" class="dp-arrow" onclick="F1DatePick.move(-1)" aria-label="เดือนก่อน"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+                <p id="dpMonth" class="dp-month">-</p>
+                <button type="button" class="dp-arrow" onclick="F1DatePick.move(1)" aria-label="เดือนถัดไป"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+              </div>
+              <div class="dp-week"><span>จ</span><span>อ</span><span>พ</span><span>พฤ</span><span>ศ</span><span>ส</span><span>อา</span></div>
+              <div id="dpGrid" class="dp-grid"></div>
+              <div class="dp-foot">
+                <p class="dp-range"><span>ช่วง</span> <b id="dpRange">-</b></p>
+                <div class="dp-actions">
+                  <button type="button" class="dp-cancel" onclick="F1DatePick.close()">ยกเลิก</button>
+                  <button type="button" id="dpApply" class="dp-apply" onclick="F1DatePick.apply()">ใช้งาน</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -2233,6 +2320,7 @@ async function onDateChange(){
   }
 
   const t = el('datePickerTo').value || s;
+  if (window.F1DatePick) F1DatePick.sync();
   const loadingStartedAt = showDashboardLoading(s, t);
 
   // วันนี้ = ต้องดึง LIVE จาก API เท่านั้น
@@ -4419,6 +4507,168 @@ main();
    เล่นเฉพาะตอนเข้าหน้า / Dashboard โหลดเสร็จครั้งแรก (ไม่เล่นตอนรีเฟรชข้อมูลหรือกดปุ่มในหน้า)
    เครื่องที่ตั้ง "ลดภาพเคลื่อนไหว" = ไม่เล่น
    ======================================================= */
+// ===== เลือกวันที่: ปฏิทินเลือกช่วง + ทางลัด =====
+// เขียนค่าลง #datePicker / #datePickerTo เดิมแล้วเรียก onDateChange() เหมือนตอนกรอกเอง
+const F1DatePick = (function(){
+  const TH_M = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+  const TH_MF = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const PRESETS = [
+    ['today', 'วันนี้'], ['yesterday', 'เมื่อวาน'], ['last7', '7 วันล่าสุด'],
+    ['week', 'สัปดาห์นี้'], ['month', 'เดือนนี้'], ['lastMonth', 'เดือนก่อน']
+  ];
+  const st = { a:'', b:'', hover:'', y:0, m:0, open:false };
+  let pop, shade, btn;
+
+  const pad = n => String(n).padStart(2, '0');
+  const iso = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const parse = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+  const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+  const short = s => { const d = parse(s); return `${d.getDate()} ${TH_M[d.getMonth()]}`; };
+  const isMobile = () => window.matchMedia('(max-width:639px)').matches;
+
+  function presetRange(key){
+    const t = getTodayStr(), d = parse(t);
+    if (key === 'today') return [t, t];
+    if (key === 'yesterday'){ const y = addDays(t, -1); return [y, y]; }
+    if (key === 'last7') return [addDays(t, -6), t];
+    if (key === 'week') return [addDays(t, -((d.getDay() + 6) % 7)), t];
+    if (key === 'month') return [iso(new Date(d.getFullYear(), d.getMonth(), 1)), t];
+    return [iso(new Date(d.getFullYear(), d.getMonth() - 1, 1)), iso(new Date(d.getFullYear(), d.getMonth(), 0))];
+  }
+
+  function label(a, b){
+    if (!a) return 'เลือกวันที่';
+    const t = getTodayStr();
+    if (!b || b === a){
+      const y = parse(a).getFullYear();
+      return (a === t ? 'วันนี้ · ' : a === addDays(t, -1) ? 'เมื่อวาน · ' : '') + `${short(a)} ${y}`;
+    }
+    const da = parse(a), db = parse(b);
+    if (da.getFullYear() !== db.getFullYear()) return `${short(a)} ${da.getFullYear()} – ${short(b)} ${db.getFullYear()}`;
+    if (da.getMonth() === db.getMonth()) return `${da.getDate()} – ${db.getDate()} ${TH_M[db.getMonth()]} ${db.getFullYear()}`;
+    return `${short(a)} – ${short(b)} ${db.getFullYear()}`;
+  }
+
+  // ปุ่มบนการ์ดให้ตรงกับค่าที่ใช้อยู่จริง
+  function sync(){
+    const t = document.getElementById('dpBtnText'); if (!t) return;
+    const a = el('datePicker').value, b = el('datePickerTo').value;
+    t.textContent = label(a, b || a);
+  }
+
+  function render(){
+    const today = getTodayStr();
+    const lo = st.a, hi = st.b || (st.hover && st.hover >= st.a ? st.hover : '');
+    document.getElementById('dpMonth').textContent = `${TH_MF[st.m]} ${st.y}`;
+    const first = new Date(st.y, st.m, 1);
+    const start = addDays(iso(first), -((first.getDay() + 6) % 7));
+    let html = '';
+    for (let i = 0; i < 42; i++){
+      const s = addDays(start, i), d = parse(s);
+      const cls = ['dp-day'];
+      if (d.getMonth() !== st.m) cls.push('out');
+      if (s === today) cls.push('today');
+      if (lo && s === lo) cls.push('start');
+      if (lo && (s === (hi || lo))) cls.push('end');
+      if (lo && hi && s >= lo && s <= hi) cls.push('in');
+      html += `<button type="button" class="${cls.join(' ')}" data-d="${s}"${s > today ? ' disabled' : ''}><i>${d.getDate()}</i></button>`;
+      if (i === 34 && d.getMonth() !== st.m) break;   // เดือนที่ใช้แค่ 5 แถว ไม่ต้องมีแถวว่าง
+    }
+    document.getElementById('dpGrid').innerHTML = html;
+    const t = parse(today);
+    pop.querySelector('.dp-arrow[aria-label="เดือนถัดไป"]').disabled = (st.y > t.getFullYear() || (st.y === t.getFullYear() && st.m >= t.getMonth()));
+    const b = st.b || st.a;
+    pop.querySelectorAll('.dp-preset').forEach(p => {
+      const [pa, pb] = presetRange(p.dataset.k);
+      p.classList.toggle('on', !!st.a && pa === st.a && pb === b);
+    });
+    document.getElementById('dpRange').textContent = st.a ? label(st.a, b) : '-';
+    document.getElementById('dpApply').disabled = !st.a;
+  }
+
+  function place(){
+    if (isMobile()){ pop.style.left = ''; pop.style.top = ''; return; }
+    const r = btn.getBoundingClientRect(), w = pop.offsetWidth || 340, h = pop.offsetHeight || 460;
+    let left = Math.min(r.right - w, window.innerWidth - w - 12);
+    left = Math.max(12, left);
+    let top = r.bottom + 8;
+    if (top + h > window.innerHeight - 12 && r.top - h - 8 > 12) top = r.top - h - 8;   // ล่างไม่พอ เปิดขึ้นบน
+    pop.style.left = left + 'px'; pop.style.top = Math.max(12, top) + 'px';
+  }
+
+  function open(){
+    st.a = el('datePicker').value || getTodayStr();
+    st.b = el('datePickerTo').value || '';
+    if (st.b === st.a) st.b = '';
+    st.hover = '';
+    const d = parse(st.b || st.a); st.y = d.getFullYear(); st.m = d.getMonth();
+    render();
+    st.open = true;
+    pop.classList.add('show'); btn.setAttribute('aria-expanded', 'true');
+    if (isMobile()) shade.classList.add('show');
+    place();
+  }
+  function close(){
+    if (!st.open) return;
+    st.open = false;
+    pop.classList.remove('show'); shade.classList.remove('show'); btn.setAttribute('aria-expanded', 'false');
+  }
+  function toggle(){ st.open ? close() : open(); }
+  function move(n){
+    const d = new Date(st.y, st.m + n, 1); st.y = d.getFullYear(); st.m = d.getMonth(); render();
+  }
+
+  function pick(s){
+    if (!st.a || st.b){ st.a = s; st.b = ''; }
+    else if (s < st.a){ st.a = s; }
+    else if (s !== st.a){ st.b = s; }
+    st.hover = ''; render();
+  }
+
+  function apply(){
+    if (!st.a) return;
+    const a = st.a, b = st.b && st.b !== st.a ? st.b : '';
+    const changed = a !== el('datePicker').value || b !== el('datePickerTo').value;
+    close();
+    if (!changed) return;
+    el('datePicker').value = a; el('datePickerTo').value = b;
+    onDateChange();
+  }
+
+  function init(){
+    pop = document.getElementById('dpPop'); btn = document.getElementById('dpBtn');
+    if (!pop || !btn) return;
+    document.body.appendChild(pop);   // ย้ายออกมาไว้ท้ายหน้า ไม่ให้การ์ดอื่นทับ/ตัดขอบ
+    shade = document.createElement('div'); shade.className = 'dp-shade'; shade.onclick = close;
+    document.body.appendChild(shade);
+    document.getElementById('dpPresets').innerHTML = PRESETS.map(([k, t]) => `<button type="button" class="dp-preset" data-k="${k}">${t}</button>`).join('');
+    pop.addEventListener('click', e => {
+      const p = e.target.closest('.dp-preset');
+      if (p){
+        const [a, b] = presetRange(p.dataset.k); st.a = a; st.b = b === a ? '' : b;
+        const d = parse(b); st.y = d.getFullYear(); st.m = d.getMonth(); render(); return;
+      }
+      const day = e.target.closest('.dp-day');
+      if (day && !day.disabled) pick(day.dataset.d);
+    });
+    pop.addEventListener('mouseover', e => {
+      const day = e.target.closest('.dp-day');
+      if (!day || day.disabled || !st.a || st.b || st.hover === day.dataset.d) return;
+      st.hover = day.dataset.d; render();
+    });
+    document.addEventListener('mousedown', e => {
+      if (st.open && !pop.contains(e.target) && !btn.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+    window.addEventListener('resize', () => { if (st.open) place(); });
+    window.addEventListener('scroll', () => { if (st.open && !isMobile()) place(); }, { passive:true });
+    sync();
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+
+  return (window.F1DatePick = { toggle, close, move, apply, sync });
+})();
+
 const F1Motion = (function(){
   const SEL = '.card, .pr-step, .mh-run, .sew-tabs, .pg-title, .mh-strip';
   const reduced = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
