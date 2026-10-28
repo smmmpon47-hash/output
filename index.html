@@ -860,6 +860,34 @@
     .floorScene .hot{ padding:3px; }
     .floorScene .hot .hotLabel{ height:20px; padding:0 7px; font-size:9.5px; gap:5px; letter-spacing:.04em; }
   }
+  /* มือถือ: หัวกระชับแถวเดียวกับปุ่มชั้น · ผังเต็มกว้าง · ท้ายสั้น */
+  @media (max-width:639px){
+    .floorScene{ display:grid; grid-template-columns:1fr auto; column-gap:12px; align-items:start; padding:18px 14px 16px; }
+    .fs-head{ grid-column:1; gap:5px; }
+    .fs-kicker{ font-size:9.5px; letter-spacing:.18em; gap:8px; }
+    .fs-kicker span{ width:16px; }
+    .fs-title{ font-size:30px; }
+    .fs-meta{ font-size:10px; letter-spacing:.12em; }
+    #lvlMeta, .fs-corner{ display:none !important; }
+    .fs-status{ font-size:10px; }
+    .fs-status span{ width:16px; }
+    html body .floorScene .fs-ruler{ grid-column:2; grid-row:1; align-self:center; margin:0; gap:2px; padding:3px; border-radius:999px; background:rgba(255,255,255,.55); border:1px solid rgba(15,23,42,.12); }
+    html body .floorScene .fs-ruler .floorTab{ min-height:30px; padding:0 12px; justify-content:center; border-radius:999px; font-size:12px; font-weight:600; color:#64748B; }
+    html body .floorScene .fs-ruler .floorTab span{ display:none; }
+    html body .floorScene .fs-ruler .floorTab.active{ background:#0F172A; color:#fff; }
+    html.dark body .floorScene .fs-ruler{ background:rgba(255,255,255,.05); border-color:rgba(214,185,123,.3); }
+    html.dark body .floorScene .fs-ruler .floorTab{ color:#94A3B8; }
+    html.dark body .floorScene .fs-ruler .floorTab.active{ background:linear-gradient(135deg,#E9D29A,#C9A55C); color:#1A1408; }
+    .fs-plan{ grid-column:1 / -1; width:auto; margin:14px -8px 0; }
+    .floorScene .hot{ align-items:center; justify-content:center; padding:2px; }
+    .floorScene .hot .hotLabel{ height:22px; padding:0 8px; font-size:10px; }
+    .fs-foot{ grid-column:1 / -1; gap:4px; margin-top:10px; }
+    .fs-caption{ font-size:12px; letter-spacing:.1em; white-space:nowrap; }
+    .fs-hint{ font-size:9px; letter-spacing:.12em; }
+    .fs-lines{ display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); width:100%; gap:8px; margin-top:6px; }
+    html body .floorScene .floorLineRow{ min-height:46px; padding:0 14px; }
+    .floorScene .floorLineRow .flex-1{ flex:1 1 auto; }
+  }
 
   /* ---------- MOTION จัดเต็ม ---------- */
   @keyframes f1LvlUp{ from{ opacity:0; transform:translateY(60%); } to{ opacity:1; transform:none; } }
