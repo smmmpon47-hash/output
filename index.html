@@ -51,6 +51,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy:#0F172A; --navy2:#16233F;
@@ -731,7 +732,126 @@
   .theme-curtain.to-dark{ background:#06080E; }
   .theme-curtain.to-light{ background:linear-gradient(135deg,#EEF2FF 0%,#E0E7FF 35%,#F5F3FF 70%,#ECFEFF 100%); }
 
+  /* ---------- ผังโรงงานแบบโปร่ง: เส้นผังลอยบนฉาก · สว่าง = เส้นดำ · มืด = เส้นขาว ---------- */
+  .floorScene{ position:relative; overflow:hidden; border-radius:28px; padding:36px 48px 30px; }
+  html:not(.dark) .card.floorScene{ background:linear-gradient(135deg,#EEF2FF 0%,#E0E7FF 35%,#F5F3FF 70%,#ECFEFF 100%); border:1px solid rgba(255,255,255,.9); box-shadow:inset 0 1px 0 #fff, 0 24px 48px -30px rgba(49,46,129,.45); color:#0F172A; }
+  html.dark .card.floorScene{ background:linear-gradient(180deg,#1C2744 0%,#151D36 42%,#0C1222 78%,#080C17 100%); border:1px solid rgba(255,255,255,.07); box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 30px 60px -36px rgba(0,0,0,.95); color:#E2E8F0; }
+  /* ห้ามใส่ z-index ให้ชั้นเนื้อหา: ผังต้อง "ผสม" กับฉากหลังได้ (mix-blend-mode) ถ้าแยกชั้นจะเห็นเป็นกล่องทึบ */
+  .floorScene > *:not(.fs-bg){ position:relative; }
+  /* ฉากหลัง */
+  .fs-bg{ position:absolute; inset:0; z-index:0; pointer-events:none; }
+  .fs-bg i{ position:absolute; display:block; }
+  .fs-glow1{ width:1000px; height:1000px; left:-380px; top:-440px; border-radius:50%; background:radial-gradient(closest-side, rgba(99,102,241,.22), transparent); }
+  .fs-glow2{ width:900px; height:900px; right:-360px; top:90px; border-radius:50%; background:radial-gradient(closest-side, rgba(103,232,249,.26), transparent); }
+  html.dark .fs-glow1{ left:0; right:0; top:auto; bottom:-560px; width:auto; height:900px; border-radius:0; background:radial-gradient(ellipse 50% 50% at 50% 100%, rgba(214,185,123,.20), transparent 70%); }
+  html.dark .fs-glow2{ background:radial-gradient(closest-side, rgba(56,78,130,.30), transparent); }
+  .fs-tower{ left:50%; top:0; width:300px; height:82%; margin-left:-150px; background:repeating-linear-gradient(180deg, rgba(79,70,229,.07) 0 2px, transparent 2px 22px), linear-gradient(180deg, rgba(255,255,255,.55), rgba(255,255,255,.2)); border-left:1px solid rgba(255,255,255,.9); border-right:1px solid rgba(255,255,255,.9); }
+  html.dark .fs-tower{ background:repeating-linear-gradient(180deg, rgba(255,255,255,.055) 0 2px, transparent 2px 22px), linear-gradient(180deg, #121A30, #0E1528); border:0; opacity:.9; }
+  .fs-tower2{ display:none; }
+  html.dark .fs-tower2{ display:block; left:50%; top:0; width:120px; height:82%; margin-left:-60px; background:repeating-linear-gradient(180deg, rgba(214,185,123,.10) 0 3px, transparent 3px 22px); opacity:.7; }
+  .fs-skyline{ position:absolute; left:0; bottom:0; width:100%; height:200px; }
+  .fs-roof{ fill:rgba(255,255,255,.55); } .fs-trees{ fill:rgba(196,181,253,.28); }
+  html.dark .fs-roof{ fill:#0A0F1D; } html.dark .fs-trees{ fill:#0B1322; }
+  /* หัวซ้ายบน · มุมขวาบน */
+  .fs-head{ position:absolute !important; left:48px; top:36px; display:flex; flex-direction:column; gap:9px; max-width:40%; }
+  .fs-kicker{ display:flex; align-items:center; gap:10px; margin:0; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:#475569; }
+  .fs-kicker span, .fs-status span{ width:26px; height:1px; background:currentColor; flex:none; }
+  .fs-title{ margin:0; font-family:'Cormorant Garamond', 'Kanit', serif; font-weight:600; font-size:46px; line-height:1; letter-spacing:.06em; color:#0F172A; }
+  .fs-title span{ display:inline-block; }
+  .fs-meta{ margin:0; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:#334155; }
+  .fs-meta2{ color:#475569; }
+  .fs-status{ display:flex; align-items:center; gap:10px; margin:0; font-size:11px; letter-spacing:.1em; color:#475569; }
+  .fs-corner{ position:absolute !important; right:48px; top:36px; text-align:right; }
+  .fs-count{ font-family:'Cormorant Garamond', serif; font-size:22px; font-weight:600; letter-spacing:.08em; color:#0F172A; }
+  .fs-count-sub{ font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:#475569; }
+  .fs-live{ display:inline-block; margin-top:8px; padding:3px 10px; border:1px solid rgba(15,23,42,.25); border-radius:999px; font-size:10px; letter-spacing:.14em; color:#334155; }
+  html.dark .fs-kicker, html.dark .fs-meta2, html.dark .fs-status, html.dark .fs-count-sub{ color:#94A3B8; }
+  html.dark .fs-title, html.dark .fs-count{ color:#FFFFFF; }
+  html.dark .fs-meta{ color:#CBD5E1; } html.dark .fs-meta2{ color:#94A3B8; }
+  html.dark .fs-live{ border-color:rgba(255,255,255,.3); color:#CBD5E1; }
+  /* ไม้บรรทัดเลือกชั้น (ขวา) */
+  html body .floorScene .fs-ruler{ position:absolute !important; right:40px; top:44%; display:flex; flex-direction:column; gap:4px; width:auto; padding:0; margin:0; background:transparent; border-radius:0; }
+  html body .floorScene .fs-ruler .floorTab{ display:flex; align-items:center; justify-content:flex-end; gap:8px; min-width:64px; min-height:36px; padding:0; border-radius:0; background:transparent; box-shadow:none; font-size:12px; font-weight:500; letter-spacing:.12em; color:#94A3B8; cursor:pointer; }
+  html body .floorScene .fs-ruler .floorTab span{ width:10px; height:1px; background:currentColor; transition:width .35s cubic-bezier(.2,.75,.25,1); }
+  html body .floorScene .fs-ruler .floorTab:hover{ color:#334155; }
+  html body .floorScene .fs-ruler .floorTab.active{ color:#0F172A; font-weight:700; background:transparent; box-shadow:none; }
+  html body .floorScene .fs-ruler .floorTab.active span{ width:34px; }
+  html.dark body .floorScene .fs-ruler .floorTab{ color:#64748B; }
+  html.dark body .floorScene .fs-ruler .floorTab:hover{ color:#CBD5E1; }
+  html.dark body .floorScene .fs-ruler .floorTab.active{ color:#FFFFFF; }
+  /* ตัวผัง */
+  .fs-plan{ width:min(1000px, calc(100% - 240px)); margin:150px auto 0; }
+  html body .floorScene .planWrap{ background:transparent; border:0; box-shadow:none; border-radius:0; overflow:visible; }
+  .floorScene .planImg{ clip-path:inset(10% 3.4% 16% 3.6%); transition:opacity .3s ease, transform .55s cubic-bezier(.2,.75,.25,1); }
+  /* ตัดตามรูปตึก (รวมห้องเล็กที่ยื่นด้านบนขวา) ไม่ให้พื้นหลังเดิมของรูปโผล่เป็นแถบทึบ */
+  .floorScene .planImg[data-floor="3"]{ clip-path:polygon(3.9% 10.9%, 83.9% 10.9%, 83.9% 3.8%, 89.3% 3.8%, 89.3% 10.9%, 96.3% 10.9%, 96.3% 83.4%, 3.9% 83.4%); }
+  .floorScene .planImg[data-floor="4"]{ clip-path:polygon(4.5% 13.4%, 83.1% 13.4%, 83.1% 5.1%, 88.7% 5.1%, 88.7% 13.4%, 96.3% 13.4%, 96.3% 83.4%, 4.5% 83.4%); }
+  html:not(.dark) .floorScene .planImg{ filter:grayscale(1) contrast(1.9) brightness(1.12); mix-blend-mode:multiply; }
+  html.dark .floorScene .planImg{ filter:invert(1) grayscale(1) contrast(1.7) brightness(1.08); mix-blend-mode:screen; }
+  .floorScene .planImg.is-switching{ opacity:.2; transform:scale(1.02); }
+  .fs-side, .fs-aisle{ position:absolute; margin:0; font-size:10px; letter-spacing:.22em; text-transform:uppercase; color:#64748B; white-space:nowrap; pointer-events:none; }
+  html.dark .fs-side, html.dark .fs-aisle{ color:#94A3B8; }
+  .fs-side{ top:50%; }
+  .fs-side-l{ left:-46px; transform:translate(-50%,-50%) rotate(-90deg); }
+  .fs-side-r{ right:-46px; transform:translate(50%,-50%) rotate(90deg); }
+  .fs-aisle{ left:0; right:0; text-align:center; font-size:9px; }
+  .fs-aisle-t{ top:2%; } .fs-aisle-b{ bottom:4%; }
+  .fs-plan{ position:relative; }
+  /* ไลน์บนผัง: ระบายลายเส้นเฉียงตามสถานะ */
+  .st-ok{ --hc:#6EE7B7; --hd:#059669; --hf:rgba(52,211,153,.34); --hb:rgba(52,211,153,.26); --hl:#047857; }
+  .st-warn{ --hc:#FCD34D; --hd:#D97706; --hf:rgba(251,191,36,.34); --hb:rgba(245,158,11,.22); --hl:#B45309; }
+  .st-bad{ --hc:#FDA4AF; --hd:#E11D48; --hf:rgba(251,113,133,.34); --hb:rgba(244,63,94,.22); --hl:#BE123C; }
+  .st-none{ --hc:#CBD5E1; --hd:#64748B; --hf:rgba(148,163,184,.26); --hb:rgba(148,163,184,.12); --hl:#475569; }
+  .floorScene .hot{ border-radius:3px; align-items:flex-start; justify-content:flex-start; padding:8px; border:1.5px solid var(--hd); background:repeating-linear-gradient(135deg, var(--hf) 0 2px, transparent 2px 7px), var(--hb); }
+  html.dark .floorScene .hot{ border-color:var(--hc); box-shadow:0 0 40px -12px var(--hc); }
+  .floorScene .hot:hover, .floorScene .hot.is-active{ transform:none; background:repeating-linear-gradient(135deg, var(--hf) 0 2px, transparent 2px 7px), var(--hf); border-color:var(--hd); box-shadow:0 0 0 1px var(--hd), 0 14px 30px -14px var(--hd); }
+  html.dark .floorScene .hot:hover, html.dark .floorScene .hot.is-active{ border-color:var(--hc); box-shadow:0 0 0 1px var(--hc), 0 0 46px -8px var(--hc); }
+  .floorScene .hot .hotLabel{ opacity:1; transform:none; display:inline-flex; align-items:center; gap:7px; height:26px; padding:0 11px; border-radius:999px; font-size:12px; font-weight:500; letter-spacing:.08em; background:rgba(255,255,255,.9); border:1px solid rgba(15,23,42,.14); box-shadow:0 6px 14px -8px rgba(15,23,42,.35); color:#0F172A; }
+  .floorScene .hot .hotLabel i{ width:7px; height:7px; border-radius:50%; background:var(--hd); }
+  .floorScene .hot .hotLabel b{ color:var(--hl); font-weight:700; letter-spacing:0; }
+  html.dark .floorScene .hot .hotLabel{ background:rgba(6,9,18,.78); border-color:rgba(255,255,255,.22); box-shadow:none; color:#F1F5F9; }
+  html.dark .floorScene .hot .hotLabel i{ background:var(--hc); box-shadow:0 0 8px var(--hc); }
+  html.dark .floorScene .hot .hotLabel b{ color:var(--hc); }
+  /* ท้าย: คำบรรยาย + ไลน์ในชั้นนี้ */
+  .fs-foot{ display:flex; flex-direction:column; align-items:center; gap:8px; margin-top:18px; text-align:center; }
+  .fs-caption{ margin:0; font-family:'Cormorant Garamond', serif; font-size:20px; font-weight:600; letter-spacing:.12em; color:#0F172A; }
+  .fs-hint{ margin:0; font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:#475569; }
+  html.dark .fs-caption{ color:#FFFFFF; } html.dark .fs-hint{ color:#94A3B8; }
+  .fs-lines{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:8px; }
+  html body .floorScene .floorLineRow{ width:auto; display:inline-flex; align-items:center; gap:10px; min-height:44px; padding:0 16px; border-radius:999px; background:rgba(255,255,255,.6); border:1px solid rgba(15,23,42,.18); }
+  html body .floorScene .floorLineRow:hover{ background:#fff; border-color:rgba(15,23,42,.35); }
+  html.dark body .floorScene .floorLineRow{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.28); }
+  html.dark body .floorScene .floorLineRow:hover{ background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.5); }
+  html.dark .floorScene .floorLineRow .text-slate-800{ color:#F1F5F9; }
+  html.dark .floorScene .floorLineRow .text-slate-400{ color:#94A3B8; }
+  html.dark .floorScene .floorLineRow .text-emerald-600{ color:#6EE7B7; }
+  html.dark .floorScene .floorLineRow .text-amber-600{ color:#FCD34D; }
+  html.dark .floorScene .floorLineRow .text-rose-600{ color:#FDA4AF; }
+  .floorScene .floorLineRow .flex-1{ flex:0 1 auto; text-align:left; }
+  @media (max-width:900px){
+    .floorScene{ padding:22px 16px 20px; border-radius:22px; }
+    .fs-head, .fs-corner, html body .floorScene .fs-ruler{ position:relative !important; left:auto; right:auto; top:auto; max-width:none; }
+    .fs-corner{ text-align:left; display:flex; align-items:center; gap:10px; margin-top:10px; }
+    .fs-live{ margin-top:0; }
+    html body .floorScene .fs-ruler{ flex-direction:row; gap:16px; margin-top:6px; }
+    html body .floorScene .fs-ruler .floorTab{ min-width:0; }
+    .fs-title{ font-size:38px; }
+    .fs-plan{ width:100%; margin-top:14px; }
+    .fs-side, .fs-aisle{ display:none; }
+    .fs-skyline{ height:110px; }
+    .fs-tower, .fs-tower2{ display:none !important; }
+    .floorScene .hot{ padding:3px; }
+    .floorScene .hot .hotLabel{ height:20px; padding:0 7px; font-size:9.5px; gap:5px; letter-spacing:.04em; }
+  }
+
   /* ---------- MOTION จัดเต็ม ---------- */
+  @keyframes f1LvlUp{ from{ opacity:0; transform:translateY(60%); } to{ opacity:1; transform:none; } }
+  @keyframes f1HotIn{ from{ opacity:0; transform:scale(.96); } to{ opacity:1; transform:none; } }
+  @media (prefers-reduced-motion: no-preference){
+    .floorScene.lvl-swap #lvlNum{ animation:f1LvlUp .55s cubic-bezier(.2,.75,.25,1) both; }
+    .floorScene.lvl-swap .hot{ animation:f1HotIn .5s cubic-bezier(.2,.75,.25,1) both; animation-delay:calc(260ms + var(--k, 0) * 110ms); }
+    .floorScene.lvl-swap .fs-meta, .floorScene.lvl-swap .fs-status, .floorScene.lvl-swap .fs-caption{ animation:f1Fade .5s ease both; animation-delay:.12s; }
+  }
   @keyframes f1Drift1{ from{ transform:translate(0,0) scale(1); } to{ transform:translate(120px,70px) scale(1.12); } }
   @keyframes f1Drift2{ from{ transform:translate(0,0) scale(1.05); } to{ transform:translate(-110px,-60px) scale(.94); } }
   @keyframes f1Drift3{ from{ transform:translate(0,0) scale(1); } to{ transform:translate(-140px,-40px) scale(1.15); } }
@@ -937,52 +1057,70 @@
   </section>
 
   <!-- ======================= 3. FLOOR PLAN ======================= -->
+  <!-- ผังแบบโปร่ง: เส้นผังลอยบนฉาก (สว่าง = เส้นดำ · มืด = เส้นขาว) · LEVEL ตัวใหญ่ · ไม้บรรทัดเลือกชั้น · ไลน์ระบายสีตามสถานะ -->
   <section class="mt-5">
-    <div class="planHeader flex flex-wrap justify-between items-center gap-3 mb-3">
-      <div>
-        <h2 class="font-bold text-slate-800">ผังไลน์การผลิต</h2>
-        <p class="text-xs text-slate-400">ชี้ที่ไลน์เพื่อดูยอดย่อ คลิกเพื่อเปิดรายละเอียดทั้งหมด</p>
+    <div class="card floorScene">
+      <div class="fs-bg" aria-hidden="true">
+        <i class="fs-glow1"></i><i class="fs-glow2"></i><i class="fs-tower"></i><i class="fs-tower2"></i><i class="fs-horizon"></i>
+        <svg class="fs-skyline" viewBox="0 0 1440 230" preserveAspectRatio="none">
+          <path class="fs-roof" d="M0 150 L120 150 L120 120 L170 95 L220 120 L270 95 L320 120 L320 150 L420 150 L420 110 L520 110 L520 150 L920 150 L920 105 L980 80 L1040 105 L1100 80 L1160 105 L1160 150 L1260 150 L1260 115 L1360 115 L1360 150 L1440 150 L1440 230 L0 230 Z"/>
+          <g class="fs-trees"><circle cx="60" cy="150" r="46"/><circle cx="110" cy="128" r="38"/><circle cx="20" cy="120" r="30"/><circle cx="210" cy="160" r="40"/><circle cx="1230" cy="160" r="40"/><circle cx="1330" cy="140" r="48"/><circle cx="1390" cy="118" r="36"/><circle cx="1420" cy="160" r="40"/></g>
+        </svg>
       </div>
-    </div>
 
-    <div class="floorLayout">
-      <div class="floorMain soft">
-        <div class="floorInner">
-          <div class="floorSwitch" aria-label="เลือกชั้นของผังโรงงาน">
-            <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active px-4 py-2 rounded-xl text-sm font-bold">ชั้น 3</button>
-            <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab px-4 py-2 rounded-xl text-sm font-bold text-slate-500">ชั้น 4</button>
+      <div class="fs-head">
+        <p class="fs-kicker"><span></span>FLOOR PLAN · ผังไลน์การผลิต</p>
+        <h2 class="fs-title">LEVEL <span id="lvlNum">03</span></h2>
+        <p id="lvlLines" class="fs-meta">LINE B · LINE C</p>
+        <p id="lvlMeta" class="fs-meta fs-meta2">ชั้น 3 · พื้นที่ผลิตแผนกเย็บ</p>
+        <p id="lvlStatus" class="fs-status"><span></span>-</p>
+      </div>
+
+      <div class="fs-corner">
+        <div id="lvlCount" class="fs-count">2 LINES</div>
+        <div class="fs-count-sub">ไลน์บนชั้นนี้</div>
+        <div id="lvlLive" class="fs-live">LIVE --:--</div>
+      </div>
+
+      <div class="floorSwitch fs-ruler" aria-label="เลือกชั้นของผังโรงงาน">
+        <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab" aria-label="ชั้น 4">04<span></span></button>
+        <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active" aria-label="ชั้น 3">03<span></span></button>
+      </div>
+
+      <div class="fs-plan">
+        <p class="fs-side fs-side-l">ฝั่งออฟฟิศ · OFFICE SIDE</p>
+        <p class="fs-side fs-side-r">ลิฟต์ · บันได · LIFT SIDE</p>
+        <p class="fs-aisle fs-aisle-t">ทางเดินด้านเหนือ</p>
+        <div id="planWrap" class="planWrap">
+          <div id="planCanvas" class="planCanvas">
+            <img id="planImg" class="planImg" alt="ผังโรงงาน">
+            <div id="hotspots"></div>
           </div>
-
-          <div id="planWrap" class="planWrap">
-            <div id="planCanvas" class="planCanvas">
-              <img id="planImg" class="planImg" alt="ผังโรงงาน">
-              <div id="hotspots"></div>
+          <div id="planTip">
+            <div class="flex items-center justify-between gap-2">
+              <p id="tipLine" class="font-extrabold text-slate-800">LINE B</p>
+              <span id="tipStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">-</span>
             </div>
-            <div id="planTip">
-              <div class="flex items-center justify-between gap-2">
-                <p id="tipLine" class="font-extrabold text-slate-800">LINE B</p>
-                <span id="tipStatus" class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">-</span>
-              </div>
-              <p id="tipModel" class="text-[11px] text-slate-400 mb-2">-</p>
-              <div class="space-y-1 text-xs">
-                <div class="flex justify-between"><span class="text-slate-500">เป้าหมาย</span><span id="tipTarget" class="font-bold text-slate-800">-</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">ผลิตแล้ว</span><span id="tipActual" class="font-bold text-slate-800">-</span></div>
-                <div class="flex justify-between"><span class="text-slate-500">เทียบเป้าตอนนี้</span><span id="tipPct" class="font-bold text-slate-800">-</span></div>
-              </div>
-              <div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                <div id="tipBar" class="h-1.5 rounded-full bg-emerald-500" style="width:0%"></div>
-              </div>
-              <p class="text-[10px] text-slate-400 mt-2">คลิกเพื่อดูรายละเอียดไลน์</p>
+            <p id="tipModel" class="text-[11px] text-slate-400 mb-2">-</p>
+            <div class="space-y-1 text-xs">
+              <div class="flex justify-between"><span class="text-slate-500">เป้าหมาย</span><span id="tipTarget" class="font-bold text-slate-800">-</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">ผลิตแล้ว</span><span id="tipActual" class="font-bold text-slate-800">-</span></div>
+              <div class="flex justify-between"><span class="text-slate-500">เทียบเป้าตอนนี้</span><span id="tipPct" class="font-bold text-slate-800">-</span></div>
             </div>
+            <div class="mt-2 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+              <div id="tipBar" class="h-1.5 rounded-full bg-emerald-500" style="width:0%"></div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-2">คลิกเพื่อดูรายละเอียดไลน์</p>
           </div>
         </div>
+        <p class="fs-aisle fs-aisle-b">ทางเดินด้านใต้</p>
       </div>
 
-      <aside class="guideColumn soft" aria-label="ไลน์ในชั้นนี้">
-        <p class="text-[15px] font-extrabold text-slate-800">ไลน์ในชั้นนี้</p>
-        <p class="text-[11px] text-slate-400 mt-0.5 mb-3">กดไลน์บนผังหรือในรายการเพื่อดูรายละเอียด</p>
-        <div id="floorLineShortcuts" class="space-y-2"></div>
-      </aside>
+      <div class="fs-foot">
+        <p class="fs-caption">TYPICAL FLOOR PLAN OF LEVEL <span id="lvlCap">03</span></p>
+        <p class="fs-hint">ชี้ที่ไลน์เพื่อดูยอดย่อ · กดเพื่อเปิดรายละเอียด</p>
+        <div id="floorLineShortcuts" class="fs-lines" aria-label="ไลน์ในชั้นนี้"></div>
+      </div>
     </div>
   </section>
 
@@ -2582,12 +2720,35 @@ function switchFloor(floor){
   const planImg = el('planImg');
   planImg.classList.add('is-switching');
   planImg.onload = () => planImg.classList.remove('is-switching');
+  planImg.dataset.floor = floor; // ผังแบบโปร่ง: ตัดขอบตามรูปตึกของแต่ละชั้น (CSS)
   planImg.src = FLOOR_PLANS[floor].img;
   planImg.alt = 'ผังโรงงานชั้น ' + floor;
   if (planImg.complete) requestAnimationFrame(() => planImg.classList.remove('is-switching'));
 
   hideTip();
   renderHotspots();
+  // เปลี่ยนชั้น: เลข LEVEL เลื่อนขึ้น · ไลน์ค่อยๆ โผล่ทีละอัน
+  const scene = document.querySelector('.floorScene');
+  if (scene){ scene.classList.remove('lvl-swap'); void scene.offsetWidth; scene.classList.add('lvl-swap'); clearTimeout(scene._swapT); scene._swapT = setTimeout(() => scene.classList.remove('lvl-swap'), 1200); }
+}
+
+// หัวผัง: LEVEL 03 · รายชื่อไลน์ · สรุปสถานะ · เวลาอัปเดต
+function renderFloorHead_(){
+  const plan = FLOOR_PLANS[currentFloor];
+  if (!plan || !el('lvlNum')) return;
+  const nn = String(currentFloor).padStart(2, '0');
+  const codes = plan.lines.map(l => l.code).sort();
+  el('lvlNum').textContent = nn;
+  el('lvlCap').textContent = nn;
+  el('lvlLines').textContent = codes.map(c => 'LINE ' + c).join(' · ');
+  el('lvlMeta').textContent = `ชั้น ${currentFloor} · พื้นที่ผลิตแผนกเย็บ`;
+  el('lvlCount').textContent = codes.length + (codes.length > 1 ? ' LINES' : ' LINE');
+  const n = { ok:0, warn:0, bad:0, none:0 };
+  codes.forEach(c => { const k = getLineStatus(findLine(c)).key; n[n[k] === undefined ? 'none' : k]++; });
+  const parts = [[n.ok, 'ตามเป้า'], [n.warn, 'ใกล้เป้า'], [n.bad, 'ต่ำกว่าเป้า'], [n.none, 'รอเริ่ม']].filter(p => p[0]).map(p => p[0] + ' ' + p[1]);
+  el('lvlStatus').innerHTML = '<span></span>' + esc(parts.join(' · ') || '-');
+  const d = new Date();
+  el('lvlLive').textContent = 'LIVE ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
 function renderHotspots(){
@@ -2599,7 +2760,8 @@ function renderHotspots(){
     const item = findLine(cfg.code);
     const st = getLineStatus(item);
     const d = document.createElement('div');
-    d.className = 'hot' + (currentLine === cfg.code ? ' is-active' : '');
+    d.className = 'hot st-' + st.key + (currentLine === cfg.code ? ' is-active' : '');
+    d.style.setProperty('--k', plan.lines.indexOf(cfg));
     d.style.left = cfg.left + '%';
     d.style.top = cfg.top + '%';
     d.style.width = cfg.width + '%';
@@ -2608,7 +2770,7 @@ function renderHotspots(){
     d.setAttribute('tabindex','0');
     d.dataset.line = cfg.code;
     d.setAttribute('aria-label', `เปิดรายละเอียด LINE ${cfg.code}`);
-    d.innerHTML = `<span class="hotLabel">LINE ${cfg.code}</span>`;
+    d.innerHTML = `<span class="hotLabel"><i></i>LINE ${cfg.code}<b>${st.key === 'none' ? '–' : st.pct + '%'}</b></span>`;
 
     d.addEventListener('mouseenter', () => showTip(cfg, d));
     d.addEventListener('mousemove',  () => showTip(cfg, d));
@@ -2619,6 +2781,7 @@ function renderHotspots(){
   });
 
   renderFloorLineList_();
+  renderFloorHead_();
 }
 
 // รายการไลน์ข้างผัง: จุดสี + รุ่น + % เทียบเป้าตอนนี้ (เกณฑ์เดียวกับการ์ด)
