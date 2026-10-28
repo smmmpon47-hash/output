@@ -828,6 +828,23 @@
   html.dark .floorScene .floorLineRow .text-amber-600{ color:#FCD34D; }
   html.dark .floorScene .floorLineRow .text-rose-600{ color:#FDA4AF; }
   .floorScene .floorLineRow .flex-1{ flex:0 1 auto; text-align:left; }
+  /* จอใหญ่: ย่อให้กระชับ ไม่กินที่ทั้งจอ */
+  @media (min-width:901px){
+    .floorScene{ padding:22px 32px 18px; border-radius:24px; }
+    .fs-head{ left:32px; top:22px; gap:5px; }
+    .fs-title{ font-size:32px; }
+    .fs-kicker, .fs-meta, .fs-status{ font-size:10px; }
+    .fs-corner{ top:22px; right:32px; }
+    .fs-count{ font-size:18px; }
+    .fs-plan{ width:min(820px, calc(100% - 220px)); margin-top:92px; }
+    html body .floorScene .fs-ruler{ right:28px; }
+    .fs-skyline{ height:130px; }
+    .floorScene .hot .hotLabel{ height:22px; padding:0 9px; font-size:11px; }
+    .fs-foot{ gap:5px; margin-top:8px; }
+    .fs-caption{ font-size:15px; }
+    .fs-lines{ margin-top:4px; }
+    html body .floorScene .floorLineRow{ min-height:36px; padding:0 13px; }
+  }
   @media (max-width:900px){
     .floorScene{ padding:22px 16px 20px; border-radius:22px; }
     .fs-head, .fs-corner, html body .floorScene .fs-ruler{ position:relative !important; left:auto; right:auto; top:auto; max-width:none; }
