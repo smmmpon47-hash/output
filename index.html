@@ -2493,14 +2493,29 @@ function renderDailyChart(lines, rememberLines = true){
     anchor:'center', align:'center', color, font:{ family:'Kanit', size:12, weight:'700' },
     formatter:v => v > 0 ? v.toLocaleString() : ''
   });
+  // ความสูงจริงของแท่ง (px) ไว้ตัดสินว่าตัวเลขใส่ในแท่งพอไหม
+  const barPx = c => {
+    const bar = c.chart.getDatasetMeta(c.datasetIndex).data[c.dataIndex];
+    if (!bar) return 0;
+    const p = bar.getProps(['y', 'base'], true);
+    return Math.abs(p.base - p.y);
+  };
+  const THIN = 26;
   const actualSet = extra => Object.assign({
     label:'ผลิตแล้ว', data:actualData, backgroundColor:greenFill,
-    borderRadius:10, borderSkipped:false, datalabels:valueLabel('#fff')
+    borderRadius:10, borderSkipped:false,
+    datalabels:Object.assign(valueLabel('#fff'), { display:c => barPx(c) >= 18 })
   }, BAR_SIZE, extra);
+  // ส่วนขาดเป้าบางเกินป้ายตัวเลข → ยกป้ายไปไว้เหนือแท่ง ไม่ให้ทะลุขอบ
   const gapSet = extra => Object.assign({
     label:'ยังขาดเป้า', data:remaining, backgroundColor:GAP_FILL,
     borderColor:GAP_LINE, borderWidth:1.2, borderRadius:10, borderSkipped:false,
-    datalabels:Object.assign(valueLabel(GAP_TEXT), { backgroundColor:c => c.dataset.data[c.dataIndex] > 0 ? GAP_CHIP : null, borderRadius:7, padding:{ top:3, bottom:2, left:8, right:8 } })
+    datalabels:Object.assign(valueLabel(GAP_TEXT), {
+      anchor:c => barPx(c) < THIN ? 'end' : 'center',
+      align:c => barPx(c) < THIN ? 'end' : 'center',
+      offset:4,
+      backgroundColor:c => c.dataset.data[c.dataIndex] > 0 ? GAP_CHIP : null, borderRadius:7, padding:{ top:3, bottom:2, left:8, right:8 }
+    })
   }, BAR_SIZE, extra);
 
   let datasets = [];
@@ -2525,6 +2540,7 @@ function renderDailyChart(lines, rememberLines = true){
     options:{
       responsive:true,
       maintainAspectRatio:false,
+      layout:{ padding:{ top:18 } },
       animation:{
         duration:900, easing:'easeOutQuart',
         delay:c => (c.type === 'data' && c.mode === 'default') ? c.dataIndex * 90 + c.datasetIndex * 140 : 0
