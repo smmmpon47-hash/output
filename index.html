@@ -840,9 +840,13 @@
     .fs-plan{ width:min(880px, calc(100% - 200px)); margin-top:92px; margin-bottom:-16px; }
     .fs-side-l{ left:-30px; } .fs-side-r{ right:-30px; }
     .fs-aisle-b{ bottom:auto; top:85.5%; }
-    html body .floorScene .fs-ruler{ right:28px; top:112px; gap:2px; }
+    html body .floorScene .fs-ruler{ right:28px; top:90px; gap:2px; }
     /* ปุ่มเลือกชั้นใหญ่ขึ้น + ป้าย "เลือกชั้น" ให้รู้ว่ากดได้ */
-    html body .floorScene .fs-ruler::before{ content:"เลือกชั้น"; display:block; margin-bottom:4px; text-align:right; font-size:10px; letter-spacing:.18em; color:#64748B; }
+    html body .floorScene .fs-ruler::before{ content:"เลือกชั้น"; display:block; margin-bottom:4px; text-align:right; font-size:11.5px; letter-spacing:.16em; color:#64748B; }
+  }
+  /* เอาออกตามเจ้าของ: ป้ายข้าง/ทางเดิน, ป้าย LIVE, แถบตึกลายขวางด้านหลัง */
+  .floorScene .fs-side, .floorScene .fs-aisle, .floorScene .fs-live, .floorScene .fs-tower, .floorScene .fs-tower2{ display:none !important; }
+  @media (min-width:901px){
     html.dark body .floorScene .fs-ruler::before{ color:#94A3B8; }
     html body .floorScene .fs-ruler .floorTab{ min-width:84px; min-height:40px; gap:10px; font-size:22px; font-weight:600; font-family:'Cormorant Garamond', 'Kanit', serif; letter-spacing:.08em; }
     html body .floorScene .fs-ruler .floorTab:hover:not(.active){ color:#475569; }
