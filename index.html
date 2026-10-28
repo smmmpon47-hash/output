@@ -4311,8 +4311,56 @@ const F1Motion = (function(){
     root._f1io = io;
     boxes.forEach(b => io.observe(b.card));
   }
+  // การ์ดไลน์ + แถบ KPI ที่จะรอเลื่อนมาเห็นแล้วค่อยเล่น (soft = ไม่เทตัวหนังสือ แค่หลอดวิ่ง)
+  function prepBoxes(root, soft){
+    const boxes = [];
+    root.querySelectorAll('.lineCard').forEach(card => {
+      const rows = soft ? [] : card.querySelectorAll(':scope > div:first-child, :scope > .border-t > .grid, :scope > .border-t > .space-y-2 > div');
+      rows.forEach((r, k) => { r.classList.add('f1-drop'); r.style.setProperty('--r', k); });
+      const bar = card.querySelector(':scope > div:last-child');
+      const fill = bar && bar.querySelector('.rounded-full > div');
+      const pctEl = bar && bar.querySelector(':scope > span');
+      boxes.push(barBox(card, rows.length, fill, pctEl, true));
+    });
+    // แถบคืบหน้าทั้งโรงงาน (KPI ขวาบน) ยาวขึ้นเหมือนกัน (สีฟ้าสีเดียว)
+    const kpiBar = root.querySelector('#kpiBar'), kpiCard = kpiBar && kpiBar.closest('.card');
+    if (kpiCard) boxes.push(barBox(kpiCard, 1, kpiBar, null, false));
+    return boxes;
+  }
+  // ข้อมูลอัปเดตเอง (ทุก 15 วิ) ขณะที่การ์ดยังรอเล่น → การ์ดชุดใหม่ต้องรอเล่นต่อ ไม่ใช่โผล่นิ่งๆ
+  // (การ์ดที่เล่นไปแล้ว อัปเดตแล้วไม่เล่นซ้ำ เหมือนเดิม)
+  // คืนลำดับการ์ดไลน์ที่ยังรอเล่น (+ แถบ KPI) · ไม่มีอะไรรอ = null
+  function beforeRender(root){
+    if (!root) return null;
+    const cards = Array.prototype.slice.call(root.querySelectorAll('.lineCard'));
+    const waiting = (root._f1boxes || []).filter(b => b.card.classList.contains('f1-wait'));
+    if (!waiting.length) return null;
+    const info = { idx: waiting.map(b => cards.indexOf(b.card)).filter(i => i >= 0), kpi: waiting.some(b => !b.card.classList.contains('lineCard')) };
+    resetBoxes(root);
+    return info;
+  }
+  function afterRender(root, info){
+    const keep = prepBoxes(root, !!root._f1soft).filter((b, i, all) => b.card.classList.contains('lineCard') ? info.idx.indexOf(i) >= 0 : info.kpi);
+    // การ์ดที่เล่นไปแล้ว: ไม่เตรียม (เอาคลาสเทตัวหนังสือออก)
+    root.querySelectorAll('.lineCard').forEach((c, i) => { if (info.idx.indexOf(i) < 0) c.querySelectorAll('.f1-drop').forEach(e => e.classList.remove('f1-drop')); });
+    watchBoxes(root, keep, 0);
+  }
   function enter(root, opts){
     if (!root || reduced()) return;
+    // เปิดหน้าแล้วสลับไปแอปอื่น / จอดับ: รอกลับมาเห็นหน้าก่อนค่อยเล่น (ไม่เล่นทิ้งไปตอนไม่มีใครดู)
+    if (document.hidden){
+      root._f1defer = opts || {};
+      if (!root._f1vis){
+        root._f1vis = () => {
+          if (document.hidden || !root._f1defer) return;
+          const o = root._f1defer; root._f1defer = null;
+          if (!root.classList.contains('hide')) enter(root, Object.assign({}, o, { delay: 150 }));
+        };
+        document.addEventListener('visibilitychange', root._f1vis);
+      }
+      return;
+    }
+    root._f1defer = null;
     const d0 = (opts && opts.delay) || 0;
     // soft = สลับกลับมาหน้าเดิม: ทั้งหน้าจางเข้ามาพร้อมกัน (ไม่ไล่ทีละกล่องจากมุมซ้ายบน) · หลอด % ยังวิ่งเหมือนเดิม
     const soft = !!(opts && opts.soft);
@@ -4328,19 +4376,8 @@ const F1Motion = (function(){
     items.forEach((el, i) => { el.classList.add('f1-anim'); el.style.setProperty('--i', Math.min(i, 12)); });
     root.querySelectorAll('.mh-bar').forEach((b, i) => b.style.setProperty('--b', Math.min(i, 14)));
     // การ์ดไลน์: แต่ละบรรทัดเทลงมาตามลำดับ · แถบ % ไหลไปขวาหลังบรรทัดสุดท้าย · ตัวเลข % วิ่งไปพร้อมแถบ
-    const boxes = [];
-    root.querySelectorAll('.lineCard').forEach(card => {
-      const rows = soft ? [] : card.querySelectorAll(':scope > div:first-child, :scope > .border-t > .grid, :scope > .border-t > .space-y-2 > div');
-      rows.forEach((r, k) => { r.classList.add('f1-drop'); r.style.setProperty('--r', k); });
-      const bar = card.querySelector(':scope > div:last-child');
-      const fill = bar && bar.querySelector('.rounded-full > div');
-      const pctEl = bar && bar.querySelector(':scope > span');
-      boxes.push(barBox(card, rows.length, fill, pctEl, true));
-    });
-    // แถบคืบหน้าทั้งโรงงาน (KPI ขวาบน) ยาวขึ้นเหมือนกัน (สีฟ้าสีเดียว)
-    const kpiBar = root.querySelector('#kpiBar'), kpiCard = kpiBar && kpiBar.closest('.card');
-    if (kpiCard) boxes.push(barBox(kpiCard, 1, kpiBar, null, false));
-    watchBoxes(root, boxes, d0);
+    root._f1soft = soft;
+    watchBoxes(root, prepBoxes(root, soft), d0);
     void root.offsetWidth;
     root.classList.add(soft ? 'f1-fade' : 'f1-enter');
     // หัวเว็บ: แสงกวาดผ่านหนึ่งครั้ง
@@ -4352,20 +4389,36 @@ const F1Motion = (function(){
       items.forEach(el => el.classList.remove('f1-anim'));
     }, d0 + 2200);
   }
-  return { enter };
+  return { enter, beforeRender, afterRender };
 })();
 
 // Dashboard เดิม: เล่น motion ครั้งเดียวตอนโหลดข้อมูลรอบแรกเสร็จ (ห่อฟังก์ชันเดิม ไม่แก้โค้ดเดิม)
+function f1FirstDashMotion_(){
+  if (window.__f1DashReady) return;
+  window.__f1DashReady = true;
+  const v = document.documentElement.getAttribute('data-view');
+  // จอโหลดจาง .22 วิ → รอให้หายสนิทแล้วค่อยเริ่ม จะได้เห็น motion เต็มๆ
+  if (!v || v === 'sewing') F1Motion.enter(document.querySelector('.shell[data-view="sewing"]'), { delay: 400 });
+}
 if (typeof hideDashboardLoading === 'function'){
   const f1OrigHideLoading = hideDashboardLoading;
   window.hideDashboardLoading = async function(){
     const out = await f1OrigHideLoading.apply(this, arguments);
-    if (!window.__f1DashReady){
-      window.__f1DashReady = true;
-      const v = document.documentElement.getAttribute('data-view');
-      // จอโหลดจาง .22 วิ → รอให้หายสนิทแล้วค่อยเริ่ม จะได้เห็น motion เต็มๆ
-      if (!v || v === 'sewing') F1Motion.enter(document.querySelector('.shell[data-view="sewing"]'), { delay: 400 });
-    }
+    f1FirstDashMotion_();
+    return out;
+  };
+  // ข้อมูลมาเร็วจนโหลดเสร็จไปก่อนส่วนนี้พร้อม → เล่นตอนนี้เลย (ไม่งั้นรอบนั้นจะไม่มี motion)
+  const ov = document.getElementById('dashboardLoadingOverlay');
+  if (ov && !ov.classList.contains('show') && document.querySelector('.lineCard')) f1FirstDashMotion_();
+}
+// ข้อมูลอัปเดตเองระหว่างที่การ์ดยังรอเล่น → การ์ดชุดใหม่รอเล่นต่อ
+if (typeof renderDashboardPayload === 'function'){
+  const f1OrigRender = renderDashboardPayload;
+  window.renderDashboardPayload = function(){
+    const root = document.querySelector('.shell[data-view="sewing"]');
+    const rearm = F1Motion.beforeRender(root);
+    const out = f1OrigRender.apply(this, arguments);
+    if (rearm) F1Motion.afterRender(root, rearm);
     return out;
   };
 }
