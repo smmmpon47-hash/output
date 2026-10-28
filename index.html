@@ -2460,9 +2460,19 @@ function renderDailyChart(lines, rememberLines = true){
     g.addColorStop(0, GREEN[1]); g.addColorStop(1, GREEN[0]);
     return g;
   };
-  const GAP_FILL = dark ? 'rgba(251,113,133,0.16)' : 'rgba(244,63,94,0.14)';
-  const GAP_LINE = dark ? 'rgba(251,113,133,0.50)' : 'rgba(244,63,94,0.40)';
+  // ส่วนขาดเป้า: แดงอ่อน + ลายเส้นเฉียงแบบผังชั้น · ตัวเลขมีพื้นทึบรองไว้ ลายไม่ทับตัวเลข
+  const GAP_BASE = dark ? 'rgba(251,113,133,0.20)' : 'rgba(244,63,94,0.17)';
+  const GAP_LINE = dark ? 'rgba(251,113,133,0.55)' : 'rgba(244,63,94,0.48)';
   const GAP_TEXT = dark ? '#FDA4AF' : '#E11D48';
+  const GAP_CHIP = dark ? '#3A2431' : '#FDDDE3';
+  const GAP_FILL = (() => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 9;
+    const x = cv.getContext('2d');
+    x.fillStyle = GAP_BASE; x.fillRect(0, 0, 9, 9);
+    x.strokeStyle = dark ? 'rgba(251,113,133,0.40)' : 'rgba(244,63,94,0.32)'; x.lineWidth = 1.3;
+    x.beginPath(); x.moveTo(-1, 10); x.lineTo(10, -1); x.moveTo(-1, 1); x.lineTo(1, -1); x.moveTo(8, 10); x.lineTo(10, 8); x.stroke();
+    return ctx.createPattern(cv, 'repeat');
+  })();
   const BAR_SIZE = { maxBarThickness:170, categoryPercentage:.8, barPercentage:.92 };
   const valueLabel = color => ({
     anchor:'center', align:'center', color, font:{ family:'Kanit', size:12, weight:'700' },
@@ -2475,7 +2485,7 @@ function renderDailyChart(lines, rememberLines = true){
   const gapSet = extra => Object.assign({
     label:'ยังขาดเป้า', data:remaining, backgroundColor:GAP_FILL,
     borderColor:GAP_LINE, borderWidth:1.2, borderRadius:10, borderSkipped:false,
-    datalabels:valueLabel(GAP_TEXT)
+    datalabels:Object.assign(valueLabel(GAP_TEXT), { backgroundColor:c => c.dataset.data[c.dataIndex] > 0 ? GAP_CHIP : null, borderRadius:7, padding:{ top:3, bottom:2, left:8, right:8 } })
   }, BAR_SIZE, extra);
 
   let datasets = [];
@@ -3879,11 +3889,8 @@ const hourlyTargetPathPlugin = {
     for (let i = 0; i < n; i++) {
       const v = vals[i];
       if (v === null || v === undefined || v === '') continue;
-      const m = Number(mins[i]) || 60;
-      const full = m < 60 ? Math.round(Number(v) * 60 / m) : Number(v);
-      if (i === si) { pieces.push([left(i), cx(i), full]); pieces.push([cx(i), right(i), Number(v)]); }
-      else if (i === si + 1) { pieces.push([left(i), cx(i), Number(v)]); pieces.push([cx(i), right(i), full]); }
-      else pieces.push([left(i), right(i), Number(v)]);
+      // สองช่อง 0.5 ชม. ที่พักคร่อมกัน ก็วาดเส้นเป้าของช่องนั้นเส้นเดียว (เส้นล่าง) ไม่มีเส้นบนซ้อน
+      pieces.push([left(i), right(i), Number(v)]);
     }
     if (!pieces.length) return;
     const ctx = chart.ctx;
