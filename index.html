@@ -2449,74 +2449,47 @@ function renderDailyChart(lines, rememberLines = true){
   const targetData = lines.map(d => num(d.target) || (num(d.target1)+num(d.target2)));
   const remaining  = targetData.map((t,i) => Math.max(0, t - actualData[i]));
 
-  // สีแท่งตามสถานะเดียวกับหลอด % ในการ์ด (เทียบเป้า ณ ตอนนี้)
+  // แบบเดิม: เขียว = ผลิตแล้ว (ล่าง) · แดง = ยังขาดเป้า (บน) แต่แดงจางลง ไม่ทึบตะโกน
   const dark = isDashDark();
   const sts = lines.map(d => getLineStatus(d));
-  const TONE = dark
-    ? { ok:['#34D399','#059669'], warn:['#FCD34D','#D97706'], bad:['#FB7185','#BE123C'], none:['#64748B','#334155'] }
-    : { ok:['#34D399','#059669'], warn:['#FBBF24','#D97706'], bad:['#FB7185','#E11D48'], none:['#CBD5E1','#94A3B8'] };
-  const PCT_TEXT = dark
-    ? { ok:'#6EE7B7', warn:'#FCD34D', bad:'#FDA4AF', none:'#94A3B8' }
-    : { ok:'#047857', warn:'#B45309', bad:'#BE123C', none:'#64748B' };
-  const barFill = c => {
-    const area = c.chart.chartArea, st = sts[c.dataIndex] || { key:'none' };
-    const [top, bottom] = TONE[st.key] || TONE.none;
-    if (!area) return bottom;
+  const GREEN = dark ? ['#34D399','#059669'] : ['#34D399','#10B981'];
+  const greenFill = c => {
+    const area = c.chart.chartArea;
+    if (!area) return GREEN[1];
     const g = c.chart.ctx.createLinearGradient(0, area.bottom, 0, area.top);
-    g.addColorStop(0, bottom); g.addColorStop(1, top);
+    g.addColorStop(0, GREEN[1]); g.addColorStop(1, GREEN[0]);
     return g;
   };
-  // ส่วนที่ยังขาดเป้า: กรอบโปร่งลายเส้นเฉียง (แบบเดียวกับไลน์บนผัง) แทนแดงทึบ
-  const hatch = (() => {
-    const cv = document.createElement('canvas'); cv.width = cv.height = 8;
-    const x = cv.getContext('2d');
-    x.fillStyle = dark ? 'rgba(255,255,255,0.03)' : 'rgba(99,102,241,0.04)'; x.fillRect(0, 0, 8, 8);
-    x.strokeStyle = dark ? 'rgba(214,185,123,0.30)' : 'rgba(100,116,139,0.30)'; x.lineWidth = 1.2;
-    x.beginPath(); x.moveTo(-2, 10); x.lineTo(10, -2); x.moveTo(-2, 2); x.lineTo(2, -2); x.moveTo(6, 10); x.lineTo(10, 6); x.stroke();
-    return ctx.createPattern(cv, 'repeat');
-  })();
-  const gapBorder = dark ? 'rgba(214,185,123,0.45)' : 'rgba(100,116,139,0.40)';
-  const labelFont = { family:'Kanit', size:11, weight:'600' };
-  const pctLabel = {
-    anchor:'end', align:'end', offset:4, clamp:true,
-    color:c => PCT_TEXT[(sts[c.dataIndex] || {}).key] || PCT_TEXT.none,
-    font:{ family:'Kanit', size:12, weight:'700' },
-    formatter:(v, c) => { const st = sts[c.dataIndex]; return st && st.key !== 'none' ? st.pct + '%' : ''; }
-  };
-  const innerLabel = {
-    anchor:'end', align:'start', offset:6,
-    color:'rgba(255,255,255,0.95)', font:labelFont,
-    display:c => { const v = c.dataset.data[c.dataIndex], max = c.chart.scales.y ? c.chart.scales.y.max : 0; return v > 0 && max > 0 && v / max > 0.12; },
-    formatter:v => v.toLocaleString()
-  };
+  const GAP_FILL = dark ? 'rgba(251,113,133,0.16)' : 'rgba(244,63,94,0.14)';
+  const GAP_LINE = dark ? 'rgba(251,113,133,0.50)' : 'rgba(244,63,94,0.40)';
+  const GAP_TEXT = dark ? '#FDA4AF' : '#E11D48';
+  const BAR_SIZE = { maxBarThickness:170, categoryPercentage:.8, barPercentage:.92 };
+  const valueLabel = color => ({
+    anchor:'center', align:'center', color, font:{ family:'Kanit', size:12, weight:'700' },
+    formatter:v => v > 0 ? v.toLocaleString() : ''
+  });
   const actualSet = extra => Object.assign({
-    label:'ผลิตแล้ว', data:actualData, backgroundColor:barFill,
-    borderRadius:10, borderSkipped:false, maxBarThickness:58, categoryPercentage:.62, barPercentage:.9
-  }, extra);
+    label:'ผลิตแล้ว', data:actualData, backgroundColor:greenFill,
+    borderRadius:10, borderSkipped:false, datalabels:valueLabel('#fff')
+  }, BAR_SIZE, extra);
+  const gapSet = extra => Object.assign({
+    label:'ยังขาดเป้า', data:remaining, backgroundColor:GAP_FILL,
+    borderColor:GAP_LINE, borderWidth:1.2, borderRadius:10, borderSkipped:false,
+    datalabels:valueLabel(GAP_TEXT)
+  }, BAR_SIZE, extra);
 
   let datasets = [];
   let stacked = false;
 
   if (dailyChartMode === 'ACTUAL'){
-    datasets = [actualSet({ datalabels:{ labels:{ value:innerLabel, pct:pctLabel } } })];
+    datasets = [actualSet()];
   } else if (dailyChartMode === 'GAP'){
-    datasets = [{
-      label:'ยังขาดเป้า', data:remaining, backgroundColor:hatch,
-      borderColor:dark ? 'rgba(251,113,133,0.7)' : 'rgba(225,29,72,0.55)', borderWidth:1.5, borderDash:[4,3],
-      borderRadius:10, borderSkipped:false, maxBarThickness:58, categoryPercentage:.62, barPercentage:.9,
-      datalabels:{ anchor:'end', align:'end', offset:4, color:dark ? '#FDA4AF' : '#BE123C', font:{ family:'Kanit', size:12, weight:'700' },
-        formatter:v => v > 0 ? '-' + v.toLocaleString() : '✓' }
-    }];
+    datasets = [gapSet()];
   } else {
     stacked = true;
     datasets = [
-      actualSet({ datalabels:innerLabel, borderRadius:c => remaining[c.dataIndex] > 0 ? { topLeft:0, topRight:0, bottomLeft:10, bottomRight:10 } : 10 }),
-      {
-        label:'ยังขาดเป้า', data:remaining, backgroundColor:hatch,
-        borderColor:gapBorder, borderWidth:1.2, borderRadius:{ topLeft:10, topRight:10, bottomLeft:0, bottomRight:0 }, borderSkipped:'bottom',
-        maxBarThickness:58, categoryPercentage:.62, barPercentage:.9,
-        datalabels:pctLabel
-      }
+      actualSet({ borderRadius:c => remaining[c.dataIndex] > 0 ? { topLeft:0, topRight:0, bottomLeft:10, bottomRight:10 } : 10 }),
+      gapSet({ borderRadius:{ topLeft:10, topRight:10, bottomLeft:0, bottomRight:0 }, borderSkipped:'bottom' })
     ];
   }
 
@@ -2527,7 +2500,6 @@ function renderDailyChart(lines, rememberLines = true){
     options:{
       responsive:true,
       maintainAspectRatio:false,
-      layout:{ padding:{ top:22 } },
       animation:{
         duration:900, easing:'easeOutQuart',
         delay:c => (c.type === 'data' && c.mode === 'default') ? c.dataIndex * 90 + c.datasetIndex * 140 : 0
@@ -2545,8 +2517,8 @@ function renderDailyChart(lines, rememberLines = true){
             font:{family:'Kanit', size:11}, color:dashTick(), boxWidth:10, boxHeight:10, padding:14, usePointStyle:true,
             generateLabels:ch => ch.data.datasets.map((ds, i) => ({
               text:ds.label, datasetIndex:i, pointStyle:'rectRounded', lineWidth:ds.label === 'ผลิตแล้ว' ? 0 : 1.2,
-              fillStyle:ds.label === 'ผลิตแล้ว' ? (dark ? '#34D399' : '#10B981') : hatch,
-              strokeStyle:ds.label === 'ผลิตแล้ว' ? 'transparent' : (dailyChartMode === 'GAP' ? (dark ? '#FB7185' : '#E11D48') : gapBorder),
+              fillStyle:ds.label === 'ผลิตแล้ว' ? (dark ? '#34D399' : '#10B981') : GAP_FILL,
+              strokeStyle:ds.label === 'ผลิตแล้ว' ? 'transparent' : GAP_LINE,
               fontColor:dashTick(), hidden:!ch.isDatasetVisible(i)
             }))
           }
@@ -2569,7 +2541,7 @@ function renderDailyChart(lines, rememberLines = true){
       },
       scales:{
         x:{ stacked, grid:{display:false}, border:{display:false}, ticks:{ font:{family:'Kanit', size:11, weight:'600'}, color:dashTick() } },
-        y:{ stacked, beginAtZero:true, border:{display:false, dash:[3,4]}, grid:{color:dashGrid(), drawTicks:false}, ticks:{ font:{family:'Kanit', size:10}, color:dashTick(), maxTicksLimit:5, padding:8 } }
+        y:{ stacked, beginAtZero:true, border:{display:false, dash:[3,4]}, grid:{color:dashGrid(), drawTicks:false}, ticks:{ font:{family:'Kanit', size:10}, color:dashTick(), padding:8 } }
       }
     }
   });
@@ -3923,8 +3895,8 @@ const hourlyTargetPathPlugin = {
     let prev = null;
     pieces.forEach(p => {
       const py = y.getPixelForValue(p[2]);
-      if (prev && Math.abs(prev[0] - p[0]) < 0.5) ctx.lineTo(p[0], py);
-      else ctx.moveTo(p[0], py);
+      // ช่องพักคาบสองชั่วโมง: วาดแค่เส้นแนวนอน ไม่ลากเส้นตั้งเชื่อมเป็นกล่อง
+      if (!(prev && Math.abs(prev[0] - p[0]) < 0.5 && Math.abs(prev[1] - py) < 0.5)) ctx.moveTo(p[0], py);
       ctx.lineTo(p[1], py);
       prev = [p[1], py];
     });
