@@ -2508,7 +2508,7 @@ function renderDailyChart(lines, rememberLines = true){
   }, BAR_SIZE, extra);
   // ส่วนขาดเป้าบางเกินป้ายตัวเลข → ยกป้ายไปไว้เหนือแท่ง ไม่ให้ทะลุขอบ
   const gapSet = extra => Object.assign({
-    label:'ยังขาดเป้า', data:remaining, backgroundColor:GAP_FILL,
+    label:'ส่วนต่าง', data:remaining, backgroundColor:GAP_FILL,
     borderColor:GAP_LINE, borderWidth:1.2, borderRadius:10, borderSkipped:false,
     datalabels:Object.assign(valueLabel(GAP_TEXT), {
       anchor:c => barPx(c) < THIN ? 'end' : 'center',
