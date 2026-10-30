@@ -1297,7 +1297,7 @@
         <p id="dtStatusNote" class="text-[10px] text-slate-400">-</p>
       </div>
       <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3">
-        <p class="text-[10px] font-semibold text-slate-400">เป้าหมายวันนี้</p>
+        <p id="dtTargetLabel" class="text-[10px] font-semibold text-slate-400">เป้าหมายวันนี้</p>
         <p id="dtTarget" class="text-lg font-extrabold text-slate-800 mt-0.5">-</p>
       </div>
       <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-3">
@@ -1305,12 +1305,12 @@
         <p id="dtActual" class="text-lg font-extrabold text-emerald-700 mt-0.5">-</p>
       </div>
       <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3">
-        <p class="text-[10px] font-semibold text-slate-400">ส่วนต่างจากเป้าวัน</p>
+        <p id="dtGapLabel" class="text-[10px] font-semibold text-slate-400">ส่วนต่างจากเป้าวัน</p>
         <p id="dtGap" class="text-lg font-extrabold mt-0.5">-</p>
         <p id="dtGapPct" class="text-[10px] text-slate-400">-</p>
       </div>
       <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3">
-        <p class="text-[10px] font-semibold text-slate-400">เวลาทำงานวันนี้</p>
+        <p id="dtHoursLabel" class="text-[10px] font-semibold text-slate-400">เวลาทำงานวันนี้</p>
         <p id="dtHours" class="text-lg font-extrabold text-slate-800 mt-0.5">-</p>
         <p id="dtSlotRange" class="text-[10px] text-slate-400">-</p>
         <p id="dtManpower" class="text-[10px] font-semibold text-indigo-500 mt-1">กำลังคน -</p>
@@ -1322,7 +1322,7 @@
       <div class="space-y-4">
         <div class="bg-slate-50/70 border border-slate-100 rounded-2xl p-4">
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
-            <h3 class="text-sm font-bold text-slate-700">ผลการผลิตรายชั่วโมง</h3>
+            <h3 id="hourlyTitle" class="text-sm font-bold text-slate-700">ผลการผลิตรายชั่วโมง</h3>
             <div class="flex flex-wrap items-center justify-end gap-2">
               <p id="hourlyTargetSubtitle" class="text-[11px] text-slate-400">-</p>
             </div>
@@ -1334,7 +1334,7 @@
           <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
             <div>
               <h3 class="text-sm font-bold text-slate-700">เป้าสะสม เทียบ ผลิตสะสม</h3>
-              <p class="text-[11px] text-slate-400">ดูว่ายอดเริ่มห่างจากแผนตั้งแต่รอบไหน</p>
+              <p id="cumSubtitle" class="text-[11px] text-slate-400">ดูว่ายอดเริ่มห่างจากแผนตั้งแต่รอบไหน</p>
             </div>
           </div>
           <div class="h-60 relative"><canvas id="cumulativeChart"></canvas></div>
@@ -1382,7 +1382,7 @@
         </div>
 
         <div class="bg-slate-50/70 border border-slate-100 rounded-2xl p-4">
-          <h3 class="text-sm font-bold text-slate-700 mb-2">รายการ LOT ของวันนี้</h3>
+          <h3 id="lotTableTitle" class="text-sm font-bold text-slate-700 mb-2">รายการ LOT ของวันนี้</h3>
           <div class="overflow-x-auto">
             <table class="w-full text-[11px]">
               <thead>
@@ -3105,6 +3105,7 @@ function renderLineDetail(code){
     el('dtManpower').innerText = 'กำลังคน -';
     el('dtLotTable').innerHTML = `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มีข้อมูลของไลน์นี้</td></tr>`;
     el('dtRemarks').innerHTML = `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
+    setDetailRangeLabels_(false);
     updateHourlyChart(code);
     loadRepairOverview();
     renderEtonSection(code);
@@ -3176,9 +3177,173 @@ function renderLineDetail(code){
         </div>`).join('')
     : `<p class="text-amber-700/60">ยังไม่มีหมายเหตุของไลน์นี้วันนี้</p>`;
 
-  updateHourlyChart(code);
+  setDetailRangeLabels_(false);
+  if (currentDashboardIsRange) void renderRangeLineDetail_(code);
+  else updateHourlyChart(code);
   loadRepairOverview();
   renderEtonSection(code);
+}
+
+/* =======================================================
+   ดูหลายวัน: ข้อมูลรายชั่วโมงรวมหลายวันไม่มีความหมาย (และ API ช่วงไม่ส่งมา)
+   → ดึงข้อมูลทีละวัน (วันย้อนหลังใช้ cache ในเครื่อง) แล้วโชว์เป็นรายวัน + LOT รวมทั้งช่วง
+   ======================================================= */
+const rangeDayPromiseCache = {};
+let rangeDetailSeq = 0;
+
+function setDetailRangeLabels_(isRange){
+  el('hourlyTitle').innerText = isRange ? 'ผลการผลิตรายวัน' : 'ผลการผลิตรายชั่วโมง';
+  el('cumSubtitle').innerText = isRange ? 'ยอดสะสมทีละวันในช่วงที่เลือก' : 'ดูว่ายอดเริ่มห่างจากแผนตั้งแต่รอบไหน';
+  el('lotTableTitle').innerText = isRange ? 'รายการ LOT ในช่วงที่เลือก' : 'รายการ LOT ของวันนี้';
+  el('dtTargetLabel').innerText = isRange ? 'เป้ารวมช่วงที่เลือก' : 'เป้าหมายวันนี้';
+  el('dtGapLabel').innerText = isRange ? 'ส่วนต่างจากเป้ารวม' : 'ส่วนต่างจากเป้าวัน';
+  el('dtHoursLabel').innerText = isRange ? 'วันที่มีการผลิต' : 'เวลาทำงานวันนี้';
+}
+
+function labels_(ymd){ const p = String(ymd).split('-'); return p.length === 3 ? `${p[2]}/${p[1]}` : ymd; }
+
+function rangeDates_(from, to){
+  const out = [];
+  const d = new Date(from + 'T00:00:00'), end = new Date(to + 'T00:00:00');
+  while (d <= end && out.length < 62){
+    out.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
+function fetchDaySummary_(date){
+  const isToday = date === getTodayStr();
+  if (!isToday){
+    const cached = readDashboardCache(date, date);
+    if (cached) return Promise.resolve(cached.data);
+  }
+  if (!rangeDayPromiseCache[date] || isToday){
+    rangeDayPromiseCache[date] = fetchTextWithRetry(`${GAS_API_URL}?action=getDailySummary&date=${date}`, { attempts:2, timeoutMs:DASHBOARD_FETCH_TIMEOUT_MS })
+      .then(text => {
+        const data = JSON.parse(text);
+        if (!isToday && data && Array.isArray(data.lines)) writeDashboardCache(date, date, data);
+        return data;
+      })
+      .catch(err => { delete rangeDayPromiseCache[date]; throw err; });
+  }
+  return rangeDayPromiseCache[date];
+}
+
+async function fetchRangeDays_(dates){
+  const out = new Array(dates.length).fill(null);
+  let next = 0;
+  const worker = async () => {
+    while (next < dates.length){
+      const i = next++;
+      try{ out[i] = await fetchDaySummary_(dates[i]); }catch(err){ console.warn('Range day load failed:', dates[i], err); }
+    }
+  };
+  await Promise.all([worker(), worker(), worker()]); // ทีละ 3 วัน ไม่ให้ Apps Script ติดคิว
+  return out;
+}
+
+async function renderRangeLineDetail_(code){
+  const seq = ++rangeDetailSeq;
+  const from = el('datePicker').value, to = el('datePickerTo').value || from;
+  setDetailRangeLabels_(true);
+  if (hourlyChartInstance){ hourlyChartInstance.destroy(); hourlyChartInstance = null; }
+  if (cumulativeChartInstance){ cumulativeChartInstance.destroy(); cumulativeChartInstance = null; }
+  el('hourlyTargetSubtitle').innerText = 'กำลังโหลดข้อมูลรายวัน...';
+  el('pulseLineBadge').innerText = 'LINE ' + code;
+  ['pulseActual','pulsePace','pulseProjected','pulseGap'].forEach(id => el(id).innerText = '-');
+  setPulsePaceTone(0, false);
+  el('pulseOrderMeta').innerText = 'เลือกวันเดียวเพื่อดูออเดอร์';
+  el('pulseGapNote').innerText = 'ใช้ได้กับข้อมูลรายวัน';
+  el('pulseSubtitle').innerText = 'ดูข้อมูลแบบวันเดียวเพื่อใช้ Production Pulse';
+  el('dtLotTable').innerHTML = `<tr><td colspan="5" class="py-3 text-center text-slate-400">กำลังโหลด LOT ในช่วงที่เลือก...</td></tr>`;
+
+  const dates = rangeDates_(from, to);
+  const payloads = await fetchRangeDays_(dates);
+  if (seq !== rangeDetailSeq || currentLine !== code || !currentDashboardIsRange) return;
+
+  const days = [], lots = new Map();
+  let failed = 0;
+  payloads.forEach((data, i) => {
+    if (!data){ failed++; return; }
+    const item = (data.lines || []).find(d => String(d.line || d.lineName || '').toUpperCase().includes(code));
+    if (!item) return;
+    const tg = num(item.target) || (num(item.target1)+num(item.target2)+num(item.target3));
+    const ac = num(item.actual) || (num(item.actual1)+num(item.actual2)+num(item.actual3));
+    if (!tg && !ac) return;
+    days.push({ date: dates[i], tg, ac });
+    getLotPlan(item).filter((lp, idx) => idx === 0 ? Boolean(lp.lot || lp.target) : Boolean(lp.lot)).forEach(lp => {
+      const key = normalizeLotLookupKey_(lp.lot) || '-';
+      const row = lots.get(key) || { lot: lp.lot || '-', model: lp.model || '', target: 0, actual: 0, days: 0 };
+      row.target += num(lp.target); row.actual += num(lp.actual); row.days += 1;
+      if (!row.model && lp.model) row.model = lp.model;
+      lots.set(key, row);
+    });
+  });
+
+  const totalAc = days.reduce((s, d) => s + d.ac, 0);
+  el('dtHours').innerText = `${days.length} วัน`;
+  el('dtSlotRange').innerText = `${labels_(from)} ถึง ${labels_(to)}`;
+  el('pulseActual').innerText = fmt(totalAc);
+  el('hourlyTargetSubtitle').innerText = days.length
+    ? `${days.length} วันที่มีการผลิต • เป้าเฉลี่ย ${Math.round(days.reduce((s, d) => s + d.tg, 0) / days.length).toLocaleString()} ชิ้นต่อวัน` + (failed ? ` • โหลดไม่สำเร็จ ${failed} วัน` : '')
+    : (failed ? `โหลดข้อมูลไม่สำเร็จ ${failed} วัน ลองเลือกช่วงใหม่อีกครั้ง` : 'ไม่มีข้อมูลการผลิตของไลน์นี้ในช่วงที่เลือก');
+
+  el('dtLotTable').innerHTML = lots.size
+    ? [...lots.values()].map(r => {
+        const d = r.actual - r.target;
+        return `<tr class="border-b border-slate-100 last:border-0">
+          <td class="py-2 font-bold text-indigo-600">${esc(r.lot)}<span class="block text-[10px] font-semibold text-slate-400">${r.days} วัน</span></td>
+          <td class="text-slate-600">${esc(r.model || '-')}</td>
+          <td class="text-right font-semibold text-slate-700">${fmt(r.target)}</td>
+          <td class="text-right font-semibold text-slate-700">${fmt(r.actual)}</td>
+          <td class="text-right font-bold ${d>=0?'text-emerald-600':'text-rose-600'}">${d>=0?'+':''}${d.toLocaleString()}</td>
+        </tr>`;
+      }).join('')
+    : `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มี LOT ของไลน์นี้ในช่วงที่เลือก</td></tr>`;
+
+  if (!days.length) return;
+  const labels = days.map(d => { const p = d.date.split('-'); return `${p[2]}/${p[1]}`; });
+  const fontK = { family:'Kanit', size:10 };
+
+  hourlyChartInstance = new Chart(el('hourlyChart').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      { type:'line', label:'เป้ารายวัน', data:days.map(d => d.tg), borderColor:'#6366F1', borderWidth:2, borderDash:[5,5],
+        fill:false, pointRadius:3, datalabels:{display:false} },
+      { type:'bar', label:'ผลิตได้จริง', data:days.map(d => d.ac),
+        backgroundColor:days.map(d => statusByPieces_(d.tg, d.ac).key === 'ok' ? '#10B981' : statusByPieces_(d.tg, d.ac).key === 'warn' ? '#F59E0B' : '#F43F5E'),
+        borderRadius:6 }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top', labels:{ font:fontK, usePointStyle:true } },
+        datalabels:{ anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:10, family:'Kanit'}, formatter:v => v > 0 ? v.toLocaleString() : '' },
+        tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'} }
+      },
+      scales:{
+        x:{ grid:{display:false}, ticks:{ font:fontK } },
+        y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:fontK } }
+      }
+    }
+  });
+
+  let ct = 0, ca = 0;
+  cumulativeChartInstance = new Chart(el('cumulativeChart').getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'เป้าสะสม', data:days.map(d => (ct += d.tg)), borderColor:'#6366F1', borderWidth:2, borderDash:[6,5], pointRadius:2, tension:.25, fill:false, datalabels:{display:false} },
+      { label:'ผลิตสะสม', data:days.map(d => (ca += d.ac)), borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.10)', borderWidth:3, pointRadius:3, tension:.25, fill:true, datalabels:{display:false} }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ position:'top', labels:{ font:fontK, usePointStyle:true } }, tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'} } },
+      scales:{ x:{ grid:{display:false}, ticks:{ font:fontK } }, y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:fontK } } }
+    }
+  });
 }
 
 /* =======================================================
