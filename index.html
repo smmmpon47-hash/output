@@ -860,6 +860,32 @@
     .fs-lines{ margin-top:4px; }
     html body .floorScene .floorLineRow{ min-height:36px; padding:0 13px; }
   }
+
+  /* ---------- จอคอม: ปุ่มเลือกชั้นแบบการ์ดมุมขวาบน (เดิมเป็นไม้บรรทัดตัวจาง หากันไม่เจอ) · ผังใหญ่ขึ้น กรอบเท่าเดิม ---------- */
+  .floorScene .ft-num{ font:inherit; }
+  .floorScene .ft-sub{ display:none; }
+  @media (min-width:901px){
+    .fs-corner{ display:none !important; }
+    html body .floorScene .fs-ruler{ top:20px; right:28px; flex-direction:row-reverse; gap:8px; padding:5px; border-radius:18px; background:rgba(255,255,255,.62); border:1px solid rgba(15,23,42,.10); box-shadow:0 12px 26px -18px rgba(49,46,129,.55); }
+    html body .floorScene .fs-ruler::before{ content:none; }
+    html body .floorScene .fs-ruler::after{ content:"เลือกชั้น"; align-self:center; padding:0 6px 0 10px; font-size:12px; font-weight:600; letter-spacing:.08em; color:#475569; }
+    html body .floorScene .fs-ruler .floorTab{ flex-direction:column; align-items:flex-start; justify-content:center; gap:1px; min-width:116px; min-height:52px; padding:6px 16px; border-radius:14px; font-family:'Kanit', sans-serif; font-size:15px; font-weight:600; letter-spacing:.02em; color:#334155; transition:background .2s ease, color .2s ease, box-shadow .2s ease; }
+    html body .floorScene .fs-ruler .floorTab span{ display:none; }
+    html body .floorScene .fs-ruler .floorTab .ft-num::before{ content:"ชั้น "; }
+    html body .floorScene .fs-ruler .floorTab .ft-sub{ display:block; font-size:10.5px; font-weight:500; letter-spacing:.06em; color:#64748B; }
+    html body .floorScene .fs-ruler .floorTab:hover:not(.active){ background:rgba(255,255,255,.9); color:#0F172A; }
+    html body .floorScene .fs-ruler .floorTab.active{ background:#0F172A; color:#fff; box-shadow:0 10px 20px -12px rgba(15,23,42,.8); }
+    html body .floorScene .fs-ruler .floorTab.active .ft-sub{ color:rgba(255,255,255,.7); }
+    html.dark body .floorScene .fs-ruler{ background:rgba(255,255,255,.05); border-color:rgba(214,185,123,.3); box-shadow:none; }
+    html.dark body .floorScene .fs-ruler::after{ color:#94A3B8; }
+    html.dark body .floorScene .fs-ruler .floorTab{ color:#CBD5E1; }
+    html.dark body .floorScene .fs-ruler .floorTab .ft-sub{ color:#94A3B8; }
+    html.dark body .floorScene .fs-ruler .floorTab:hover:not(.active){ background:rgba(255,255,255,.08); color:#fff; }
+    html.dark body .floorScene .fs-ruler .floorTab.active{ background:linear-gradient(135deg,#E9D29A,#C9A55C); color:#1A1408; }
+    html.dark body .floorScene .fs-ruler .floorTab.active .ft-sub{ color:rgba(26,20,8,.7); }
+    /* ผังกว้างขึ้น (ไม่มีไม้บรรทัดข้างขวาแล้ว) · ดึงขอบโปร่งบน/ล่างของรูปเข้าหากัน กรอบการ์ดสูงเท่าเดิม */
+    .fs-plan{ width:min(960px, calc(100% - 110px)); margin-top:76px; margin-bottom:-42px; }
+  }
   @media (max-width:900px){
     .floorScene{ padding:22px 16px 20px; border-radius:22px; }
     .fs-head, .fs-corner, html body .floorScene .fs-ruler{ position:relative !important; left:auto; right:auto; top:auto; max-width:none; }
@@ -1230,8 +1256,8 @@
       </div>
 
       <div class="floorSwitch fs-ruler" aria-label="เลือกชั้นของผังโรงงาน">
-        <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab" aria-label="ชั้น 4">04<span></span></button>
-        <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active" aria-label="ชั้น 3">03<span></span></button>
+        <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab" aria-label="ชั้น 4"><b class="ft-num">04</b><span></span><small class="ft-sub">LINE D · E · F</small></button>
+        <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active" aria-label="ชั้น 3"><b class="ft-num">03</b><span></span><small class="ft-sub">LINE B · C</small></button>
       </div>
 
       <div class="fs-plan">
