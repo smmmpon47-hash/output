@@ -3192,8 +3192,8 @@ const rangeDayPromiseCache = {};
 let rangeDetailSeq = 0;
 
 function setDetailRangeLabels_(isRange){
-  el('hourlyTitle').innerText = isRange ? 'ผลการผลิตรายวัน' : 'ผลการผลิตรายชั่วโมง';
-  el('cumSubtitle').innerText = isRange ? 'ยอดสะสมทีละวันในช่วงที่เลือก' : 'ดูว่ายอดเริ่มห่างจากแผนตั้งแต่รอบไหน';
+  el('hourlyTitle').innerText = isRange ? 'ผลการผลิตรายชั่วโมง (รวมทุกวันในช่วง)' : 'ผลการผลิตรายชั่วโมง';
+  el('cumSubtitle').innerText = isRange ? 'ยอดรวมทุกวันในช่วง สะสมทีละช่วงเวลา' : 'ดูว่ายอดเริ่มห่างจากแผนตั้งแต่รอบไหน';
   el('lotTableTitle').innerText = isRange ? 'รายการ LOT ในช่วงที่เลือก' : 'รายการ LOT ของวันนี้';
   el('dtTargetLabel').innerText = isRange ? 'เป้ารวมช่วงที่เลือก' : 'เป้าหมายวันนี้';
   el('dtGapLabel').innerText = isRange ? 'ส่วนต่างจากเป้ารวม' : 'ส่วนต่างจากเป้าวัน';
@@ -3271,7 +3271,7 @@ async function renderRangeLineDetail_(code){
     const tg = num(item.target) || (num(item.target1)+num(item.target2)+num(item.target3));
     const ac = num(item.actual) || (num(item.actual1)+num(item.actual2)+num(item.actual3));
     if (!tg && !ac) return;
-    days.push({ date: dates[i], tg, ac });
+    days.push({ date: dates[i], tg, ac, item });
     getLotPlan(item).filter((lp, idx) => idx === 0 ? Boolean(lp.lot || lp.target) : Boolean(lp.lot)).forEach(lp => {
       const key = normalizeLotLookupKey_(lp.lot) || '-';
       const row = lots.get(key) || { lot: lp.lot || '-', model: lp.model || '', target: 0, actual: 0, days: 0 };
@@ -3303,47 +3303,120 @@ async function renderRangeLineDetail_(code){
     : `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มี LOT ของไลน์นี้ในช่วงที่เลือก</td></tr>`;
 
   if (!days.length) return;
-  const labels = days.map(d => { const p = d.date.split('-'); return `${p[2]}/${p[1]}`; });
+
+  // รวมยอดทีละช่องเวลาข้ามวัน (แบบโรง 2) · วันที่เข้างานคนละเวลา (08.00 / 08.30) ช่องไม่ตรงกัน
+  // → ใช้ช่องของ "แบบที่เจอบ่อยสุด" เป็นแกน แล้วโยนช่องของวันอื่นลงช่องที่ทับเวลามากสุด
+  const perDay = days.map(d => dayItemSlots_(d.item, code));
+  const sig = {};
+  perDay.forEach(sl => { const k = sl.map(x => x.label).sort().join('|'); sig[k] = (sig[k] || 0) + 1; });
+  const refKey = Object.keys(sig).sort((a, b) => sig[b] - sig[a])[0];
+  const ref = perDay.find(sl => sl.map(x => x.label).sort().join('|') === refKey);
+  const agg = new Map();
+  ref.forEach(x => agg.set(x.label, { label:x.label, start:x.start, end:x.end, tg:0, ac:0, work:0, brk:0 }));
+  perDay.forEach(sl => sl.forEach(x => {
+    let row = agg.get(x.label);
+    if (!row){
+      let best = null, bestOv = 0;
+      agg.forEach(r => { const ov = Math.min(r.end, x.end) - Math.max(r.start, x.start); if (ov > bestOv){ bestOv = ov; best = r; } });
+      row = best || { label:x.label, start:x.start, end:x.end, tg:0, ac:0, work:0, brk:0 };
+      agg.set(row.label, row);
+    }
+    if (x.brk) row.brk++;
+    else { row.work++; row.tg += num(x.tg); row.ac += num(x.ac); }
+  }));
+  const rows = [...agg.values()].sort((a, b) => a.start - b.start);
+  const firstWork = rows.findIndex(r => r.work), lastWork = rows.length - 1 - [...rows].reverse().findIndex(r => r.work);
+  const slots = rows.filter((r, i) => r.work || (i > firstWork && i < lastWork)); // ช่องพักโชว์เฉพาะที่อยู่กลางวัน
+  const isBreak = r => !r.work;
+  const labels = slots.map(r => r.label);
   const fontK = { family:'Kanit', size:10 };
+  const breakIdx = slots.findIndex(isBreak);
 
   hourlyChartInstance = new Chart(el('hourlyChart').getContext('2d'), {
     type:'bar',
+    plugins:[hourlyBreakBandPlugin],
     data:{ labels, datasets:[
-      { type:'line', label:'เป้ารายวัน', data:days.map(d => d.tg), borderColor:'#6366F1', borderWidth:2, borderDash:[5,5],
-        fill:false, pointRadius:3, datalabels:{display:false} },
-      { type:'bar', label:'ผลิตได้จริง', data:days.map(d => d.ac),
-        backgroundColor:days.map(d => statusByPieces_(d.tg, d.ac).key === 'ok' ? '#10B981' : statusByPieces_(d.tg, d.ac).key === 'warn' ? '#F59E0B' : '#F43F5E'),
-        borderRadius:6 }
+      { type:'line', label:'เป้าของช่อง (รวมทุกวัน)', data:slots.map(r => isBreak(r) ? null : r.tg), borderColor:'#6366F1', borderWidth:2, borderDash:[5,5],
+        fill:false, pointRadius:0, stepped:'middle', spanGaps:false, datalabels:{display:false} },
+      { type:'bar', label:'ผลิตได้จริง (รวมทุกวัน)', data:slots.map(r => isBreak(r) ? 0 : r.ac),
+        backgroundColor:slots.map(r => isBreak(r) ? '#CBD5E1' : (r.ac >= r.tg ? '#10B981' : '#F59E0B')), borderRadius:6 }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
-      interaction:{ mode:'index', intersect:false },
+      layout:{ padding:{ bottom:4 } },
+      interaction:{ mode:'nearest', intersect:false },
       plugins:{
+        hourlyBreakBand:{ breakIndex: breakIdx, spanIndex: -1 },
         legend:{ position:'top', labels:{ font:fontK, usePointStyle:true } },
         datalabels:{ anchor:'center', align:'center', color:'#fff', font:{weight:'bold', size:10, family:'Kanit'}, formatter:v => v > 0 ? v.toLocaleString() : '' },
         tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'} }
       },
       scales:{
-        x:{ grid:{display:false}, ticks:{ font:fontK } },
+        x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:60, minRotation:45, font:{size:9, family:'Kanit'} } },
         y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:fontK } }
       }
     }
   });
 
+  const work = slots.filter(r => !isBreak(r));
   let ct = 0, ca = 0;
   cumulativeChartInstance = new Chart(el('cumulativeChart').getContext('2d'), {
     type:'line',
-    data:{ labels, datasets:[
-      { label:'เป้าสะสม', data:days.map(d => (ct += d.tg)), borderColor:'#6366F1', borderWidth:2, borderDash:[6,5], pointRadius:2, tension:.25, fill:false, datalabels:{display:false} },
-      { label:'ผลิตสะสม', data:days.map(d => (ca += d.ac)), borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.10)', borderWidth:3, pointRadius:3, tension:.25, fill:true, datalabels:{display:false} }
+    data:{ labels:work.map(r => r.label), datasets:[
+      { label:'เป้าสะสม', data:work.map(r => (ct += r.tg)), borderColor:'#6366F1', borderWidth:2, borderDash:[6,5], pointRadius:2, tension:.25, fill:false, datalabels:{display:false} },
+      { label:'ผลิตสะสม', data:work.map(r => (ca += r.ac)), borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.10)', borderWidth:3, pointRadius:3, tension:.25, fill:true, datalabels:{display:false} }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index', intersect:false },
       plugins:{ legend:{ position:'top', labels:{ font:fontK, usePointStyle:true } }, tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'} } },
-      scales:{ x:{ grid:{display:false}, ticks:{ font:fontK } }, y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:fontK } } }
+      scales:{ x:{ grid:{display:false}, ticks:{ autoSkip:false, maxRotation:60, minRotation:45, font:{size:9, family:'Kanit'} } }, y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:fontK } } }
     }
   });
+}
+
+// ช่องเวลาของไลน์ใน 1 วัน (ใช้ slot_grid ของวันนั้นถ้ามี ไม่งั้นใช้ช่องจาก hourly_data + พักตามไลน์)
+function dayItemSlots_(item, code){
+  const hd = item.hourly_data || {};
+  const startOf = label => { const m = String(label).match(/^(\d{1,2})[.:](\d{2})/); return m ? Number(m[1]) * 60 + Number(m[2]) : 9999; };
+  const t = m => String(Math.floor(m/60)).padStart(2,'0') + '.' + String(m%60).padStart(2,'0');
+  const grid = item.slot_grid;
+  let working, breakLabel = '';
+
+  if (grid && Array.isArray(grid.slots) && grid.slots.length){
+    working = grid.slots.map(x => ({ label:x.label, minutes:num(x.minutes) || 60, tg:(x.target === undefined || x.target === null) ? null : num(x.target) }));
+    if (grid.mode === 'split') breakLabel = grid.breakSlot && grid.breakSlot.label ? grid.breakSlot.label : '';
+    else if (grid.breakStart){ const p = String(grid.breakStart).split(':').map(Number); breakLabel = t(p[0]*60 + p[1]) + '-' + t(p[0]*60 + p[1] + 60); }
+  } else {
+    const c = String(code).toUpperCase();
+    breakLabel = ['B','C'].includes(c) ? '12.30-13.30' : ['D','E','F','G'].includes(c) ? '11.30-12.30' : '';
+    const totalHours = num(item.total_working_hours) || 8;
+    working = Object.keys(hd).filter(l => l !== breakLabel).slice(0, Math.max(0, totalHours)).map(l => ({ label:l, minutes:60, tg:null }));
+  }
+
+  // ช่องที่ไม่มีเป้าจาก Apps Script: ใช้อัตราต่อชั่วโมงของ LOT ตามลำดับชั่วโมง (แบบเดิมของกราฟรายชั่วโมง)
+  if (working.some(x => x.tg === null)){
+    const plans = getLotPlan(item);
+    const total = num(item.target) || plans.reduce((s, lp) => s + num(lp.target), 0);
+    const totalHours = num(item.total_working_hours) || 8;
+    const overall = totalHours > 0 ? total / totalHours : 0;
+    let hoursSoFar = 0;
+    working.forEach(x => {
+      if (x.tg === null){
+        let acc = 0, rate = overall;
+        for (const lp of plans){
+          if (num(lp.hours) > 0 && hoursSoFar < acc + num(lp.hours)){ rate = num(lp.target) / num(lp.hours) || overall; break; }
+          acc += num(lp.hours);
+        }
+        x.tg = Math.round(rate * x.minutes / 60);
+      }
+      hoursSoFar += x.minutes / 60;
+    });
+  }
+
+  const out = working.map(x => ({ label:x.label, start:startOf(x.label), end:startOf(x.label) + x.minutes, tg:x.tg, ac:num(hd[x.label]), brk:false }));
+  if (breakLabel && !out.some(x => x.label === breakLabel)) out.push({ label:breakLabel, start:startOf(breakLabel), end:startOf(breakLabel) + 60, tg:null, ac:0, brk:true });
+  return out;
 }
 
 /* =======================================================
