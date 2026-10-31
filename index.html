@@ -861,45 +861,43 @@
     html body .floorScene .floorLineRow{ min-height:36px; padding:0 13px; }
   }
 
-  /* ---------- จอคอม: ตัวเลือกชั้นแบบกระจก มุมขวาบน · เลขชั้นตัวใหญ่แบบเดียวกับ LEVEL · ไฟสถานะของแต่ละไลน์ · แถบเลือกเลื่อนตาม ---------- */
+  /* ---------- จอคอม: ตัวเลือกชั้นแบบแผงปุ่มลิฟต์ ทางขวาของผัง · จอบอกชั้นด้านบน · ปุ่มกลม ชั้น 4 บน ชั้น 3 ล่าง · ปุ่มที่เลือกมีไฟวงแหวน · ไฟสถานะไลน์ใต้ปุ่ม ---------- */
   .floorScene .ft-num{ font:inherit; }
   .floorScene .ft-txt{ display:none; }
   @media (min-width:901px){
     .fs-corner{ display:none !important; }
-    html body .floorScene .fs-ruler{ top:34px; right:30px; flex-direction:row-reverse; gap:0; padding:5px; border-radius:22px;
-      background:rgba(255,255,255,.42); border:1px solid rgba(255,255,255,.85);
-      box-shadow:inset 0 1px 0 #fff, 0 18px 40px -26px rgba(49,46,129,.55);
-      backdrop-filter:blur(14px) saturate(1.3); -webkit-backdrop-filter:blur(14px) saturate(1.3); }
-    html body .floorScene .fs-ruler::before{ content:""; position:absolute; top:5px; bottom:5px; left:5px; width:calc(50% - 5px); margin:0; border-radius:17px;
-      background:#fff; box-shadow:0 10px 24px -14px rgba(15,23,42,.45), 0 0 0 1px rgba(15,23,42,.05);
-      transition:transform .5s cubic-bezier(.2,.75,.25,1); }
-    html body .floorScene .fs-ruler.on-4::before{ transform:translateX(100%); }
-    html body .floorScene .fs-ruler::after{ content:"SELECT FLOOR · เลือกชั้น"; position:absolute; right:10px; top:-21px; padding:0; font-family:'Cormorant Garamond', 'Kanit', serif; font-size:12.5px; font-weight:500; letter-spacing:.22em; color:#475569; white-space:nowrap; }
-    html body .floorScene .fs-ruler .floorTab{ position:relative; z-index:1; flex-direction:row; align-items:center; justify-content:flex-start; gap:10px; width:146px; min-width:0; min-height:56px; padding:6px 16px; border-radius:17px; background:transparent !important; box-shadow:none !important; color:#94A3B8; }
+    html body .floorScene .fs-ruler{ top:50%; right:34px; transform:translateY(-44%); flex-direction:column; align-items:center; gap:12px; width:76px; padding:12px 0 14px; border-radius:38px;
+      background:linear-gradient(180deg, rgba(255,255,255,.75), rgba(241,245,249,.55)); border:1px solid rgba(255,255,255,.9);
+      box-shadow:inset 0 1px 0 #fff, inset 0 -1px 0 rgba(15,23,42,.06), 0 18px 36px -24px rgba(49,46,129,.55);
+      backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px); }
+    /* จอบอกชั้น */
+    html body .floorScene .fs-ruler::before{ content:attr(data-floor); position:static; display:flex; align-items:center; justify-content:center; width:46px; height:30px; margin:0 0 2px; border-radius:9px; transform:none;
+      background:#0F172A; color:#A5B4FC; font-family:'Cormorant Garamond', serif; font-size:19px; font-weight:600; letter-spacing:.06em; text-shadow:0 0 8px rgba(165,180,252,.7); box-shadow:inset 0 2px 6px rgba(0,0,0,.5); }
+    html body .floorScene .fs-ruler::after{ content:"FLOOR"; position:absolute; left:0; right:0; top:-20px; padding:0; text-align:center; font-family:'Cormorant Garamond', serif; font-size:11.5px; font-weight:600; letter-spacing:.28em; color:#475569; }
+    html body .floorScene .fs-ruler .floorTab{ position:relative; display:flex; flex-direction:column; align-items:center; gap:6px; width:auto; min-width:0; min-height:0; height:auto; padding:0; margin:0; border-radius:0; background:transparent !important; box-shadow:none !important; letter-spacing:0; color:#64748B; }
     html body .floorScene .fs-ruler .floorTab > span{ display:none; }
-    html body .floorScene .fs-ruler .floorTab .ft-num{ font-family:'Cormorant Garamond', 'Kanit', serif; font-size:42px; font-weight:600; line-height:1; letter-spacing:.02em; transition:color .3s ease; }
+    html body .floorScene .fs-ruler .floorTab .ft-num{ display:flex; align-items:center; justify-content:center; width:46px; height:46px; border-radius:50%;
+      background:linear-gradient(180deg,#FFFFFF,#E2E8F0); border:1px solid rgba(15,23,42,.14); box-shadow:0 3px 6px -3px rgba(15,23,42,.35), inset 0 1px 0 #fff;
+      font-family:'Cormorant Garamond', serif; font-size:22px; font-weight:600; line-height:1; transition:box-shadow .3s ease, color .3s ease, border-color .3s ease; }
     html body .floorScene .fs-ruler .floorTab .ft-num::before{ content:none; }
-    html body .floorScene .fs-ruler .floorTab .ft-txt{ display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
-    html body .floorScene .fs-ruler .floorTab .ft-txt em{ font-style:normal; font-family:'Cormorant Garamond', 'Kanit', serif; font-size:12px; font-weight:600; letter-spacing:.26em; color:#94A3B8; }
-    html body .floorScene .fs-ruler .floorTab .ft-sub{ display:flex; gap:9px; font-family:'Cormorant Garamond', 'Kanit', serif; font-size:14px; font-weight:600; letter-spacing:.06em; color:#475569; }
-    html body .floorScene .ft-sub i{ display:inline-flex; align-items:center; gap:4px; font-style:normal; }
-    html body .floorScene .ft-sub i::before{ content:""; width:6px; height:6px; border-radius:50%; background:var(--hd); }
-    html body .floorScene .fs-ruler .floorTab:hover:not(.active) .ft-num{ color:#475569; }
-    html body .floorScene .fs-ruler .floorTab.active{ color:#0F172A; }
-    html body .floorScene .fs-ruler .floorTab.active .ft-txt em{ color:#4338CA; }
-    html body .floorScene .fs-ruler .floorTab:not(.active) .ft-sub{ opacity:.75; }
-    html.dark body .floorScene .fs-ruler{ background:rgba(255,255,255,.035); border-color:rgba(255,255,255,.09); box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 20px 44px -28px rgba(0,0,0,.95); }
-    html.dark body .floorScene .fs-ruler::before{ background:linear-gradient(180deg, rgba(214,185,123,.16), rgba(214,185,123,.06)); box-shadow:inset 0 0 0 1px rgba(214,185,123,.45), 0 0 30px -10px rgba(214,185,123,.5); }
+    html body .floorScene .fs-ruler .floorTab:hover:not(.active) .ft-num{ color:#0F172A; border-color:rgba(15,23,42,.3); }
+    html body .floorScene .fs-ruler .floorTab:active .ft-num{ transform:translateY(1px); box-shadow:inset 0 2px 4px rgba(15,23,42,.2); }
+    html body .floorScene .fs-ruler .floorTab.active .ft-num{ color:#4338CA; border-color:#818CF8; box-shadow:0 0 0 3px rgba(129,140,248,.28), 0 0 16px rgba(99,102,241,.55), inset 0 1px 0 #fff; }
+    html body .floorScene .fs-ruler .floorTab .ft-txt{ display:block; }
+    html body .floorScene .fs-ruler .floorTab .ft-txt em{ display:none; }
+    html body .floorScene .fs-ruler .floorTab .ft-sub{ display:flex; gap:4px; font-size:0; }
+    html body .floorScene .ft-sub i{ display:block; width:6px; height:6px; border-radius:50%; background:var(--hd); font-size:0; }
+    html body .floorScene .ft-sub i::before{ content:none; }
+    html.dark body .floorScene .fs-ruler{ background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02)); border-color:rgba(255,255,255,.1); box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 20px 40px -26px rgba(0,0,0,.95); }
+    html.dark body .floorScene .fs-ruler::before{ background:#05070D; color:#E9D29A; text-shadow:0 0 8px rgba(233,210,154,.75); box-shadow:inset 0 2px 6px rgba(0,0,0,.8), 0 0 0 1px rgba(214,185,123,.25); }
     html.dark body .floorScene .fs-ruler::after{ color:#94A3B8; }
-    html.dark body .floorScene .fs-ruler .floorTab{ color:#475569; }
-    html.dark body .floorScene .fs-ruler .floorTab:hover:not(.active) .ft-num{ color:#94A3B8; }
-    html.dark body .floorScene .fs-ruler .floorTab.active{ color:#E9D29A; }
-    html.dark body .floorScene .fs-ruler .floorTab .ft-txt em{ color:#64748B; }
-    html.dark body .floorScene .fs-ruler .floorTab.active .ft-txt em{ color:#D6B97B; }
-    html.dark body .floorScene .fs-ruler .floorTab .ft-sub{ color:#94A3B8; }
-    html.dark body .floorScene .ft-sub i::before{ background:var(--hc); box-shadow:0 0 6px var(--hc); }
-    /* ผังกว้างขึ้น (ไม่มีไม้บรรทัดข้างขวาแล้ว) · ดึงขอบโปร่งบน/ล่างของรูปเข้าหากัน กรอบการ์ดสูงเท่าเดิม */
-    .fs-plan{ width:min(960px, calc(100% - 110px)); margin-top:76px; margin-bottom:-42px; }
+    html.dark body .floorScene .fs-ruler .floorTab .ft-num{ background:linear-gradient(180deg,#1E2738,#111827); border-color:rgba(255,255,255,.14); color:#94A3B8; box-shadow:0 3px 8px -3px rgba(0,0,0,.8), inset 0 1px 0 rgba(255,255,255,.08); }
+    html.dark body .floorScene .fs-ruler .floorTab:hover:not(.active) .ft-num{ color:#E2E8F0; border-color:rgba(255,255,255,.3); }
+    html.dark body .floorScene .fs-ruler .floorTab.active .ft-num{ color:#F5E3B5; border-color:#D6B97B; box-shadow:0 0 0 3px rgba(214,185,123,.22), 0 0 18px rgba(214,185,123,.6), inset 0 1px 0 rgba(255,255,255,.08); }
+    html.dark body .floorScene .ft-sub i{ background:var(--hc); box-shadow:0 0 5px var(--hc); }
+    /* ผังอยู่กลางพื้นที่ทางซ้ายของแผงปุ่ม · กรอบการ์ดสูงเท่าเดิม */
+    .fs-plan, .fs-foot{ --fp-w:min(980px, calc(100% - 150px)); width:var(--fp-w); margin-left:calc((100% - 110px - var(--fp-w)) / 2); margin-right:auto; }
+    .fs-plan{ margin-top:calc(70px + (980px - var(--fp-w)) * .2); margin-bottom:-42px; }
   }
   @media (max-width:900px){
     .floorScene{ padding:22px 16px 20px; border-radius:22px; }
@@ -1270,7 +1268,7 @@
         <div id="lvlLive" class="fs-live">LIVE --:--</div>
       </div>
 
-      <div id="floorPicker" class="floorSwitch fs-ruler on-3" aria-label="เลือกชั้นของผังโรงงาน">
+      <div id="floorPicker" class="floorSwitch fs-ruler on-3" data-floor="03" aria-label="เลือกชั้นของผังโรงงาน">
         <button id="floorBtn4" onclick="switchFloor(4)" class="floorTab" aria-label="ชั้น 4"><b class="ft-num">04</b><span></span><small class="ft-txt"><em>FLOOR</em><small id="ftSub4" class="ft-sub"></small></small></button>
         <button id="floorBtn3" onclick="switchFloor(3)" class="floorTab active" aria-label="ชั้น 3"><b class="ft-num">03</b><span></span><small class="ft-txt"><em>FLOOR</em><small id="ftSub3" class="ft-sub"></small></small></button>
       </div>
@@ -2954,6 +2952,7 @@ function switchFloor(floor){
   currentFloor = floor;
   el('floorBtn3').className = 'floorTab px-4 py-2 rounded-xl text-sm font-bold ' + (floor===3 ? 'active' : 'text-slate-500');
   el('floorBtn4').className = 'floorTab px-4 py-2 rounded-xl text-sm font-bold ' + (floor===4 ? 'active' : 'text-slate-500');
+  el('floorPicker').dataset.floor = '0' + floor;
   el('floorPicker').classList.toggle('on-3', floor===3); el('floorPicker').classList.toggle('on-4', floor===4);
   el('floorBtn3').setAttribute('aria-pressed', floor===3 ? 'true' : 'false');
   el('floorBtn4').setAttribute('aria-pressed', floor===4 ? 'true' : 'false');
