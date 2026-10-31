@@ -1074,11 +1074,9 @@
     .dp-preset{ height:34px; }
   }
 
-  /* ===== OEE & สาเหตุยอดตก (แบบ Performance Board) ===== */
-  :root{ --oee-track:#EEF1F6; --oee-violet:#7C3AED; --oee-line:#E2E8F0; }
-  html.dark{ --oee-track:rgba(255,255,255,.07); --oee-violet:#A78BFA; --oee-line:rgba(255,255,255,.1); }
-  .oee-kicker{ margin:0; font-size:11px; letter-spacing:.16em; color:#64748B; }
-  html.dark .oee-kicker{ color:#94A3B8; }
+  /* ===== OEE & สาเหตุยอดตก ===== */
+  :root{ --oee-base:#C7D2FE; --oee-track:#EEF1F6; --oee-fill:#6366F1; }
+  html.dark{ --oee-base:#3B4560; --oee-track:rgba(255,255,255,.07); --oee-fill:#D6B97B; }
   .oee-sample{ font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; background:#FEF3C7; color:#92400E; }
   html.dark .oee-sample{ background:rgba(214,185,123,.14); color:#F3E3BC; }
   .oee-ranges{ display:inline-flex; gap:4px; padding:4px; border-radius:12px; background:#F1F5F9; border:1px solid #E2E8F0; }
@@ -1087,62 +1085,41 @@
   .oee-range.on{ background:#0F172A; color:#fff; }
   html.dark .oee-range{ color:#94A3B8; }
   html.dark .oee-range.on{ background:linear-gradient(135deg,#E9D29A,#C9A55C); color:#1A1408; }
-  /* แถบ KPI 5 ช่อง */
-  .oee-kpis{ display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:12px; }
-  .oee-kpi{ display:flex; flex-direction:column; gap:6px; padding:16px 18px; }
-  .oee-kpi-label{ font-size:12px; color:#64748B; }
-  .oee-kpi-val{ font-size:30px; font-weight:700; line-height:1.05; color:#0F172A; font-variant-numeric:tabular-nums; }
-  .oee-kpi-unit{ font-size:13px; color:#64748B; }
-  .oee-kpi-sub{ font-size:12px; }
-  .oee-kpi.hero{ border-color:#7DD3FC !important; box-shadow:0 0 0 2px rgba(56,189,248,.25), 0 18px 40px -26px rgba(14,165,233,.5) !important; }
-  .oee-kpi.hero .oee-kpi-val{ font-size:38px; color:#0284C7; }
-  .oee-kpi.violet .oee-kpi-val{ color:var(--oee-violet); }
-  .oee-kpi.rose .oee-kpi-val{ color:#E11D48; }
-  .oee-kpi.muted .oee-kpi-val{ color:#94A3B8; }
-  html.dark .oee-kpi-label, html.dark .oee-kpi-unit{ color:#94A3B8; }
-  html.dark .oee-kpi-val{ color:#F8FAFC; }
-  html.dark .oee-kpi.hero{ border-color:rgba(214,185,123,.65) !important; box-shadow:0 0 0 2px rgba(214,185,123,.22) !important; }
-  html.dark .oee-kpi.hero .oee-kpi-val{ color:#F3E3BC; }
-  html.dark .oee-kpi.rose .oee-kpi-val{ color:#FDA4AF; }
-  html.dark .oee-kpi.muted .oee-kpi-val{ color:#64748B; }
-  /* Six Big Losses */
-  .oee-loss-bar{ display:flex; height:40px; border-radius:10px; overflow:hidden; }
-  .oee-loss-seg{ display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#0B1220; transition:width .6s cubic-bezier(.2,.75,.25,1); }
-  .oee-loss-legend{ display:flex; flex-wrap:wrap; gap:8px 18px; font-size:12.5px; color:#475569; }
-  .oee-loss-legend b{ color:#0F172A; }
-  html.dark .oee-loss-legend{ color:#CBD5E1; } html.dark .oee-loss-legend b{ color:#F8FAFC; }
-  .oee-dot{ display:inline-block; width:10px; height:10px; border-radius:3px; flex:none; }
-  /* Andon */
-  .oee-table{ min-width:640px; }
-  .oee-table th{ text-align:left; font-size:11px; font-weight:600; color:#64748B; padding:6px 8px; border-bottom:1px solid var(--oee-line); white-space:nowrap; }
-  .oee-table td{ padding:11px 8px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
-  html.dark .oee-table th{ color:#94A3B8; }
-  html.dark .oee-table td{ border-color:rgba(255,255,255,.06); }
-  .oee-num{ font-variant-numeric:tabular-nums; white-space:nowrap; }
-  .oee-lamp{ display:inline-block; width:11px; height:11px; border-radius:50%; margin-right:8px; vertical-align:middle; }
-  .oee-lamp.ok{ background:#10B981; box-shadow:0 0 8px #10B981; }
-  .oee-lamp.warn{ background:#F59E0B; box-shadow:0 0 8px #F59E0B; }
-  .oee-lamp.bad{ background:#F43F5E; box-shadow:0 0 8px #F43F5E; }
   .oee-track{ display:block; height:8px; border-radius:99px; background:var(--oee-track); overflow:hidden; }
-  .oee-track.lg{ height:12px; border-radius:4px; }
-  .oee-track > span{ display:block; height:100%; border-radius:inherit; transition:width .6s cubic-bezier(.2,.75,.25,1); }
-  .oee-fill-ok{ background:#10B981; } .oee-fill-warn{ background:#F59E0B; } .oee-fill-bad{ background:#F43F5E; }
-  .oee-tone-ok{ color:#059669; } .oee-tone-warn{ color:#D97706; } .oee-tone-bad{ color:#E11D48; }
-  html.dark .oee-tone-ok{ color:#6EE7B7; } html.dark .oee-tone-warn{ color:#FCD34D; } html.dark .oee-tone-bad{ color:#FDA4AF; }
-  /* Pareto */
-  .oee-par-row{ display:grid; grid-template-columns:120px minmax(0,1fr) 54px; align-items:center; gap:8px; font-size:12.5px; }
+  .oee-track.sm{ height:6px; }
+  .oee-track > span{ display:block; height:100%; border-radius:99px; background:var(--oee-fill); transition:width .6s cubic-bezier(.2,.75,.25,1); }
+  .oee-ring{ --v:0; flex:none; width:118px; height:118px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--oee-fill) calc(var(--v) * 1%), var(--oee-track) 0); }
+  .oee-ring > span{ width:92px; height:92px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fff; }
+  html.dark .oee-ring > span{ background:#0E131F; }
+  .oee-ring b{ font-size:26px; line-height:1; color:#0F172A; } html.dark .oee-ring b{ color:#F8FAFC; }
+  .oee-ring small{ font-size:10.5px; color:#64748B; margin-top:4px; }
+  .oee-line{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:16px; text-align:left; cursor:pointer; transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+  .oee-line.on{ border-color:#818CF8 !important; box-shadow:0 0 0 2px rgba(99,102,241,.35), 0 18px 36px -24px rgba(79,70,229,.55) !important; }
+  html.dark .oee-line.on{ border-color:rgba(214,185,123,.7) !important; box-shadow:0 0 0 2px rgba(214,185,123,.3) !important; }
+  .oee-mini{ display:grid; grid-template-columns:52px minmax(0,1fr) 34px; align-items:center; gap:6px; font-size:11px; }
+  .oee-mini b{ text-align:right; }
+  .oee-wf{ display:flex; align-items:flex-start; gap:8px; border-bottom:1px solid #E2E8F0; }
+  html.dark .oee-wf{ border-color:rgba(255,255,255,.1); }
+  .oee-wf-col{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:stretch; }
+  .oee-wf-col > span{ display:block; flex:none; }
+  .oee-wf-col > b{ height:20px; margin-top:-2px; font-size:12px; text-align:center; }
+  .oee-wf-col > i{ display:block; flex:none; border-radius:6px; }
+  .oee-wf-labels{ display:flex; gap:8px; }
+  .oee-wf-labels > span{ flex:1 1 0; min-width:0; text-align:center; font-size:11px; line-height:1.3; color:#475569; }
+  html.dark .oee-wf-labels > span{ color:#94A3B8; }
   .oee-note{ padding:10px 12px; border-radius:12px; background:#F5F3FF; color:#3730A3; }
   html.dark .oee-note{ background:rgba(214,185,123,.1); color:#F3E3BC; }
-  /* แนวโน้ม */
-  .oee-trend{ width:100%; height:220px; display:block; }
-  .oee-goal{ stroke:#94A3B8; stroke-width:1.5; stroke-dasharray:6 5; vector-effect:non-scaling-stroke; }
-  .oee-key{ display:inline-block; width:14px; height:3px; border-radius:2px; }
-  .oee-key.dash{ height:0; border-top:2px dashed #94A3B8; }
-  .oee-violet-text{ color:var(--oee-violet); }
+  .oee-dot{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+  .oee-chip{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; color:#fff; }
+  .oee-table{ min-width:560px; }
+  .oee-table th{ text-align:left; font-size:11px; font-weight:600; color:#64748B; padding:6px 8px; border-bottom:1px solid #E2E8F0; }
+  .oee-table td{ padding:9px 8px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
+  html.dark .oee-table th{ color:#94A3B8; border-color:rgba(255,255,255,.1); }
+  html.dark .oee-table td{ border-color:rgba(255,255,255,.06); }
   @media (max-width:639px){
-    .oee-kpi-val{ font-size:26px; } .oee-kpi.hero .oee-kpi-val{ font-size:32px; }
-    .oee-par-row{ grid-template-columns:96px minmax(0,1fr) 48px; }
-    .oee-trend{ height:170px; }
+    .oee-wf, .oee-wf-labels{ gap:4px; }
+    .oee-wf-labels > span{ font-size:9.5px; }
+    .oee-wf-col > b{ font-size:10.5px; }
   }
 </style>
 </head>
@@ -5570,49 +5547,53 @@ if (typeof renderDashboardPayload === 'function'){
    OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ
    ======================================================= */
 const F1OEE = (function(){
-  // ---- ตัวเลขตัวอย่าง (ป้ายบอกบนหน้า) · ต่อข้อมูลจริงทีหลังจาก Loss_Log + Summary + SAM + แจ้งซ่อม ----
+  const CATS = [
+    { key:'เย็บ', color:'#6366F1' },
+    { key:'ของเข้าไม่ทัน', color:'#F59E0B' },
+    { key:'เครื่องจักร/Eton', color:'#F43F5E' },
+    { key:'อื่น ๆ', color:'#14B8A6' },
+    { key:'ไม่ได้ระบุ', color:'#94A3B8' }
+  ];
+  // ตัวเลขตัวอย่าง (a = เวลาเดินได้, p = ความเร็ว, q = คุณภาพ เป็น %) · loss = ยอดหายตามหัวข้อ (ตัว)
   const SAMPLE = {
     today: {
-      kpi: { eff: 58.4, effDelta: 3.1, oee: 61, a: 88, p: 69, out: 2148, tgtNow: 2410, lostMin: 1940, topLoss: 'ของเข้าไม่ทัน 34%' },
-      losses: [52, 21, 9, 7, 5, 4, 2],
-      lines: [
-        ['B', 'Load', 452, 520, 61, 64, 380, 'เย็บ › งานติดขั้นตอน'],
-        ['C', 'Load', 555, 690, 49, 52, 610, 'ของเข้าไม่ทัน › อุปกรณ์'],
-        ['D', 'Load', 743, 800, 66, 68, 320, 'เครื่องจักร/Eton'],
-        ['E', 'Lean', 331, 372, 55, 60, 410, 'ของเข้าไม่ทัน › อุปกรณ์'],
-        ['F', 'Lean', 550, 545, 71, 74, 220, '']
-      ],
-      pareto: [['ของเข้าไม่ทัน', 660], ['เครื่องจักร/Eton', 520], ['ติดขั้นตอน', 300], ['ขึ้นรุ่นใหม่', 240], ['งานซ่อม', 140], ['อื่น ๆ / ไม่ระบุ', 80]]
+      B: { type:'Load', target:560, actual:452, a:91, p:86, q:null, loss:[38, 22, 30, 0, 18] },
+      C: { type:'Load', target:736, actual:555, a:84, p:79, q:null, loss:[44, 60, 22, 10, 45] },
+      D: { type:'Load', target:848, actual:743, a:93, p:88, q:null, loss:[25, 12, 40, 0, 28] },
+      E: { type:'Lean', target:397, actual:331, a:89, p:90, q:null, loss:[18, 30, 6, 0, 12] },
+      F: { type:'Lean', target:545, actual:550, a:98, p:97, q:null, loss:[0, 0, 0, 0, 0] }
     },
     week: {
-      kpi: { eff: 55.9, effDelta: 1.4, oee: 59, a: 87, p: 68, out: 13210, tgtNow: 15050, lostMin: 11800, topLoss: 'เครื่องจักร/Eton 31%' },
-      losses: [50, 22, 8, 9, 6, 3, 2],
-      lines: [
-        ['B', 'Load', 2810, 3360, 58, 61, 2300, 'เย็บ › งานติดขั้นตอน'],
-        ['C', 'Load', 3420, 4416, 50, 53, 3600, 'ของเข้าไม่ทัน › อุปกรณ์'],
-        ['D', 'Load', 4440, 5088, 63, 66, 2100, 'เครื่องจักร/Eton'],
-        ['E', 'Lean', 2060, 2382, 56, 59, 2400, 'ของเข้าไม่ทัน › อุปกรณ์'],
-        ['F', 'Lean', 3180, 3270, 69, 72, 1400, 'เครื่องจักร/Eton']
-      ],
-      pareto: [['เครื่องจักร/Eton', 3660], ['ของเข้าไม่ทัน', 3540], ['ติดขั้นตอน', 1900], ['ขึ้นรุ่นใหม่', 1450], ['งานซ่อม', 760], ['อื่น ๆ / ไม่ระบุ', 490]]
+      B: { type:'Load', target:3360, actual:2810, a:90, p:85, q:null, loss:[210, 120, 140, 30, 50] },
+      C: { type:'Load', target:4416, actual:3420, a:83, p:80, q:null, loss:[260, 330, 160, 60, 186] },
+      D: { type:'Load', target:5088, actual:4440, a:91, p:86, q:null, loss:[160, 90, 230, 20, 148] },
+      E: { type:'Lean', target:2382, actual:2060, a:88, p:89, q:null, loss:[90, 150, 30, 12, 40] },
+      F: { type:'Lean', target:3270, actual:3180, a:96, p:95, q:null, loss:[30, 20, 10, 0, 30] }
     }
   };
-  const LOSS_NAMES = ['เวลาที่ได้งานดี', 'ทำช้ากว่า SAM', 'ของเข้าไม่ทัน', 'เครื่องเสีย / Eton', 'เปลี่ยนรุ่น / ขึ้นรุ่นใหม่', 'ติดขั้นตอน / งานรอ', 'งานซ่อม (คุณภาพ)'];
-  const LOSS_COLORS = ['#10B981', '#38BDF8', '#F59E0B', '#F43F5E', '#A78BFA', '#6366F1', '#FB7185'];
-  const PARETO_COLORS = { 'ของเข้าไม่ทัน':'#F59E0B', 'เครื่องจักร/Eton':'#F43F5E', 'ติดขั้นตอน':'#6366F1', 'ขึ้นรุ่นใหม่':'#A78BFA', 'งานซ่อม':'#FB7185' };
-  const TREND = { eff: [51, 53, 50, 55, 54, 52, 57, 56, 53, 58, 55, 57, 55, 58], oee: [55, 57, 53, 58, 58, 55, 60, 59, 57, 61, 58, 60, 59, 61] };
-  const EFF_GOAL = 65;
-  const st = { range:'today' };
-  const fmtN = n => Number(n).toLocaleString();
-  const lamp = p => p >= STATUS_OK_PCT ? 'ok' : p >= STATUS_WARN_PCT ? 'warn' : 'bad';
-  const effTone = v => v >= EFF_GOAL ? 'ok' : v >= EFF_GOAL - 10 ? 'warn' : 'bad';
+  const TOP = {
+    today: [['ของเข้าไม่ทัน', 'อุปกรณ์', 92], ['เย็บ', 'งานติดขั้นตอน', 81], ['เครื่องจักร/Eton', '', 76], ['ของเข้าไม่ทัน', 'กระเป๋าปัก/Screen', 32], ['เย็บ', 'งานซ่อม', 29], ['เย็บ', 'ขึ้นงานรุ่นใหม่', 15], ['อื่น ๆ', '', 10]],
+    week: [['ของเข้าไม่ทัน', 'อุปกรณ์', 520], ['เย็บ', 'งานติดขั้นตอน', 470], ['เครื่องจักร/Eton', '', 570], ['เย็บ', 'งานซ่อม', 190], ['ของเข้าไม่ทัน', 'กระเป๋าปัก/Screen', 190], ['เย็บ', 'ขึ้นงานรุ่นใหม่', 90], ['อื่น ๆ', '', 122]]
+  };
+  const RECENT = [
+    ['14.30-15.30', 'C', 'ของเข้าไม่ทัน', 'อุปกรณ์', 'ซิปยังไม่มา', 22],
+    ['13.30-14.30', 'D', 'เครื่องจักร/Eton', '', 'จักรเข็มคู่เสีย รอช่าง', 18],
+    ['10.30-11.30', 'B', 'เย็บ', 'งานติดขั้นตอน', 'ติดกระเป๋าหลัง', 15],
+    ['09.30-10.30', 'E', 'ของเข้าไม่ทัน', 'อุปกรณ์', 'ยางขอบเอว', 16],
+    ['08.30-09.30', 'C', 'เย็บ', 'ขึ้นงานรุ่นใหม่', '', 12]
+  ];
+  const st = { range:'today', sel:'C' };
+  const catColor = k => (CATS.find(c => c.key === k) || CATS[4]).color;
+  const tone = v => v >= 75 ? 'ok' : v >= 60 ? 'warn' : 'bad';
+  const TONE_TEXT = { ok:'text-emerald-600', warn:'text-amber-600', bad:'text-rose-600' };
+  const oeeOf = l => Math.round(l.a * l.p * (l.q == null ? 100 : l.q) / 10000);
 
   function head(){
     const btn = (id, label) => `<button type="button" class="oee-range${st.range === id ? ' on' : ''}" onclick="F1OEE.range('${id}')">${label}</button>`;
     return `<div class="card soft p-5 flex flex-wrap justify-between items-center gap-3">
       <div class="min-w-0">
-        <p class="oee-kicker">FACTORY 1 · SEWING · PERFORMANCE</p>
-        <h2 class="text-xl font-bold text-slate-800 mt-1">ประสิทธิภาพการผลิต ${st.range === 'today' ? 'วันนี้' : 'สัปดาห์นี้'}</h2>
+        <h2 class="text-lg font-bold text-slate-800">OEE &amp; สาเหตุยอดตก</h2>
+        <p class="text-xs text-slate-500 mt-0.5">ไลน์ไหนเสียเวลาไปกับอะไร · คิดจากยอดรายชั่วโมง + หมายเหตุที่หน้างานเลือก + SAM + ระบบแจ้งซ่อม</p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <span class="oee-sample">ตัวอย่าง · ยังไม่ต่อข้อมูลจริง</span>
@@ -5621,103 +5602,107 @@ const F1OEE = (function(){
     </div>`;
   }
 
-  function kpis(k){
-    const pct = Math.round(k.out / k.tgtNow * 100);
-    const box = (cls, label, value, unit, sub, subCls) => `<div class="card soft oee-kpi ${cls}">
-      <span class="oee-kpi-label">${label}</span>
-      <div class="flex items-baseline gap-1.5"><span class="oee-kpi-val">${value}</span><span class="oee-kpi-unit">${unit}</span></div>
-      <span class="oee-kpi-sub ${subCls}">${sub}</span>
+  function plant(d){
+    const ls = Object.values(d);
+    const tgt = ls.reduce((a, l) => a + l.target, 0);
+    const w = k => Math.round(ls.reduce((a, l) => a + l[k] * l.target, 0) / tgt);
+    const A = w('a'), P = w('p');
+    const oee = Math.round(A * P / 100);
+    const row = (label, v, note, noteCls) => `<div class="flex flex-col gap-1.5">
+      <div class="flex items-baseline justify-between gap-2 text-sm"><span class="font-semibold text-slate-700">${label}</span><span class="font-bold text-slate-800 tabular-nums">${v == null ? '—' : v + '%'}</span></div>
+      <div class="oee-track"><span style="width:${v == null ? 0 : v}%"></span></div>
+      <p class="text-[11px] ${noteCls}">${note}</p>
     </div>`;
-    return `<div class="oee-kpis">
-      ${box('hero', 'Line Efficiency (ทั้งโรง)', k.eff.toFixed(1), '%', `${k.effDelta >= 0 ? '▲' : '▼'} ${Math.abs(k.effDelta)} จาก${st.range === 'today' ? 'เมื่อวาน' : 'สัปดาห์ก่อน'} · เป้า ${EFF_GOAL}%`, k.effDelta >= 0 ? 'text-emerald-600' : 'text-rose-600')}
-      ${box('violet', 'OEE', k.oee, '%', `เดินได้ ${k.a} × ความเร็ว ${k.p} × คุณภาพ 100*`, 'text-slate-500')}
-      ${box('', 'ยอด / เป้าตอนนี้', fmtN(k.out), '/ ' + fmtN(k.tgtNow), `${pct}% ของเป้า`, pct >= STATUS_OK_PCT ? 'text-emerald-600' : pct >= STATUS_WARN_PCT ? 'text-amber-600' : 'text-rose-600')}
-      ${box('rose', 'เวลาที่เสีย', fmtN(k.lostMin), 'นาที-คน', 'มากสุด: ' + k.topLoss, 'text-slate-500')}
-      ${box('muted', 'RFT (ผ่านรอบแรก)', '—', '', '*ยังไม่ได้วัด ต้องนับตัวซ่อม', 'text-amber-600')}
-    </div>`;
-  }
-
-  function sixLosses(losses){
-    const segs = losses.map((v, i) => `<span class="oee-loss-seg" style="width:${v}%;background:${LOSS_COLORS[i]}" title="${LOSS_NAMES[i]} ${v}%">${v >= 7 ? v + '%' : ''}</span>`).join('');
-    const legend = losses.map((v, i) => `<span class="inline-flex items-center gap-1.5"><i class="oee-dot" style="background:${LOSS_COLORS[i]}"></i>${LOSS_NAMES[i]} <b>${v}%</b></span>`).join('');
-    return `<div class="card soft p-5 flex flex-col gap-3">
-      <div class="flex flex-wrap justify-between items-baseline gap-2">
-        <h3 class="font-bold text-slate-800">เวลาทำงานทั้งโรง หายไปไหน <span class="text-slate-500 font-medium">(Six Big Losses)</span></h3>
-        <span class="text-[11px] text-slate-500">หน่วย: % ของนาที-คนตามแผน</span>
+    // แถบสรุปทั้งโรง: วง OEE + 3 ส่วนประกอบเรียงแนวนอน (มือถือเรียงลง)
+    return `<div class="card soft p-5 flex flex-wrap items-center gap-x-8 gap-y-5">
+      <div class="flex items-center gap-4">
+        <div class="oee-ring" style="--v:${oee}"><span><b>${oee}%</b><small>OEE ทั้งโรง</small></span></div>
+        <p class="text-xs text-slate-500 leading-relaxed">เวลาเดินได้ × ความเร็ว × คุณภาพ<br>เป้าตัวอย่าง 75% ขึ้นไป = ดี</p>
       </div>
-      <div class="oee-loss-bar">${segs}</div>
-      <div class="oee-loss-legend">${legend}</div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1 min-w-[260px]">
+        ${row('เวลาเดินได้', A, 'จากหมายเหตุ (Loss_Log) + แจ้งซ่อม Line B C', 'text-slate-500')}
+        ${row('ความเร็ว (เทียบ SAM)', P, 'จากยอด × SAM ÷ เวลาคน · ข้อมูลครบ', 'text-emerald-600')}
+        ${row('คุณภาพ', null, 'ยังไม่ได้วัด (ยังไม่มีจำนวนตัวที่ซ่อม) · คิดเป็น 100% ไปก่อน', 'text-amber-600')}
+      </div>
     </div>`;
   }
 
-  function andon(lines){
-    const rows = lines.map(([code, type, out, tgt, eff, oee, lost, reason]) => {
-      const p = Math.round(out / tgt * 100), t = lamp(p);
-      return `<tr>
-        <td><span class="oee-lamp ${t}"></span><b class="text-slate-800">${code}</b> <span class="text-[10px] text-slate-500">${type}</span></td>
-        <td class="oee-num">${fmtN(out)} / ${fmtN(tgt)}</td>
-        <td><span class="oee-track"><span class="oee-fill-${t}" style="width:${Math.min(100, p)}%"></span></span></td>
-        <td class="oee-num text-right font-bold oee-tone-${effTone(eff)}">${eff}%</td>
-        <td class="oee-num text-right">${oee}%</td>
-        <td class="oee-num text-right text-rose-600">${fmtN(lost)}</td>
-        <td class="text-slate-600">${reason || '–'}</td>
-      </tr>`;
+  function lines(d){
+    return `<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">${Object.keys(d).map(code => {
+      const l = d[code], o = oeeOf(l);
+      const lost = l.loss.reduce((a, b) => a + b, 0);
+      const bar = (label, v) => `<div class="oee-mini"><span class="text-slate-500">${label}</span><span class="oee-track sm"><span style="width:${v == null ? 0 : v}%"></span></span><b class="tabular-nums">${v == null ? '—' : v + '%'}</b></div>`;
+      return `<button type="button" class="card soft oee-line${st.sel === code ? ' on' : ''}" onclick="F1OEE.pick('${code}')">
+        <div class="flex items-baseline justify-between w-full"><span class="font-bold text-slate-800">LINE ${code}</span><span class="text-[11px] text-slate-500">${l.type}</span></div>
+        <div class="flex items-baseline gap-1.5"><span class="text-3xl font-bold tabular-nums ${TONE_TEXT[tone(o)]}">${o}%</span><span class="text-xs text-slate-500">OEE</span></div>
+        <div class="flex flex-col gap-1 w-full">${bar('เดินได้', l.a)}${bar('ความเร็ว', l.p)}${bar('คุณภาพ', l.q)}</div>
+        <p class="text-[11px] ${lost ? 'text-rose-600' : 'text-emerald-600'} font-semibold">${lost ? 'ยอดหาย ' + lost.toLocaleString() + ' ตัว' : 'ไม่มียอดหาย'}</p>
+      </button>`;
+    }).join('')}</div>`;
+  }
+
+  function waterfall(d){
+    const l = d[st.sel];
+    const steps = [{ label:'เป้า', v:l.target, kind:'base' }]
+      .concat(CATS.map((c, i) => ({ label:c.key, v:l.loss[i], kind:'loss', color:c.color })))
+      .concat([{ label:'ได้จริง', v:l.actual, kind:'end' }]);
+    const top = Math.max(l.target, l.actual);
+    const H = 280, k = H / top;
+    let level = l.target;
+    const cols = steps.map(s => {
+      let from, h;
+      if (s.kind === 'base'){ from = top - l.target; h = l.target; }
+      else if (s.kind === 'end'){ from = top - l.actual; h = l.actual; }
+      else { from = top - level; h = s.v; level -= s.v; }
+      const bg = s.kind === 'base' ? 'var(--oee-base)' : s.kind === 'end' ? '#10B981' : s.color;
+      const val = s.kind === 'loss' ? (s.v ? '−' + s.v : '0') : s.v.toLocaleString();
+      return `<div class="oee-wf-col">
+        <span style="height:${Math.round(from * k)}px"></span>
+        <b class="${s.kind === 'loss' && s.v ? 'text-rose-600' : 'text-slate-700'}">${val}</b>
+        <i style="height:${Math.max(2, Math.round(h * k))}px;background:${bg}"></i>
+      </div>`;
     }).join('');
+    const labels = steps.map(s => `<span>${s.label}</span>`).join('');
+    const lost = l.loss.reduce((a, b) => a + b, 0);
+    let big = 0; l.loss.forEach((v, i) => { if (v > l.loss[big]) big = i; });
+    const note = lost
+      ? `LINE ${st.sel} ยอดหาย ${lost.toLocaleString()} ตัว มากสุดที่ <b>${CATS[big].key}</b> ${l.loss[big]} ตัว${l.loss[4] ? ` · ไม่ได้ระบุสาเหตุ ${l.loss[4]} ตัว (ยิ่งติ๊กหมายเหตุครบ ยิ่งรู้สาเหตุจริง)` : ''}`
+      : `LINE ${st.sel} ได้ตามเป้า ไม่มียอดหาย`;
     return `<div class="card soft p-5 flex flex-col gap-3 min-w-0">
-      <h3 class="font-bold text-slate-800">สถานะรายไลน์ <span class="text-slate-500 font-medium">(Andon)</span></h3>
+      <div class="flex flex-wrap justify-between items-baseline gap-2">
+        <div><h3 class="font-bold text-slate-800">ยอดหายไปไหน · LINE ${st.sel}</h3><p class="text-[11px] text-slate-500">เริ่มจากเป้า หักทีละหัวข้อ จนเหลือยอดจริง (ตัว) · กดการ์ดไลน์ด้านบนเพื่อเปลี่ยน</p></div>
+      </div>
+      <div class="oee-wf" style="height:${H + 24}px">${cols}</div>
+      <div class="oee-wf-labels">${labels}</div>
+      <p class="oee-note text-xs">${note}</p>
+    </div>`;
+  }
+
+  function pareto(){
+    const list = TOP[st.range].slice().sort((a, b) => b[2] - a[2]);
+    const max = list[0][2], tot = list.reduce((a, x) => a + x[2], 0);
+    let cum = 0;
+    return `<div class="card soft p-5 flex flex-col gap-3 min-w-0">
+      <div><h3 class="font-bold text-slate-800">สาเหตุที่กินยอดมากสุด</h3><p class="text-[11px] text-slate-500">ทุกไลน์ · ${st.range === 'today' ? 'วันนี้' : 'สัปดาห์นี้'} · เรียงจากมากไปน้อย</p></div>
+      ${list.map(x => { cum += x[2]; return `<div class="flex flex-col gap-1">
+        <div class="flex justify-between gap-2 text-sm"><span class="text-slate-700 min-w-0"><i class="oee-dot" style="background:${catColor(x[0])}"></i>${x[0]}${x[1] ? ' › ' + x[1] : ''}</span><b class="text-rose-600 tabular-nums whitespace-nowrap">−${x[2].toLocaleString()}</b></div>
+        <div class="oee-track"><span style="width:${Math.round(x[2] / max * 100)}%;background:${catColor(x[0])}"></span></div>
+        <span class="text-[10px] text-slate-500">สะสม ${Math.round(cum / tot * 100)}%</span>
+      </div>`; }).join('')}
+    </div>`;
+  }
+
+  function recent(){
+    return `<div class="card soft p-5 flex flex-col gap-3">
+      <div><h3 class="font-bold text-slate-800">หมายเหตุล่าสุดจากหน้างาน</h3><p class="text-[11px] text-slate-500">จากชีต Loss_Log · ยอดหาย = เป้าช่วงนั้น − ยอดจริง</p></div>
       <div class="overflow-x-auto"><table class="oee-table w-full text-sm">
-        <thead><tr><th>ไลน์</th><th>ยอด / เป้าตอนนี้</th><th style="width:22%">ความคืบหน้า</th><th class="text-right">Efficiency</th><th class="text-right">OEE</th><th class="text-right">เสีย (นาที)</th><th>สาเหตุหลัก</th></tr></thead>
-        <tbody>${rows}</tbody>
+        <thead><tr><th>ช่วงเวลา</th><th>ไลน์</th><th>หัวข้อ</th><th>รายละเอียด</th><th class="text-right">ยอดหาย</th></tr></thead>
+        <tbody>${RECENT.map(r => `<tr>
+          <td class="tabular-nums whitespace-nowrap">${r[0]}</td><td class="font-semibold">${r[1]}</td>
+          <td class="whitespace-nowrap"><span class="oee-chip" style="background:${catColor(r[2])}">${r[2]}</span>${r[3] ? ' <span class="text-slate-600">› ' + r[3] + '</span>' : ''}</td>
+          <td class="text-slate-600">${r[4] || '–'}</td><td class="text-right font-bold text-rose-600 tabular-nums">−${r[5]}</td>
+        </tr>`).join('')}</tbody>
       </table></div>
-    </div>`;
-  }
-
-  function pareto(list){
-    const total = list.reduce((a, x) => a + x[1], 0), max = list[0][1];
-    const top3 = Math.round(list.slice(0, 3).reduce((a, x) => a + x[1], 0) / total * 100);
-    return `<div class="card soft p-5 flex flex-col gap-3 min-w-0">
-      <div><h3 class="font-bold text-slate-800">Downtime Pareto</h3><p class="text-[11px] text-slate-500">ทั้งโรง · นาที-คนที่เสีย เรียงจากมากไปน้อย</p></div>
-      ${list.map(x => `<div class="oee-par-row">
-        <span class="text-slate-700">${x[0]}</span>
-        <span class="oee-track lg"><span style="width:${Math.round(x[1] / max * 100)}%;background:${PARETO_COLORS[x[0]] || '#94A3B8'}"></span></span>
-        <span class="oee-num text-right text-slate-800">${fmtN(x[1])}</span>
-      </div>`).join('')}
-      <p class="oee-note text-xs">3 สาเหตุแรก = ${top3}% ของเวลาที่เสียทั้งหมด → แก้ 3 ข้อนี้ก่อน</p>
-    </div>`;
-  }
-
-  function trend(){
-    // สเกล 45–70% ให้เส้นใช้ความสูงกราฟเต็ม (ค่าจริงอยู่ช่วงนี้)
-    const y = v => Math.round(195 - (Math.max(45, Math.min(70, v)) - 45) / 25 * 185);
-    const pts = arr => arr.map((v, i) => Math.round(i * 640 / (arr.length - 1)) + ',' + y(v)).join(' ');
-    return `<div class="card soft p-5 flex flex-col gap-3 min-w-0">
-      <div class="flex flex-wrap justify-between gap-2">
-        <h3 class="font-bold text-slate-800">แนวโน้ม 14 วันทำงาน</h3>
-        <span class="flex flex-wrap gap-3 text-[11px] text-slate-600">
-          <span class="inline-flex items-center gap-1.5"><i class="oee-key" style="background:#0EA5E9"></i>Efficiency</span>
-          <span class="inline-flex items-center gap-1.5"><i class="oee-key" style="background:var(--oee-violet)"></i>OEE</span>
-          <span class="inline-flex items-center gap-1.5"><i class="oee-key dash"></i>เป้า Efficiency ${EFF_GOAL}%</span>
-        </span>
-      </div>
-      <svg viewBox="0 0 640 200" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม Efficiency และ OEE 14 วัน">
-        <line x1="0" y1="${y(EFF_GOAL)}" x2="640" y2="${y(EFF_GOAL)}" class="oee-goal"></line>
-        <polyline points="${pts(TREND.eff)}" fill="none" stroke="#0EA5E9" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
-        <polyline points="${pts(TREND.oee)}" fill="none" stroke="var(--oee-violet)" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
-      </svg>
-      <div class="flex justify-between text-[11px] text-slate-500"><span>15 ต.ค.</span><span>22 ต.ค.</span><span>31 ต.ค.</span></div>
-    </div>`;
-  }
-
-  function guide(){
-    return `<div class="card soft p-5 flex flex-col gap-2 min-w-0">
-      <h3 class="font-bold text-slate-800">อ่านหน้านี้ยังไง</h3>
-      <div class="flex flex-col gap-2 text-[13px] text-slate-600 leading-relaxed">
-        <span><b class="text-sky-600">Efficiency</b> = ยอด × SAM ÷ (คน × นาทีทำงาน) ตัวหลักที่โรงเย็บทั่วไปใช้</span>
-        <span><b class="oee-violet-text">OEE</b> = เวลาเดินได้ × ความเร็ว × คุณภาพ ไว้เทียบภาพรวมสำหรับผู้บริหาร</span>
-        <span><b class="text-amber-600">RFT</b> = % ตัวที่ผ่านรอบแรกไม่ต้องซ่อม (ยังไม่มีข้อมูล ต้องนับตัวซ่อมก่อน)</span>
-        <span><b class="text-rose-600">เสีย (นาที)</b> = เวลาคนที่หายไป จากหมายเหตุหน้างาน + แจ้งซ่อม</span>
-        <span>ไฟหน้าไลน์: <b class="text-emerald-600">เขียว</b> ≥ ${STATUS_OK_PCT}% ของเป้าตอนนี้ · <b class="text-amber-600">เหลือง</b> ${STATUS_WARN_PCT}–${STATUS_OK_PCT - 1}% · <b class="text-rose-600">แดง</b> ต่ำกว่า ${STATUS_WARN_PCT}%</span>
-      </div>
     </div>`;
   }
 
@@ -5725,9 +5710,10 @@ const F1OEE = (function(){
     const root = document.getElementById('oeeRoot');
     if (!root) return;
     const d = SAMPLE[st.range];
-    root.innerHTML = head() + kpis(d.kpi) + sixLosses(d.losses)
-      + `<section class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-4">${andon(d.lines)}${pareto(d.pareto)}</section>`
-      + `<section class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] gap-4">${trend()}${guide()}</section>`;
+    root.innerHTML = head()
+      + plant(d) + lines(d)
+      + `<section class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-4">${waterfall(d)}${pareto()}</section>`
+      + recent();
   }
   let entered = false;
   function enter(){
@@ -5736,7 +5722,8 @@ const F1OEE = (function(){
   }
   return {
     enter,
-    range(id){ st.range = id; render(); }
+    range(id){ st.range = id; render(); },
+    pick(code){ st.sel = code; render(); }
   };
 })();
 
