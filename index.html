@@ -2864,6 +2864,7 @@ function renderCards(lines, isRange){
     });
   });
 
+  if (isRange) void hydrateRangeCardRates_();
   paintCachedShipments_();
   // บาง LOT ใน Summary อาจมีช่องว่างไม่ตรงกับ Master_LOT
   // ถ้า backend ส่ง model ว่าง ให้ค้นจาก LOT แบบ normalize เฉพาะหน้า Dashboard
@@ -2892,7 +2893,9 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
   const dayGapText = `${dayGap>=0?'+':''}${dayGap.toLocaleString()} (${dayGapPct>=0?'+':''}${dayGapPct}%)`;
   const dayGapClass = dayGap >= 0 ? 'text-emerald-600' : 'text-rose-600';
 
-  const targetNow = live ? num(live.targetNow) : 0;
+  // ดูหลายวัน: ไม่มี "ตอนนี้" → เป้าตอนนี้ = เป้ารวม (แบบโรง 2) · ผลิต/ชม. กับ เป้า/ชม. เติมทีหลังจากข้อมูลรายวัน
+  const rangeCard = !live && currentDashboardIsRange;
+  const targetNow = live ? num(live.targetNow) : (rangeCard ? target : 0);
   const actualNow = live ? num(live.reportedActual) : actual;
   const nowGap = actualNow - targetNow;
   const nowGapPct = targetNow > 0 ? Math.round(nowGap/targetNow*100) : 0;
@@ -2935,8 +2938,8 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
         </div>
         <div class="space-y-2 text-xs pt-0.5">
           <div class="flex flex-wrap gap-x-4 gap-y-1">
-            <div class="font-semibold text-slate-500">ผลิต/ชม. <span class="ml-1 font-extrabold text-slate-800">${avgOutput.toLocaleString()}</span></div>
-            <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800">${tgPerHour.toLocaleString()}</span></div>
+            <div class="font-semibold text-slate-500">ผลิต/ชม. <span class="ml-1 font-extrabold text-slate-800"${rangeCard ? ` data-range-avg="${esc(String(line).toUpperCase())}"` : ''}>${rangeCard ? '…' : avgOutput.toLocaleString()}</span></div>
+            <div class="font-semibold text-slate-500">เป้า/ชม. <span class="ml-1 font-extrabold text-slate-800"${rangeCard ? ` data-range-tgph="${esc(String(line).toUpperCase())}"` : ''}>${rangeCard ? '…' : tgPerHour.toLocaleString()}</span></div>
           </div>
           ${manpowerValue !== null ? `<div class="font-semibold text-slate-500">กำลังคน <span class="ml-1 font-extrabold text-indigo-600">${manpowerValue.toLocaleString()} คน</span></div>` : ''}
           ${lotName ? `<div class="hidden flex-wrap items-center gap-x-1.5 gap-y-1 font-semibold text-slate-500" data-lot-shipment="${esc(lotName)}">Shipment <span class="ml-1 font-extrabold text-sky-600"></span><em class="hidden not-italic whitespace-nowrap text-[10px] font-bold px-1.5 py-0.5 rounded-md"></em></div>` : ''}
@@ -3288,6 +3291,36 @@ function fetchDaySummary_(date){
       .catch(err => { delete rangeDayPromiseCache[date]; throw err; });
   }
   return rangeDayPromiseCache[date];
+}
+
+// การ์ดตอนดูหลายวัน: ผลิต/ชม. = ผลิตรวม ÷ ชม.ทำงานรวม, เป้า/ชม. = เป้ารวม ÷ ชม.ทำงานรวม
+// (ชม.ทำงานรวมจาก total_working_hours ของแต่ละวัน · วันที่ไลน์ไม่ได้ผลิตไม่นับ) — วิธีเดียวกับโรง 2
+let rangeCardRateSeq = 0;
+async function hydrateRangeCardRates_(){
+  const seq = ++rangeCardRateSeq;
+  const from = el('datePicker').value, to = el('datePickerTo').value || from;
+  const dates = [];
+  for (let d = new Date(from + 'T00:00:00'), end = new Date(to + 'T00:00:00'); d <= end && dates.length < 62; d.setDate(d.getDate() + 1)){
+    dates.push(d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'));
+  }
+  const days = await fetchRangeDays_(dates);
+  if (seq !== rangeCardRateSeq || !currentDashboardIsRange) return;
+  const sum = {};
+  days.forEach(day => (day && Array.isArray(day.lines) ? day.lines : []).forEach(item => {
+    const code = String(item.line || item.lineName || '').trim().toUpperCase();
+    const tg = num(item.target) || (num(item.target1) + num(item.target2) + num(item.target3));
+    const ac = num(item.actual) || (num(item.actual1) + num(item.actual2) + num(item.actual3));
+    const h = num(item.total_working_hours);
+    if (!code || h <= 0 || (tg <= 0 && ac <= 0)) return;
+    const s = sum[code] || (sum[code] = { tg:0, ac:0, h:0 });
+    s.tg += tg; s.ac += ac; s.h += h;
+  }));
+  const paint = (attr, pick) => document.querySelectorAll(`[${attr}]`).forEach(span => {
+    const s = sum[span.getAttribute(attr)];
+    span.textContent = s && s.h > 0 ? Math.round(pick(s) / s.h).toLocaleString() : '-';
+  });
+  paint('data-range-avg', s => s.ac);
+  paint('data-range-tgph', s => s.tg);
 }
 
 async function fetchRangeDays_(dates){
