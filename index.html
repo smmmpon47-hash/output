@@ -51,7 +51,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --navy:#0F172A; --navy2:#16233F;
@@ -869,18 +869,18 @@
     .fs-corner{ display:none !important; }
     html body .floorScene .fs-ruler{ top:50%; right:36px; transform:translateY(-42%); flex-direction:column; align-items:stretch; gap:0; width:168px; padding:0; border-radius:0; background:transparent; border:0; box-shadow:none; }
     html body .floorScene .fs-ruler::before{ content:"SELECT FLOOR"; position:static; display:flex; align-items:center; gap:10px; margin:0 0 10px; padding:0; width:auto; height:auto; border-radius:0; background:none; box-shadow:none; transform:none;
-      font-family:'Kanit', sans-serif; font-size:10px; font-weight:400; letter-spacing:.22em; color:#475569; }
+      font-family:'Kanit', sans-serif; font-size:10px; font-weight:500; letter-spacing:.22em; color:#475569; }
     html body .floorScene .fs-ruler::after{ content:none; }
     html body .floorScene .fs-ruler .floorTab{ position:relative; display:grid; grid-template-columns:auto 1fr; align-items:center; column-gap:14px; width:100%; min-width:0; min-height:0; height:auto; padding:12px 4px 12px 16px; margin:0;
       border-radius:0; border-top:1px solid rgba(15,23,42,.16); background:transparent !important; box-shadow:none !important; text-align:left; letter-spacing:0; color:#94A3B8; transition:color .3s ease, background .3s ease; }
     html body .floorScene .fs-ruler .floorTab + .floorTab{ border-bottom:1px solid rgba(15,23,42,.16); }
     html body .floorScene .fs-ruler .floorTab > span{ position:absolute; left:0; top:50%; display:block; width:2px; height:0; margin:0; background:#4338CA; transform:translateY(-50%); transition:height .4s cubic-bezier(.2,.75,.25,1); }
-    html body .floorScene .fs-ruler .floorTab.active > span{ height:56%; width:2px; }
-    html body .floorScene .fs-ruler .floorTab .ft-num{ font-family:'Cormorant Garamond', serif; font-size:36px; font-weight:600; line-height:1; letter-spacing:.02em; }
+    html body .floorScene .fs-ruler .floorTab.active > span{ height:58%; width:3px; }
+    html body .floorScene .fs-ruler .floorTab .ft-num{ font-family:'Cormorant Garamond', serif; font-size:38px; font-weight:700; line-height:1; letter-spacing:.02em; }
     html body .floorScene .fs-ruler .floorTab .ft-num::before{ content:none; }
     html body .floorScene .fs-ruler .floorTab .ft-txt{ display:flex; flex-direction:column; align-items:flex-start; gap:5px; }
-    html body .floorScene .fs-ruler .floorTab .ft-txt em{ font-style:normal; font-family:'Kanit', sans-serif; font-size:9.5px; font-weight:400; letter-spacing:.24em; color:inherit; }
-    html body .floorScene .fs-ruler .floorTab .ft-sub{ display:flex; gap:9px; font-family:'Cormorant Garamond', serif; font-size:14px; font-weight:600; letter-spacing:.06em; color:inherit; }
+    html body .floorScene .fs-ruler .floorTab .ft-txt em{ font-style:normal; font-family:'Kanit', sans-serif; font-size:10px; font-weight:500; letter-spacing:.24em; color:inherit; }
+    html body .floorScene .fs-ruler .floorTab .ft-sub{ display:flex; gap:9px; font-family:'Cormorant Garamond', serif; font-size:15px; font-weight:700; letter-spacing:.06em; color:inherit; }
     html body .floorScene .ft-sub i{ display:inline-flex; align-items:center; gap:4px; font-style:normal; }
     html body .floorScene .ft-sub i::before{ content:""; width:5px; height:5px; border-radius:50%; background:var(--hd); }
     html body .floorScene .fs-ruler .floorTab:hover:not(.active){ color:#475569; }
