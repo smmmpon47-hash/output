@@ -862,12 +862,13 @@
   }
 
   /* ---------- จอคอม: ตัวเลือกชั้นแบบบรรณาธิการ (เข้ากับหัว "FLOOR PLAN ——" / LEVEL 03) · ทางขวาของผัง · เส้นบางคั่นแต่ละชั้น
-     ชั้น 4 บน ชั้น 3 ล่าง · ชั้นที่เลือก: เลขเข้ม + ขีดสีด้านหน้า · ไฟสถานะของแต่ละไลน์ ---------- */
+     ชั้น 4 บน ชั้น 3 ล่าง · วางกลางช่องว่างขวาของผัง (ซ้าย-ขวา) และกึ่งกลางความสูงผัง · ชั้นที่เลือก: เลขเข้ม + ขีดสีด้านหน้า · ไฟสถานะของแต่ละไลน์ ---------- */
   .floorScene .ft-num{ font:inherit; }
   .floorScene .ft-txt{ display:none; }
   @media (min-width:901px){
     .fs-corner{ display:none !important; }
-    html body .floorScene .fs-ruler{ top:50%; right:36px; transform:translateY(-42%); flex-direction:column; align-items:stretch; gap:0; width:168px; padding:0; border-radius:0; background:transparent; border:0; box-shadow:none; }
+    .floorScene{ container-type:inline-size; }
+    html body .floorScene .fs-ruler{ --fp-w:min(980px, calc(100cqw - 210px)); top:calc(92px + (980px - var(--fp-w)) * .25 + var(--fp-w) * .198); right:calc((100% - var(--fp-w) - 146px) / 4); transform:translateY(-50%); flex-direction:column; align-items:stretch; gap:0; width:168px; padding:0; border-radius:0; background:transparent; border:0; box-shadow:none; }
     html body .floorScene .fs-ruler::before{ content:"SELECT FLOOR"; position:static; display:flex; align-items:center; gap:10px; margin:0 0 10px; padding:0; width:auto; height:auto; border-radius:0; background:none; box-shadow:none; transform:none;
       font-family:'Kanit', sans-serif; font-size:10px; font-weight:500; letter-spacing:.22em; color:#475569; }
     html body .floorScene .fs-ruler::after{ content:none; }
