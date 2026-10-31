@@ -1073,6 +1073,54 @@
     .dp-day{ height:42px; } .dp-day > i{ width:38px; height:38px; }
     .dp-preset{ height:34px; }
   }
+
+  /* ===== OEE & สาเหตุยอดตก ===== */
+  :root{ --oee-base:#C7D2FE; --oee-track:#EEF1F6; --oee-fill:#6366F1; }
+  html.dark{ --oee-base:#3B4560; --oee-track:rgba(255,255,255,.07); --oee-fill:#D6B97B; }
+  .oee-sample{ font-size:12px; font-weight:600; padding:6px 12px; border-radius:999px; background:#FEF3C7; color:#92400E; }
+  html.dark .oee-sample{ background:rgba(214,185,123,.14); color:#F3E3BC; }
+  .oee-ranges{ display:inline-flex; gap:4px; padding:4px; border-radius:12px; background:#F1F5F9; border:1px solid #E2E8F0; }
+  html.dark .oee-ranges{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
+  .oee-range{ height:32px; padding:0 14px; border-radius:9px; font-size:12.5px; font-weight:600; color:#475569; }
+  .oee-range.on{ background:#0F172A; color:#fff; }
+  html.dark .oee-range{ color:#94A3B8; }
+  html.dark .oee-range.on{ background:linear-gradient(135deg,#E9D29A,#C9A55C); color:#1A1408; }
+  .oee-track{ display:block; height:8px; border-radius:99px; background:var(--oee-track); overflow:hidden; }
+  .oee-track.sm{ height:6px; }
+  .oee-track > span{ display:block; height:100%; border-radius:99px; background:var(--oee-fill); transition:width .6s cubic-bezier(.2,.75,.25,1); }
+  .oee-ring{ --v:0; flex:none; width:118px; height:118px; border-radius:50%; display:grid; place-items:center; background:conic-gradient(var(--oee-fill) calc(var(--v) * 1%), var(--oee-track) 0); }
+  .oee-ring > span{ width:92px; height:92px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fff; }
+  html.dark .oee-ring > span{ background:#0E131F; }
+  .oee-ring b{ font-size:26px; line-height:1; color:#0F172A; } html.dark .oee-ring b{ color:#F8FAFC; }
+  .oee-ring small{ font-size:10.5px; color:#64748B; margin-top:4px; }
+  .oee-line{ display:flex; flex-direction:column; align-items:flex-start; gap:8px; padding:16px; text-align:left; cursor:pointer; transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+  .oee-line.on{ border-color:#818CF8 !important; box-shadow:0 0 0 2px rgba(99,102,241,.35), 0 18px 36px -24px rgba(79,70,229,.55) !important; }
+  html.dark .oee-line.on{ border-color:rgba(214,185,123,.7) !important; box-shadow:0 0 0 2px rgba(214,185,123,.3) !important; }
+  .oee-mini{ display:grid; grid-template-columns:52px minmax(0,1fr) 34px; align-items:center; gap:6px; font-size:11px; }
+  .oee-mini b{ text-align:right; }
+  .oee-wf{ display:flex; align-items:flex-start; gap:8px; border-bottom:1px solid #E2E8F0; }
+  html.dark .oee-wf{ border-color:rgba(255,255,255,.1); }
+  .oee-wf-col{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; align-items:stretch; }
+  .oee-wf-col > span{ display:block; flex:none; }
+  .oee-wf-col > b{ height:20px; margin-top:-2px; font-size:12px; text-align:center; }
+  .oee-wf-col > i{ display:block; flex:none; border-radius:6px; }
+  .oee-wf-labels{ display:flex; gap:8px; }
+  .oee-wf-labels > span{ flex:1 1 0; min-width:0; text-align:center; font-size:11px; line-height:1.3; color:#475569; }
+  html.dark .oee-wf-labels > span{ color:#94A3B8; }
+  .oee-note{ padding:10px 12px; border-radius:12px; background:#F5F3FF; color:#3730A3; }
+  html.dark .oee-note{ background:rgba(214,185,123,.1); color:#F3E3BC; }
+  .oee-dot{ display:inline-block; width:9px; height:9px; border-radius:3px; margin-right:6px; vertical-align:middle; }
+  .oee-chip{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:700; color:#fff; }
+  .oee-table{ min-width:560px; }
+  .oee-table th{ text-align:left; font-size:11px; font-weight:600; color:#64748B; padding:6px 8px; border-bottom:1px solid #E2E8F0; }
+  .oee-table td{ padding:9px 8px; border-bottom:1px solid #F1F5F9; vertical-align:middle; }
+  html.dark .oee-table th{ color:#94A3B8; border-color:rgba(255,255,255,.1); }
+  html.dark .oee-table td{ border-color:rgba(255,255,255,.06); }
+  @media (max-width:639px){
+    .oee-wf, .oee-wf-labels{ gap:4px; }
+    .oee-wf-labels > span{ font-size:9.5px; }
+    .oee-wf-col > b{ font-size:10.5px; }
+  }
 </style>
 </head>
 <body class="pb-10">
@@ -1649,6 +1697,12 @@
 <div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="plan">
   <div id="sewTabsPlan" class="mb-4"></div>
   <div id="mhPlanRoot" class="flex flex-col gap-4"></div>
+</div>
+
+<!-- ======================= OEE & สาเหตุยอดตก (แท็บย่อย Sewing) ======================= -->
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="oee">
+  <div id="sewTabsOee" class="mb-4"></div>
+  <div id="oeeRoot" class="flex flex-col gap-4"></div>
 </div>
 
 
@@ -5487,14 +5541,200 @@ if (typeof renderDashboardPayload === 'function'){
 /* =======================================================
    APP NAV — เมนูซ้าย + สลับหน้า (#sewing = Dashboard เดิม เป็นหน้าเริ่มต้น)
    ======================================================= */
+/* =======================================================
+   OEE & สาเหตุยอดตก (แท็บย่อย Sewing · #oee)
+   ตอนนี้ = หน้าตัวอย่าง ใช้ตัวเลขสมมติ (ป้ายบอกชัด) · ต่อข้อมูลจริงทีหลังจาก Loss_Log + Summary + SAM + Repair
+   OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ
+   ======================================================= */
+const F1OEE = (function(){
+  const CATS = [
+    { key:'เย็บ', color:'#6366F1' },
+    { key:'ของเข้าไม่ทัน', color:'#F59E0B' },
+    { key:'เครื่องจักร/Eton', color:'#F43F5E' },
+    { key:'อื่น ๆ', color:'#14B8A6' },
+    { key:'ไม่ได้ระบุ', color:'#94A3B8' }
+  ];
+  // ตัวเลขตัวอย่าง (a = เวลาเดินได้, p = ความเร็ว, q = คุณภาพ เป็น %) · loss = ยอดหายตามหัวข้อ (ตัว)
+  const SAMPLE = {
+    today: {
+      B: { type:'Load', target:560, actual:452, a:91, p:86, q:null, loss:[38, 22, 30, 0, 18] },
+      C: { type:'Load', target:736, actual:555, a:84, p:79, q:null, loss:[44, 60, 22, 10, 45] },
+      D: { type:'Load', target:848, actual:743, a:93, p:88, q:null, loss:[25, 12, 40, 0, 28] },
+      E: { type:'Lean', target:397, actual:331, a:89, p:90, q:null, loss:[18, 30, 6, 0, 12] },
+      F: { type:'Lean', target:545, actual:550, a:98, p:97, q:null, loss:[0, 0, 0, 0, 0] }
+    },
+    week: {
+      B: { type:'Load', target:3360, actual:2810, a:90, p:85, q:null, loss:[210, 120, 140, 30, 50] },
+      C: { type:'Load', target:4416, actual:3420, a:83, p:80, q:null, loss:[260, 330, 160, 60, 186] },
+      D: { type:'Load', target:5088, actual:4440, a:91, p:86, q:null, loss:[160, 90, 230, 20, 148] },
+      E: { type:'Lean', target:2382, actual:2060, a:88, p:89, q:null, loss:[90, 150, 30, 12, 40] },
+      F: { type:'Lean', target:3270, actual:3180, a:96, p:95, q:null, loss:[30, 20, 10, 0, 30] }
+    }
+  };
+  const TOP = {
+    today: [['ของเข้าไม่ทัน', 'อุปกรณ์', 92], ['เย็บ', 'งานติดขั้นตอน', 81], ['เครื่องจักร/Eton', '', 76], ['ของเข้าไม่ทัน', 'กระเป๋าปัก/Screen', 32], ['เย็บ', 'งานซ่อม', 29], ['เย็บ', 'ขึ้นงานรุ่นใหม่', 15], ['อื่น ๆ', '', 10]],
+    week: [['ของเข้าไม่ทัน', 'อุปกรณ์', 520], ['เย็บ', 'งานติดขั้นตอน', 470], ['เครื่องจักร/Eton', '', 570], ['เย็บ', 'งานซ่อม', 190], ['ของเข้าไม่ทัน', 'กระเป๋าปัก/Screen', 190], ['เย็บ', 'ขึ้นงานรุ่นใหม่', 90], ['อื่น ๆ', '', 122]]
+  };
+  const RECENT = [
+    ['14.30-15.30', 'C', 'ของเข้าไม่ทัน', 'อุปกรณ์', 'ซิปยังไม่มา', 22],
+    ['13.30-14.30', 'D', 'เครื่องจักร/Eton', '', 'จักรเข็มคู่เสีย รอช่าง', 18],
+    ['10.30-11.30', 'B', 'เย็บ', 'งานติดขั้นตอน', 'ติดกระเป๋าหลัง', 15],
+    ['09.30-10.30', 'E', 'ของเข้าไม่ทัน', 'อุปกรณ์', 'ยางขอบเอว', 16],
+    ['08.30-09.30', 'C', 'เย็บ', 'ขึ้นงานรุ่นใหม่', '', 12]
+  ];
+  const st = { range:'today', sel:'C' };
+  const catColor = k => (CATS.find(c => c.key === k) || CATS[4]).color;
+  const tone = v => v >= 75 ? 'ok' : v >= 60 ? 'warn' : 'bad';
+  const TONE_TEXT = { ok:'text-emerald-600', warn:'text-amber-600', bad:'text-rose-600' };
+  const oeeOf = l => Math.round(l.a * l.p * (l.q == null ? 100 : l.q) / 10000);
+
+  function head(){
+    const btn = (id, label) => `<button type="button" class="oee-range${st.range === id ? ' on' : ''}" onclick="F1OEE.range('${id}')">${label}</button>`;
+    return `<div class="card soft p-5 flex flex-wrap justify-between items-center gap-3">
+      <div class="min-w-0">
+        <h2 class="text-lg font-bold text-slate-800">OEE &amp; สาเหตุยอดตก</h2>
+        <p class="text-xs text-slate-500 mt-0.5">ไลน์ไหนเสียเวลาไปกับอะไร · คิดจากยอดรายชั่วโมง + หมายเหตุที่หน้างานเลือก + SAM + ระบบแจ้งซ่อม</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="oee-sample">ตัวอย่าง · ยังไม่ต่อข้อมูลจริง</span>
+        <div class="oee-ranges">${btn('today', 'วันนี้')}${btn('week', 'สัปดาห์นี้')}</div>
+      </div>
+    </div>`;
+  }
+
+  function plant(d){
+    const ls = Object.values(d);
+    const tgt = ls.reduce((a, l) => a + l.target, 0);
+    const w = k => Math.round(ls.reduce((a, l) => a + l[k] * l.target, 0) / tgt);
+    const A = w('a'), P = w('p');
+    const oee = Math.round(A * P / 100);
+    const row = (label, v, note, noteCls) => `<div class="flex flex-col gap-1.5">
+      <div class="flex items-baseline justify-between gap-2 text-sm"><span class="font-semibold text-slate-700">${label}</span><span class="font-bold text-slate-800 tabular-nums">${v == null ? '—' : v + '%'}</span></div>
+      <div class="oee-track"><span style="width:${v == null ? 0 : v}%"></span></div>
+      <p class="text-[11px] ${noteCls}">${note}</p>
+    </div>`;
+    // แถบสรุปทั้งโรง: วง OEE + 3 ส่วนประกอบเรียงแนวนอน (มือถือเรียงลง)
+    return `<div class="card soft p-5 flex flex-wrap items-center gap-x-8 gap-y-5">
+      <div class="flex items-center gap-4">
+        <div class="oee-ring" style="--v:${oee}"><span><b>${oee}%</b><small>OEE ทั้งโรง</small></span></div>
+        <p class="text-xs text-slate-500 leading-relaxed">เวลาเดินได้ × ความเร็ว × คุณภาพ<br>เป้าตัวอย่าง 75% ขึ้นไป = ดี</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 flex-1 min-w-[260px]">
+        ${row('เวลาเดินได้', A, 'จากหมายเหตุ (Loss_Log) + แจ้งซ่อม Line B C', 'text-slate-500')}
+        ${row('ความเร็ว (เทียบ SAM)', P, 'จากยอด × SAM ÷ เวลาคน · ข้อมูลครบ', 'text-emerald-600')}
+        ${row('คุณภาพ', null, 'ยังไม่ได้วัด (ยังไม่มีจำนวนตัวที่ซ่อม) · คิดเป็น 100% ไปก่อน', 'text-amber-600')}
+      </div>
+    </div>`;
+  }
+
+  function lines(d){
+    return `<div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">${Object.keys(d).map(code => {
+      const l = d[code], o = oeeOf(l);
+      const lost = l.loss.reduce((a, b) => a + b, 0);
+      const bar = (label, v) => `<div class="oee-mini"><span class="text-slate-500">${label}</span><span class="oee-track sm"><span style="width:${v == null ? 0 : v}%"></span></span><b class="tabular-nums">${v == null ? '—' : v + '%'}</b></div>`;
+      return `<button type="button" class="card soft oee-line${st.sel === code ? ' on' : ''}" onclick="F1OEE.pick('${code}')">
+        <div class="flex items-baseline justify-between w-full"><span class="font-bold text-slate-800">LINE ${code}</span><span class="text-[11px] text-slate-500">${l.type}</span></div>
+        <div class="flex items-baseline gap-1.5"><span class="text-3xl font-bold tabular-nums ${TONE_TEXT[tone(o)]}">${o}%</span><span class="text-xs text-slate-500">OEE</span></div>
+        <div class="flex flex-col gap-1 w-full">${bar('เดินได้', l.a)}${bar('ความเร็ว', l.p)}${bar('คุณภาพ', l.q)}</div>
+        <p class="text-[11px] ${lost ? 'text-rose-600' : 'text-emerald-600'} font-semibold">${lost ? 'ยอดหาย ' + lost.toLocaleString() + ' ตัว' : 'ไม่มียอดหาย'}</p>
+      </button>`;
+    }).join('')}</div>`;
+  }
+
+  function waterfall(d){
+    const l = d[st.sel];
+    const steps = [{ label:'เป้า', v:l.target, kind:'base' }]
+      .concat(CATS.map((c, i) => ({ label:c.key, v:l.loss[i], kind:'loss', color:c.color })))
+      .concat([{ label:'ได้จริง', v:l.actual, kind:'end' }]);
+    const top = Math.max(l.target, l.actual);
+    const H = 280, k = H / top;
+    let level = l.target;
+    const cols = steps.map(s => {
+      let from, h;
+      if (s.kind === 'base'){ from = top - l.target; h = l.target; }
+      else if (s.kind === 'end'){ from = top - l.actual; h = l.actual; }
+      else { from = top - level; h = s.v; level -= s.v; }
+      const bg = s.kind === 'base' ? 'var(--oee-base)' : s.kind === 'end' ? '#10B981' : s.color;
+      const val = s.kind === 'loss' ? (s.v ? '−' + s.v : '0') : s.v.toLocaleString();
+      return `<div class="oee-wf-col">
+        <span style="height:${Math.round(from * k)}px"></span>
+        <b class="${s.kind === 'loss' && s.v ? 'text-rose-600' : 'text-slate-700'}">${val}</b>
+        <i style="height:${Math.max(2, Math.round(h * k))}px;background:${bg}"></i>
+      </div>`;
+    }).join('');
+    const labels = steps.map(s => `<span>${s.label}</span>`).join('');
+    const lost = l.loss.reduce((a, b) => a + b, 0);
+    let big = 0; l.loss.forEach((v, i) => { if (v > l.loss[big]) big = i; });
+    const note = lost
+      ? `LINE ${st.sel} ยอดหาย ${lost.toLocaleString()} ตัว มากสุดที่ <b>${CATS[big].key}</b> ${l.loss[big]} ตัว${l.loss[4] ? ` · ไม่ได้ระบุสาเหตุ ${l.loss[4]} ตัว (ยิ่งติ๊กหมายเหตุครบ ยิ่งรู้สาเหตุจริง)` : ''}`
+      : `LINE ${st.sel} ได้ตามเป้า ไม่มียอดหาย`;
+    return `<div class="card soft p-5 flex flex-col gap-3 min-w-0">
+      <div class="flex flex-wrap justify-between items-baseline gap-2">
+        <div><h3 class="font-bold text-slate-800">ยอดหายไปไหน · LINE ${st.sel}</h3><p class="text-[11px] text-slate-500">เริ่มจากเป้า หักทีละหัวข้อ จนเหลือยอดจริง (ตัว) · กดการ์ดไลน์ด้านบนเพื่อเปลี่ยน</p></div>
+      </div>
+      <div class="oee-wf" style="height:${H + 24}px">${cols}</div>
+      <div class="oee-wf-labels">${labels}</div>
+      <p class="oee-note text-xs">${note}</p>
+    </div>`;
+  }
+
+  function pareto(){
+    const list = TOP[st.range].slice().sort((a, b) => b[2] - a[2]);
+    const max = list[0][2], tot = list.reduce((a, x) => a + x[2], 0);
+    let cum = 0;
+    return `<div class="card soft p-5 flex flex-col gap-3 min-w-0">
+      <div><h3 class="font-bold text-slate-800">สาเหตุที่กินยอดมากสุด</h3><p class="text-[11px] text-slate-500">ทุกไลน์ · ${st.range === 'today' ? 'วันนี้' : 'สัปดาห์นี้'} · เรียงจากมากไปน้อย</p></div>
+      ${list.map(x => { cum += x[2]; return `<div class="flex flex-col gap-1">
+        <div class="flex justify-between gap-2 text-sm"><span class="text-slate-700 min-w-0"><i class="oee-dot" style="background:${catColor(x[0])}"></i>${x[0]}${x[1] ? ' › ' + x[1] : ''}</span><b class="text-rose-600 tabular-nums whitespace-nowrap">−${x[2].toLocaleString()}</b></div>
+        <div class="oee-track"><span style="width:${Math.round(x[2] / max * 100)}%;background:${catColor(x[0])}"></span></div>
+        <span class="text-[10px] text-slate-500">สะสม ${Math.round(cum / tot * 100)}%</span>
+      </div>`; }).join('')}
+    </div>`;
+  }
+
+  function recent(){
+    return `<div class="card soft p-5 flex flex-col gap-3">
+      <div><h3 class="font-bold text-slate-800">หมายเหตุล่าสุดจากหน้างาน</h3><p class="text-[11px] text-slate-500">จากชีต Loss_Log · ยอดหาย = เป้าช่วงนั้น − ยอดจริง</p></div>
+      <div class="overflow-x-auto"><table class="oee-table w-full text-sm">
+        <thead><tr><th>ช่วงเวลา</th><th>ไลน์</th><th>หัวข้อ</th><th>รายละเอียด</th><th class="text-right">ยอดหาย</th></tr></thead>
+        <tbody>${RECENT.map(r => `<tr>
+          <td class="tabular-nums whitespace-nowrap">${r[0]}</td><td class="font-semibold">${r[1]}</td>
+          <td class="whitespace-nowrap"><span class="oee-chip" style="background:${catColor(r[2])}">${r[2]}</span>${r[3] ? ' <span class="text-slate-600">› ' + r[3] + '</span>' : ''}</td>
+          <td class="text-slate-600">${r[4] || '–'}</td><td class="text-right font-bold text-rose-600 tabular-nums">−${r[5]}</td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>`;
+  }
+
+  function render(){
+    const root = document.getElementById('oeeRoot');
+    if (!root) return;
+    const d = SAMPLE[st.range];
+    root.innerHTML = head()
+      + plant(d) + lines(d)
+      + `<section class="grid grid-cols-1 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-4">${waterfall(d)}${pareto()}</section>`
+      + recent();
+  }
+  let entered = false;
+  function enter(){
+    render();
+    if (!entered && typeof F1Motion !== 'undefined'){ entered = true; F1Motion.enter(document.querySelector('.shell[data-view="oee"]')); }
+  }
+  return {
+    enter,
+    range(id){ st.range = id; render(); },
+    pick(code){ st.sel = code; render(); }
+  };
+})();
+
 const F1Nav = (function(){
-  const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', washing:'Washing Dept', finishing:'Finishing Dept' };
-  const NAV_OF = { plan:'sewing' }; // ประวัติรุ่น & วางแผน = แท็บย่อยของ Sewing Dept
+  const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', oee:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', washing:'Washing Dept', finishing:'Finishing Dept' };
+  const NAV_OF = { plan:'sewing', oee:'sewing' }; // ประวัติรุ่น & วางแผน / OEE = แท็บย่อยของ Sewing Dept
   // ประวัติรุ่น & วางแผน: ปุ่มไอคอนข้างแว่นขยายบนหัว Dashboard เดิม (สร้างด้วย JS ไม่แก้ markup เดิม)
   // หน้าประวัติรุ่นมีแท็บกลับไปภาพรวมวันนี้
   function sewTabsHtml(active){
     const t = (href, key, label) => `<a href="${href}" class="sew-tab${active === key ? ' on' : ''}"${active === key ? ' aria-current="page"' : ''}>${label}</a>`;
-    return `<nav class="sew-tabs" aria-label="Sewing Dept">${t('#sewing', 'sewing', 'ภาพรวมวันนี้')}${t('#plan', 'plan', 'ประวัติรุ่น &amp; วางแผน')}</nav>`;
+    return `<nav class="sew-tabs" aria-label="Sewing Dept">${t('#sewing', 'sewing', 'ภาพรวมวันนี้')}${t('#plan', 'plan', 'ประวัติรุ่น &amp; วางแผน')}${t('#oee', 'oee', 'OEE &amp; สาเหตุยอดตก')}</nav>`;
   }
   function mountSewTabs(){
     const search = document.querySelector('.shell[data-view="sewing"] > header button[onclick="openLotSearch()"]');
@@ -5507,9 +5747,19 @@ const F1Nav = (function(){
       a.setAttribute('aria-label', 'ประวัติรุ่น & วางแผน');
       a.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-7"/></svg>';
       search.insertAdjacentElement('afterend', a);
+      // OEE & สาเหตุยอดตก: ไอคอนเกจ ต่อจากไอคอนกราฟ
+      const g = a.cloneNode(false);
+      g.id = 'sewOeeBtn';
+      g.href = '#oee';
+      g.title = 'OEE & สาเหตุยอดตก';
+      g.setAttribute('aria-label', 'OEE & สาเหตุยอดตก');
+      g.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 17a8 8 0 1 1 16 0"/><path d="M12 17l4-5"/><circle cx="12" cy="17" r="1.2"/></svg>';
+      a.insertAdjacentElement('afterend', g);
     }
     const planTabs = document.getElementById('sewTabsPlan');
     if (planTabs) planTabs.innerHTML = sewTabsHtml('plan');
+    const oeeTabs = document.getElementById('sewTabsOee');
+    if (oeeTabs) oeeTabs.innerHTML = sewTabsHtml('oee');
   }
   const root = document.documentElement;
   function parseHash(){
@@ -5534,10 +5784,11 @@ const F1Nav = (function(){
     close();
     if (view === 'sewing') setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
     if (view === 'search' || view === 'plan') F1MH.enter(view, arg);
+    if (view === 'oee') F1OEE.enter();
     // motion ตอนสลับหน้า: หน้าค้นหา / แผน เล่นหลังข้อมูลขึ้น (ใน F1MH) · Dashboard เล่นเมื่อโหลดรอบแรกเสร็จแล้ว
     const node = document.querySelector('.shell[data-view="' + view + '"]');
     if (view === 'sewing'){ if (window.__f1DashReady) F1Motion.enter(node, { soft: true }); }
-    else if (view !== 'search' && view !== 'plan') F1Motion.enter(node);
+    else if (view !== 'search' && view !== 'plan' && view !== 'oee') F1Motion.enter(node);
     window.scrollTo(0, 0);
   }
   function toggleCollapse(){
