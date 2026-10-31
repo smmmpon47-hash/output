@@ -333,6 +333,19 @@
   }
 
   @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+  /* ดูหลายวัน: ปุ่มสลับกราฟ รายวัน / รายชั่วโมง + กล่องบอกความคืบหน้าตอนโหลด */
+  .rangeSeg{ display:inline-flex; padding:2px; border-radius:999px; background:rgba(148,163,184,.16); border:1px solid rgba(148,163,184,.25); }
+  .rangeSeg.hidden{ display:none; }
+  .rangeSeg button{ padding:3px 11px; border-radius:999px; font-size:11px; font-weight:600; color:#64748B; transition:background .2s, color .2s; }
+  .rangeSeg button.on{ background:#fff; color:#4338CA; box-shadow:0 1px 3px rgba(15,23,42,.12); }
+  html.dark .rangeSeg{ background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.1); }
+  html.dark .rangeSeg button{ color:#94A3B8; }
+  html.dark .rangeSeg button.on{ background:rgba(214,185,123,.16); color:#E9D5A1; box-shadow:none; }
+  .rangeLoad{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; font-size:12px; font-weight:600; color:#64748B; }
+  .rangeLoad i{ display:block; width:min(260px,70%); height:6px; border-radius:999px; background:rgba(148,163,184,.22); overflow:hidden; }
+  .rangeLoad i b{ display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#818CF8,#4F46E5); transition:width .3s; }
+  html.dark .rangeLoad{ color:#94A3B8; }
+  html.dark .rangeLoad i b{ background:linear-gradient(90deg,#B89A5E,#E9D5A1); }
 </style>
 <style>
   /* ================= NIGHT MODE (html.dark) — โหมดสว่างไม่ถูกแตะ ================= */
@@ -1373,6 +1386,10 @@
             <h3 id="hourlyTitle" class="text-sm font-bold text-slate-700">ผลการผลิตรายชั่วโมง</h3>
             <div class="flex flex-wrap items-center justify-end gap-2">
               <p id="hourlyTargetSubtitle" class="text-[11px] text-slate-400">-</p>
+              <div id="rangeChartToggle" class="rangeSeg hidden" role="tablist" aria-label="มุมมองกราฟ">
+                <button type="button" data-mode="day" onclick="setRangeChartMode_('day')">รายวัน</button>
+                <button type="button" data-mode="hour" onclick="setRangeChartMode_('hour')">รายชั่วโมง</button>
+              </div>
             </div>
           </div>
           <div class="h-60 relative"><canvas id="hourlyChart"></canvas></div>
@@ -1408,21 +1425,22 @@
           </div>
           <div class="grid grid-cols-2 gap-2.5">
             <div class="bg-white border border-slate-100 rounded-xl p-3">
-              <p class="text-[10px] font-semibold text-slate-400">ผลิตสะสมตอนนี้</p>
+              <p id="pulseActualLabel" class="text-[10px] font-semibold text-slate-400">ผลิตสะสมตอนนี้</p>
               <p id="pulseActual" class="text-lg font-extrabold text-slate-800 mt-0.5">-</p>
+              <p id="pulseActualNote" class="hidden text-[9px] text-slate-400 mt-0.5"></p>
             </div>
             <div id="pulsePaceCard" class="bg-white border border-slate-100 rounded-xl p-3 transition-colors">
               <p id="pulsePaceLabel" class="text-[10px] font-semibold text-slate-400">กำลังผลิต LOT ปัจจุบัน</p>
               <p id="pulsePace" class="text-lg font-extrabold text-slate-800 mt-0.5">-</p>
-              <p class="text-[9px] text-slate-400">ชิ้น / ชม.</p>
+              <p id="pulsePaceUnit" class="text-[9px] text-slate-400">ชิ้น / ชม.</p>
             </div>
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl p-3">
-              <p class="text-[10px] font-semibold text-indigo-500">ความคืบหน้าทั้งออเดอร์</p>
+              <p id="pulseProjLabel" class="text-[10px] font-semibold text-indigo-500">ความคืบหน้าทั้งออเดอร์</p>
               <p id="pulseProjected" class="text-base font-extrabold text-indigo-700 mt-0.5">-</p>
               <p id="pulseOrderMeta" class="text-[9px] text-indigo-400 mt-0.5">-</p>
             </div>
             <div class="bg-white border border-slate-100 rounded-xl p-3">
-              <p class="text-[10px] font-semibold text-slate-400">คาดว่าจะผลิตครบ</p>
+              <p id="pulseGapLabel" class="text-[10px] font-semibold text-slate-400">คาดว่าจะผลิตครบ</p>
               <p id="pulseGap" class="text-base font-extrabold text-slate-800 mt-0.5">-</p>
               <p id="pulseGapNote" class="text-[9px] text-slate-400 mt-0.5">-</p>
             </div>
@@ -3261,6 +3279,40 @@ function setDetailRangeLabels_(isRange){
   el('dtTargetLabel').innerText = isRange ? 'เป้ารวมช่วงที่เลือก' : 'เป้าหมายวันนี้';
   el('dtGapLabel').innerText = isRange ? 'ส่วนต่างจากเป้ารวม' : 'ส่วนต่างจากเป้าวัน';
   el('dtHoursLabel').innerText = isRange ? 'วันที่มีการผลิต' : 'เวลาทำงานวันนี้';
+  el('pulseActualLabel').innerText = isRange ? 'ผลิตรวมทั้งช่วง' : 'ผลิตสะสมตอนนี้';
+  el('pulsePaceLabel').innerText = isRange ? 'ผลิตเฉลี่ย / ชม.' : 'กำลังผลิต LOT ปัจจุบัน';
+  el('pulsePaceUnit').innerText = 'ชิ้น / ชม.';
+  el('pulseProjLabel').innerText = isRange ? 'วันที่ถึงเป้า' : 'ความคืบหน้าทั้งออเดอร์';
+  el('pulseGapLabel').innerText = isRange ? 'วันดีสุด / แย่สุด' : 'คาดว่าจะผลิตครบ';
+  el('pulseActualNote').classList.add('hidden');
+  el('rangeChartToggle').classList.toggle('hidden', !isRange);
+  if (!isRange) showRangeLoading_(0, 0);
+}
+
+// ---------- ดูหลายวัน: โหมดกราฟ (รายวันแบบ Stack แยกรุ่น / รายชั่วโมงรวมทุกวัน) ----------
+let rangeChartMode = 'day', rangeDetailCache = null;
+try{ if (localStorage.getItem('dash_range_chart') === 'hour') rangeChartMode = 'hour'; }catch(e){}
+function setRangeChartMode_(mode){
+  rangeChartMode = mode === 'hour' ? 'hour' : 'day';
+  try{ localStorage.setItem('dash_range_chart', rangeChartMode); }catch(e){}
+  paintRangeToggle_();
+  if (rangeDetailCache && rangeDetailCache.code === currentLine && currentDashboardIsRange) drawRangeCharts_(rangeDetailCache);
+}
+function paintRangeToggle_(){
+  document.querySelectorAll('#rangeChartToggle button').forEach(b => b.classList.toggle('on', b.dataset.mode === rangeChartMode));
+  el('hourlyTitle').innerText = rangeChartMode === 'day' ? 'ผลิตรายวัน แยกตามรุ่น' : 'ผลการผลิตรายชั่วโมง (รวมทุกวันในช่วง)';
+  el('cumSubtitle').innerText = rangeChartMode === 'day' ? 'ยอดสะสมทีละวันในช่วงที่เลือก' : 'ยอดรวมทุกวันในช่วง สะสมทีละช่วงเวลา';
+}
+// กล่องโหลดในกราฟทั้งสอง: "กำลังโหลด 3/7 วัน" (total = 0 → เอาออก)
+function showRangeLoading_(done, total){
+  ['hourlyChart','cumulativeChart'].forEach(id => {
+    const wrap = el(id) && el(id).parentElement; if (!wrap) return;
+    let box = wrap.querySelector('.rangeLoad');
+    if (!total){ if (box) box.remove(); return; }
+    if (!box){ box = document.createElement('div'); box.className = 'rangeLoad'; box.innerHTML = '<span></span><i><b></b></i>'; wrap.appendChild(box); }
+    box.querySelector('span').textContent = `กำลังโหลดข้อมูล ${done}/${total} วัน`;
+    box.querySelector('b').style.width = Math.round(done / total * 100) + '%';
+  });
 }
 
 function labels_(ymd){ const p = String(ymd).split('-'); return p.length === 3 ? `${p[2]}/${p[1]}` : ymd; }
@@ -3323,13 +3375,14 @@ async function hydrateRangeCardRates_(){
   paint('data-range-tgph', s => s.tg);
 }
 
-async function fetchRangeDays_(dates){
+async function fetchRangeDays_(dates, onProgress){
   const out = new Array(dates.length).fill(null);
-  let next = 0;
+  let next = 0, done = 0;
   const worker = async () => {
     while (next < dates.length){
       const i = next++;
       try{ out[i] = await fetchDaySummary_(dates[i]); }catch(err){ console.warn('Range day load failed:', dates[i], err); }
+      done++; if (onProgress) onProgress(done, dates.length);
     }
   };
   await Promise.all([worker(), worker(), worker()]); // ทีละ 3 วัน ไม่ให้ Apps Script ติดคิว
@@ -3340,6 +3393,7 @@ async function renderRangeLineDetail_(code){
   const seq = ++rangeDetailSeq;
   const from = el('datePicker').value, to = el('datePickerTo').value || from;
   setDetailRangeLabels_(true);
+  paintRangeToggle_();
   if (hourlyChartInstance){ hourlyChartInstance.destroy(); hourlyChartInstance = null; }
   if (cumulativeChartInstance){ cumulativeChartInstance.destroy(); cumulativeChartInstance = null; }
   el('hourlyTargetSubtitle').innerText = 'กำลังโหลดข้อมูลรายวัน...';
@@ -3352,8 +3406,15 @@ async function renderRangeLineDetail_(code){
   el('dtLotTable').innerHTML = `<tr><td colspan="5" class="py-3 text-center text-slate-400">กำลังโหลด LOT ในช่วงที่เลือก...</td></tr>`;
 
   const dates = rangeDates_(from, to);
-  const payloads = await fetchRangeDays_(dates);
+  showRangeLoading_(0, dates.length);
+  const payloads = await fetchRangeDays_(dates, (done, total) => {
+    if (seq === rangeDetailSeq && currentLine === code){
+      showRangeLoading_(done, total);
+      el('hourlyTargetSubtitle').innerText = `กำลังโหลดข้อมูลรายวัน ${done}/${total} วัน...`;
+    }
+  });
   if (seq !== rangeDetailSeq || currentLine !== code || !currentDashboardIsRange) return;
+  showRangeLoading_(0, 0);
 
   const days = [], lots = new Map();
   let failed = 0;
@@ -3377,7 +3438,7 @@ async function renderRangeLineDetail_(code){
   const totalAc = days.reduce((s, d) => s + d.ac, 0);
   el('dtHours').innerText = `${days.length} วัน`;
   el('dtSlotRange').innerText = `${labels_(from)} ถึง ${labels_(to)}`;
-  el('pulseActual').innerText = fmt(totalAc);
+  renderRangePulse_(days);
   el('hourlyTargetSubtitle').innerText = days.length
     ? `${days.length} วันที่มีการผลิต • เป้าเฉลี่ย ${Math.round(days.reduce((s, d) => s + d.tg, 0) / days.length).toLocaleString()} ชิ้นต่อวัน` + (failed ? ` • โหลดไม่สำเร็จ ${failed} วัน` : '')
     : (failed ? `โหลดข้อมูลไม่สำเร็จ ${failed} วัน ลองเลือกช่วงใหม่อีกครั้ง` : 'ไม่มีข้อมูลการผลิตของไลน์นี้ในช่วงที่เลือก');
@@ -3395,8 +3456,129 @@ async function renderRangeLineDetail_(code){
       }).join('')
     : `<tr><td colspan="5" class="py-3 text-center text-slate-400">ไม่มี LOT ของไลน์นี้ในช่วงที่เลือก</td></tr>`;
 
+  rangeDetailCache = { code, days };
   if (!days.length) return;
+  drawRangeCharts_(rangeDetailCache);
+}
 
+// Production Pulse ตอนดูหลายวัน: ผลิตรวม / เฉลี่ยต่อชม. / วันที่ถึงเป้า / วันดีสุด-แย่สุด
+function renderRangePulse_(days){
+  const totalAc = days.reduce((s, d) => s + d.ac, 0), totalTg = days.reduce((s, d) => s + d.tg, 0);
+  const hours = days.reduce((s, d) => s + num(d.item.total_working_hours), 0);
+  const pct = totalTg > 0 ? Math.round(totalAc / totalTg * 100) : 0;
+  el('pulseSubtitle').innerText = days.length ? `สรุป ${days.length} วันที่มีการผลิตในช่วงที่เลือก` : 'ไม่มีข้อมูลการผลิตในช่วงที่เลือก';
+  el('pulseActual').innerText = days.length ? fmt(totalAc) : '-';
+  const note = el('pulseActualNote');
+  note.innerText = totalTg > 0 ? `จากเป้า ${fmt(totalTg)} (${pct}%)` : '';
+  note.classList.toggle('hidden', !totalTg);
+
+  const avg = hours > 0 ? Math.round(totalAc / hours) : 0, tgph = hours > 0 ? Math.round(totalTg / hours) : 0;
+  el('pulsePace').innerText = hours > 0 ? fmt(avg) : '-';
+  el('pulsePaceUnit').innerText = hours > 0 ? `ชิ้น / ชม. · เป้า ${fmt(tgph)}` : 'ชิ้น / ชม.';
+  // สีการ์ด: เทียบเป้าเฉลี่ย ≥95% เขียว · ≥85% เหลือง · ต่ำกว่าแดง
+  const pacePct = tgph > 0 ? avg / tgph * 100 : 0;
+  setPulsePaceTone(pacePct >= 95 ? 0 : pacePct >= 85 ? -15 : -30, hours > 0 && tgph > 0);
+
+  const withTg = days.filter(d => d.tg > 0);
+  const hit = withTg.filter(d => d.ac >= d.tg).length;
+  el('pulseProjected').innerText = withTg.length ? `${hit} / ${withTg.length} วัน` : '-';
+  el('pulseOrderMeta').innerText = withTg.length ? `ถึงเป้า ${Math.round(hit / withTg.length * 100)}% ของวันที่ผลิต` : 'ไม่มีวันที่มีเป้า';
+
+  const ranked = withTg.map(d => ({ date:d.date, pct:Math.round(d.ac / d.tg * 100) })).sort((a, b) => b.pct - a.pct);
+  if (ranked.length){
+    const best = ranked[0], worst = ranked[ranked.length - 1];
+    el('pulseGap').innerHTML = `<span class="text-emerald-600">${labels_(best.date)}</span> <span class="text-[11px] font-bold text-emerald-600">${best.pct}%</span>`;
+    el('pulseGapNote').innerHTML = ranked.length > 1 ? `แย่สุด <b class="text-rose-500">${labels_(worst.date)} · ${worst.pct}%</b>` : 'มีวันเดียวในช่วง';
+  } else {
+    el('pulseGap').innerText = '-'; el('pulseGapNote').innerText = 'ไม่มีวันที่มีเป้า';
+  }
+}
+
+function drawRangeCharts_(cache){
+  if (hourlyChartInstance){ hourlyChartInstance.destroy(); hourlyChartInstance = null; }
+  if (cumulativeChartInstance){ cumulativeChartInstance.destroy(); cumulativeChartInstance = null; }
+  paintRangeToggle_();
+  if (rangeChartMode === 'day') drawRangeDaily_(cache.days);
+  else drawRangeHourly_(cache.days, cache.code);
+}
+
+// รายวันแบบ Stack: แท่งของแต่ละวันซ้อนกันตามรุ่น (ยอดผลิตของแต่ละ LOT ในวันนั้น) + เส้นเป้าของวัน
+const RANGE_STACK_COLORS = ['#6366F1','#F59E0B','#10B981','#0EA5E9','#F43F5E','#8B5CF6','#14B8A6','#94A3B8'];
+function drawRangeDaily_(days){
+  const fontK = { family:'Kanit', size:10 };
+  const labels = days.map(d => labels_(d.date));
+  const byModel = new Map();
+  days.forEach((d, i) => {
+    const plans = getLotPlan(d.item).filter((lp, idx) => idx === 0 ? Boolean(lp.lot || lp.target || lp.actual) : Boolean(lp.lot));
+    const sumPlans = plans.reduce((s, lp) => s + num(lp.actual), 0);
+    plans.forEach(lp => {
+      const key = String(lp.model || lp.lot || 'ไม่ระบุรุ่น').trim() || 'ไม่ระบุรุ่น';
+      const row = byModel.get(key) || { key, data:new Array(days.length).fill(0), total:0 };
+      row.data[i] += num(lp.actual); row.total += num(lp.actual);
+      byModel.set(key, row);
+    });
+    // ยอดของวันที่ไม่ได้แยกตาม LOT (actual รวมมากกว่าผลรวม LOT)
+    if (d.ac > sumPlans){
+      const row = byModel.get('ไม่ระบุรุ่น') || { key:'ไม่ระบุรุ่น', data:new Array(days.length).fill(0), total:0 };
+      row.data[i] += d.ac - sumPlans; row.total += d.ac - sumPlans; byModel.set('ไม่ระบุรุ่น', row);
+    }
+  });
+  let models = [...byModel.values()].filter(r => r.total > 0).sort((a, b) => b.total - a.total);
+  if (models.length > 7){ // รุ่นเยอะ: เก็บ 6 รุ่นที่ผลิตมากสุด ที่เหลือรวมเป็น "รุ่นอื่น"
+    const rest = models.slice(6), other = { key:`รุ่นอื่น (${rest.length})`, data:new Array(days.length).fill(0), total:0 };
+    rest.forEach(r => r.data.forEach((v, i) => { other.data[i] += v; })); models = models.slice(0, 6).concat(other);
+  }
+  const totals = days.map(d => d.ac);
+  const lastIdx = models.length - 1;
+  const datasets = models.map((m, k) => ({
+    type:'bar', label:m.key, data:m.data, stack:'ac', backgroundColor:RANGE_STACK_COLORS[k % RANGE_STACK_COLORS.length],
+    borderRadius:k === lastIdx ? { topLeft:6, topRight:6 } : 0, borderSkipped:false, maxBarThickness:46, order:2,
+    datalabels: k === lastIdx
+      ? { anchor:'end', align:'end', offset:3, color:dashTick(), backgroundColor:isDashDark() ? 'rgba(12,18,34,.85)' : 'rgba(255,255,255,.9)', borderRadius:4, padding:{ top:1, bottom:1, left:4, right:4 }, font:{ weight:'bold', size:10, family:'Kanit' }, formatter:(v, ctx) => totals[ctx.dataIndex] > 0 ? totals[ctx.dataIndex].toLocaleString() : '' }
+      : { display:false }
+  }));
+  datasets.push({ type:'line', label:'เป้าของวัน', data:days.map(d => d.tg || null), borderColor:isDashDark() ? '#E9D5A1' : '#4338CA', borderWidth:2, borderDash:[5,5],
+    pointRadius:3, pointBackgroundColor:isDashDark() ? '#E9D5A1' : '#4338CA', fill:false, tension:0, order:1, datalabels:{ display:false } });
+
+  hourlyChartInstance = new Chart(el('hourlyChart').getContext('2d'), {
+    type:'bar',
+    data:{ labels, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      layout:{ padding:{ top:16 } },
+      interaction:{ mode:'index', intersect:false },
+      plugins:{
+        legend:{ position:'top', labels:{ font:fontK, usePointStyle:true, boxWidth:8 } },
+        tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'}, footerFont:{family:'Kanit'},
+          filter:item => item.raw !== 0 && item.raw !== null,
+          callbacks:{ footer:items => { const i = items[0] && items[0].dataIndex; if (i === undefined) return '';
+            const d = days[i]; return `รวม ${fmt(d.ac)} / เป้า ${fmt(d.tg)}` + (d.tg ? ` (${Math.round(d.ac / d.tg * 100)}%)` : ''); } } }
+      },
+      scales:{
+        x:{ stacked:true, grid:{display:false}, ticks:{ autoSkip:days.length > 20, maxRotation:0, font:{size:10, family:'Kanit'} } },
+        y:{ stacked:true, beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:fontK } }
+      }
+    }
+  });
+
+  let ct = 0, ca = 0;
+  cumulativeChartInstance = new Chart(el('cumulativeChart').getContext('2d'), {
+    type:'line',
+    data:{ labels, datasets:[
+      { label:'เป้าสะสม', data:days.map(d => (ct += d.tg)), borderColor:'#6366F1', borderWidth:2, borderDash:[6,5], pointRadius:2, tension:.25, fill:false, datalabels:{display:false} },
+      { label:'ผลิตสะสม', data:days.map(d => (ca += d.ac)), borderColor:'#10B981', backgroundColor:'rgba(16,185,129,0.10)', borderWidth:3, pointRadius:3, tension:.25, fill:true, datalabels:{display:false} }
+    ]},
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      interaction:{ mode:'index', intersect:false },
+      plugins:{ legend:{ position:'top', labels:{ font:fontK, usePointStyle:true } }, tooltip:{ bodyFont:{family:'Kanit'}, titleFont:{family:'Kanit'} } },
+      scales:{ x:{ grid:{display:false}, ticks:{ autoSkip:days.length > 20, maxRotation:0, font:{size:10, family:'Kanit'} } }, y:{ beginAtZero:true, grid:{color:dashGrid()}, ticks:{ font:fontK } } }
+    }
+  });
+}
+
+// รายชั่วโมงรวมทุกวัน (แบบเดิม)
+function drawRangeHourly_(days, code){
   // รวมยอดทีละช่องเวลาข้ามวัน (แบบโรง 2) · วันที่เข้างานคนละเวลา (08.00 / 08.30) ช่องไม่ตรงกัน
   // → ใช้ช่องของ "แบบที่เจอบ่อยสุด" เป็นแกน แล้วโยนช่องของวันอื่นลงช่องที่ทับเวลามากสุด
   const perDay = days.map(d => dayItemSlots_(d.item, code));
