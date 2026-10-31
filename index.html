@@ -3438,6 +3438,10 @@ async function renderRangeLineDetail_(code){
   const totalAc = days.reduce((s, d) => s + d.ac, 0);
   el('dtHours').innerText = `${days.length} วัน`;
   el('dtSlotRange').innerText = `${labels_(from)} ถึง ${labels_(to)}`;
+  // กำลังคนตอนดูหลายวัน = เฉลี่ยจากวันที่มีการกรอกกำลังคน
+  const mp = days.map(d => num(d.item.manpower)).filter(v => v > 0);
+  const mpAvg = mp.length ? Math.round(mp.reduce((s, v) => s + v, 0) / mp.length * 10) / 10 : null;
+  el('dtManpower').innerText = mpAvg === null ? 'กำลังคน -' : `กำลังคนเฉลี่ย ${mpAvg.toLocaleString()} คน` + (mp.length < days.length ? ` (${mp.length} วัน)` : '');
   renderRangePulse_(days);
   el('hourlyTargetSubtitle').innerText = days.length
     ? `${days.length} วันที่มีการผลิต • เป้าเฉลี่ย ${Math.round(days.reduce((s, d) => s + d.tg, 0) / days.length).toLocaleString()} ชิ้นต่อวัน` + (failed ? ` • โหลดไม่สำเร็จ ${failed} วัน` : '')
