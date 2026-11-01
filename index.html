@@ -1103,17 +1103,45 @@
   .oee-ranges button.on{ background:#0F172A; color:#fff; }
   html.dark .oee-ranges{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
   html.dark .oee-ranges button{ color:#94A3B8; } html.dark .oee-ranges button.on{ background:linear-gradient(135deg,#E9D29A,#C9A55C); color:#1A1408; }
-  .oee-gauges{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-around; gap:18px; }
-  .oee-gauge{ width:var(--w); max-width:100%; display:flex; flex-direction:column; align-items:center; text-align:center; }
-  .oee-gauge svg{ width:100%; height:auto; display:block; }
-  .oee-g-track{ fill:none; stroke:#EEF1F6; stroke-width:10; stroke-linecap:round; }
-  html.dark .oee-g-track{ stroke:rgba(255,255,255,.08); }
-  .oee-gauge b{ margin-top:-18%; font-size:calc(var(--w) * .13); font-weight:800; color:#0F172A; line-height:1.1; }
-  html.dark .oee-gauge b{ color:#F8FAFC; }
-  .oee-gauge span{ margin-top:4px; font-size:13px; font-weight:700; color:#334155; }
-  html.dark .oee-gauge span{ color:#E2E8F0; }
-  .oee-gauge small{ font-size:10.5px; color:#64748B; margin-top:2px; }
-  .oee-line-gauges{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:12px; justify-items:center; }
+  /* โดนัทแยกชิ้น (กดได้) */
+  .oee-hero{ display:flex; flex-wrap:wrap; align-items:center; gap:28px; }
+  .oee-hero-r{ flex:1 1 380px; min-width:0; }
+  .oee-donut{ position:relative; width:240px; height:240px; flex:none; margin:0 auto; }
+  .oee-donut svg{ width:100%; height:100%; overflow:visible; }
+  .oee-seg{ fill:none; stroke-width:26; stroke-linecap:butt; cursor:pointer; transition:stroke-width .25s ease, opacity .25s ease; outline:none; }
+  .oee-seg:hover, .oee-seg:focus-visible{ stroke-width:32; }
+  .oee-seg.on{ stroke-width:36; }
+  .oee-seg.dim{ opacity:.35; }
+  .oee-donut-c{ position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; pointer-events:none; text-align:center; }
+  .oee-donut-c b{ font-size:40px; font-weight:800; line-height:1; color:#0F172A; }
+  .oee-donut-c span{ margin-top:6px; font-size:12px; font-weight:600; color:#64748B; }
+  html.dark .oee-donut-c b{ color:#F8FAFC; } html.dark .oee-donut-c span{ color:#94A3B8; }
+  .oee-chips{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:10px; margin-top:12px; }
+  .oee-chip{ display:flex; flex-direction:column; gap:6px; padding:12px 14px; border-radius:16px; text-align:left; background:#F8FAFC; border:1px solid #E2E8F0; cursor:pointer; transition:border-color .2s ease, transform .2s ease; }
+  .oee-chip:hover{ transform:translateY(-2px); border-color:#A5B4FC; }
+  html.dark .oee-chip{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); } html.dark .oee-chip:hover{ border-color:rgba(214,185,123,.5); }
+  .oee-chip-top{ display:flex; align-items:center; gap:6px; font-size:12px; font-weight:600; color:#334155; }
+  .oee-chip-top i{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+  .oee-chip b{ font-size:26px; font-weight:800; color:#0F172A; line-height:1; }
+  html.dark .oee-chip-top{ color:#CBD5E1; } html.dark .oee-chip b{ color:#F8FAFC; }
+  .oee-chip-bar{ display:block; height:6px; border-radius:99px; background:#CBD5E1; overflow:hidden; }
+  .oee-chip-bar > span{ display:block; height:100%; border-radius:inherit; }
+  html.dark .oee-chip-bar{ background:#334155; }
+  .oee-chip small{ font-size:10.5px; color:#64748B; }
+  .oee-back.sm{ min-height:32px; padding:0 12px; font-size:12px; }
+  /* OEE แยกไลน์: แท่ง */
+  .oee-lbars{ position:relative; display:flex; align-items:flex-end; gap:14px; height:230px; margin-top:14px; padding-top:22px; border-bottom:1px solid #E2E8F0; }
+  html.dark .oee-lbars{ border-color:rgba(255,255,255,.1); }
+  .oee-lcol{ flex:1 1 0; min-width:0; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; }
+  .oee-lcol b{ font-size:15px; font-weight:800; }
+  .oee-ltick{ position:absolute; left:-4px; right:-4px; height:0; border-top:2px dashed #64748B; }
+  html.dark .oee-ltick{ border-color:#CBD5E1; }
+  .oee-lbar{ position:relative; overflow:visible !important; display:flex; align-items:flex-end; width:100%; max-width:56px; height:calc(100% - 84px); border-radius:10px 10px 0 0; background:#E2E8F0; overflow:hidden; }
+  html.dark .oee-lbar{ background:#1E293B; }
+  .oee-lbar > span{ display:block; width:100%; border-radius:10px 10px 0 0; transition:height .6s cubic-bezier(.2,.75,.25,1); }
+  .oee-lcol small{ font-size:12px; font-weight:700; color:#334155; } html.dark .oee-lcol small{ color:#E2E8F0; }
+  .oee-lcol em{ font-size:10px; font-style:normal; color:#64748B; white-space:nowrap; }
+  @media (max-width:639px){ .oee-chips{ grid-template-columns:1fr; } .oee-donut{ width:210px; height:210px; } .oee-lbars{ gap:6px; } .oee-lcol em{ display:none; } }
   .oee-reason{ display:grid; grid-template-columns:minmax(120px, 1.2fr) minmax(0, 2fr) 54px; align-items:center; gap:8px; font-size:12px; color:#334155; }
   .oee-reason b{ text-align:right; font-variant-numeric:tabular-nums; }
   html.dark .oee-reason{ color:#CBD5E1; }
@@ -3095,48 +3123,96 @@ function renderEffKpi_(lines){
    OEE = Efficiency (ยอด × SAM ÷ เวลาคน) · ส่วนที่หายแยก 3 กลุ่มตามหมายเหตุที่หน้างานติ๊ก
    เวลาเดินได้ ← เครื่องจักร/Eton, ของเข้าไม่ทัน, ขึ้นงานรุ่นใหม่ · ความเร็ว ← งานติดขั้นตอน, อื่น ๆ, ไม่ได้ติ๊ก · คุณภาพ ← งานซ่อม */
 const F1OEE = (function(){
-  const BUCKET = {
-    avail: { label:'เวลาเดินได้', color:'#0EA5E9' },
-    perf:  { label:'ความเร็ว', color:'#8B5CF6' },
-    qual:  { label:'คุณภาพ', color:'#F59E0B' }
+  // ส่วนของเวลาทำงานตามแผน 100% = ได้งานดี (OEE) + เสียเวลาเดิน + เสียความเร็ว + เสียคุณภาพ
+  const SEGS = {
+    good:  { label:'ได้งานดี (OEE)', short:'งานดี', color:'#10B981' },
+    avail: { label:'เสียเวลาเดิน', short:'เวลาเดินได้', color:'#0EA5E9', note:'เครื่องจักร · ของไม่มา · ขึ้นรุ่นใหม่' },
+    perf:  { label:'เสียความเร็ว', short:'ความเร็ว', color:'#8B5CF6', note:'ติดขั้นตอน · อื่น ๆ · ไม่ได้ติ๊ก' },
+    qual:  { label:'เสียคุณภาพ', short:'คุณภาพ', color:'#F59E0B', note:'ช่วงที่ติ๊ก งานซ่อม' }
   };
-  // นาที-คนที่เสีย แยกตามหัวข้อหมายเหตุ → กลุ่ม OEE (ตัวอย่างทั้งเดือน)
+  // นาที-คนที่เสีย แยกตามหัวข้อหมายเหตุ → กลุ่ม (ตัวอย่างทั้งเดือน)
   const REASONS = [
     ['ของเข้าไม่ทัน › อุปกรณ์', 'avail', 2860], ['เครื่องจักร/Eton', 'avail', 2140], ['ขึ้นงานรุ่นใหม่', 'avail', 1320],
     ['ของเข้าไม่ทัน › กระเป๋าปัก/Screen', 'avail', 760], ['งานติดขั้นตอน', 'perf', 2480], ['อื่น ๆ', 'perf', 420],
     ['ไม่ได้ติ๊กหมายเหตุ', 'perf', 3900], ['งานซ่อม', 'qual', 980]
   ];
   const LINES = { B: [64, 89, 75, 97], C: [52, 84, 64, 96], D: [68, 91, 77, 97], E: [60, 88, 70, 98], F: [74, 95, 79, 99] };
-  const MONTH = { oee: 61, a: 89, p: 71, q: 97, eff: 61 };
-  const TODAY = { oee: 58, a: 87, p: 69, q: 97, eff: 58 };
+  const DATA = { month: { a: 89, p: 71, q: 97 }, today: { a: 87, p: 69, q: 97 } };
   const TREND = [55, 57, 53, 58, 58, 55, 60, 59, 57, 61, 58, 60, 59, 61, 62, 60, 63, 61, 64, 62, 63, 61, 64, 66, 63, 65];
   const GOAL = 65;
-  let range = 'month';
+  let range = 'month', pick = '';
   const tone = v => v >= GOAL ? '#10B981' : v >= GOAL - 10 ? '#F59E0B' : '#F43F5E';
 
-  // ครึ่งวงกลม: v 0–100 · size = ความกว้าง px
-  function gauge(v, size, color, label, sub){
-    const r = 40, c = Math.PI * r, len = c * Math.max(0, Math.min(100, v)) / 100;
-    return `<div class="oee-gauge" style="--w:${size}px">
-      <svg viewBox="0 0 100 58" role="img" aria-label="${label} ${v}%">
-        <path d="M10 50 A40 40 0 0 1 90 50" class="oee-g-track"/>
-        <path d="M10 50 A40 40 0 0 1 90 50" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${len} ${c}"/>
-      </svg>
-      <b>${v}%</b>
-      <span>${label}</span>${sub ? `<small>${sub}</small>` : ''}
-    </div>`;
+  // สัดส่วนเวลา 4 ชิ้นจาก A / P / Q (รวม 100)
+  function parts(d){
+    const A = d.a / 100, P = d.p / 100, Q = d.q / 100;
+    const good = A * P * Q * 100;
+    return { good, avail: (1 - A) * 100, perf: A * (1 - P) * 100, qual: A * P * (1 - Q) * 100, oee: Math.round(good) };
+  }
+
+  // โดนัทแยกชิ้น: แต่ละชิ้นกดได้ · ชิ้นที่เลือกหนาขึ้น
+  function donut(p){
+    const R = 70, C = 2 * Math.PI * R, GAP = 4;
+    let off = 0;
+    const order = ['good', 'avail', 'perf', 'qual'];
+    const segs = order.map(k => {
+      const len = Math.max(0, p[k] / 100 * C - GAP);
+      const s = `<circle cx="100" cy="100" r="${R}" class="oee-seg${pick === k ? ' on' : ''}${pick && pick !== k ? ' dim' : ''}" stroke="${SEGS[k].color}"
+        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"
+        tabindex="0" role="button" aria-label="${SEGS[k].label} ${p[k].toFixed(1)}%" onclick="F1OEE.pick('${k}')" onkeydown="if(event.key==='Enter')F1OEE.pick('${k}')"></circle>`;
+      off += p[k] / 100 * C;
+      return s;
+    }).join('');
+    const center = pick
+      ? `<b style="color:${SEGS[pick].color}">${p[pick].toFixed(1)}%</b><span>${SEGS[pick].label}</span>`
+      : `<b>${p.oee}%</b><span>OEE · เป้า ${GOAL}%</span>`;
+    return `<div class="oee-donut"><svg viewBox="0 0 200 200" role="img" aria-label="สัดส่วนเวลาทำงาน">${segs}</svg><div class="oee-donut-c">${center}</div></div>`;
+  }
+
+  function detail(p, d){
+    if (!pick || pick === 'good'){
+      const chip = (k, v) => `<button type="button" class="oee-chip${pick === k ? ' on' : ''}" onclick="F1OEE.pick('${k}')">
+        <span class="oee-chip-top"><i style="background:${SEGS[k].color}"></i>${SEGS[k].short}</span>
+        <b>${v}%</b>
+        <span class="oee-chip-bar"><span style="width:${v}%;background:${SEGS[k].color}"></span></span>
+        <small>${SEGS[k].note}</small>
+      </button>`;
+      return `<p class="text-xs text-slate-500">OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ · กดชิ้นในวงกลม หรือการ์ดด้านล่าง เพื่อดูว่าเสียไปกับอะไร</p>
+        <div class="oee-chips">${chip('avail', d.a)}${chip('perf', d.p)}${chip('qual', d.q)}</div>`;
+    }
+    const list = REASONS.filter(r => r[1] === pick).sort((a, b) => b[2] - a[2]);
+    const max = Math.max.apply(null, list.map(r => r[2]).concat([1]));
+    const sum = list.reduce((a, r) => a + r[2], 0);
+    return `<div class="flex items-center justify-between gap-2">
+        <p class="font-bold text-slate-800"><i class="eff-dot" style="background:${SEGS[pick].color}"></i> ${SEGS[pick].label} ${p[pick].toFixed(1)}% ของเวลา</p>
+        <button type="button" class="oee-back sm" onclick="F1OEE.pick('')">ดูทั้งหมด</button>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">${sum.toLocaleString()} นาที-คน · มาจากหมายเหตุที่หน้างานติ๊ก</p>
+      <div class="flex flex-col gap-2 mt-3">${list.map(r => `<div class="oee-reason">
+        <span>${r[0]}</span>
+        <span class="oee-rbar"><span style="width:${r[2] / max * 100}%;background:${r[0] === 'ไม่ได้ติ๊กหมายเหตุ' ? '#94A3B8' : SEGS[pick].color}"></span></span>
+        <b>${r[2].toLocaleString()}</b>
+      </div>`).join('')}</div>
+      ${pick === 'perf' ? '<p class="eff-note mt-3">ส่วนใหญ่เป็น "ไม่ได้ติ๊กหมายเหตุ" · ยิ่งหน้างานติ๊กครบ ยิ่งรู้สาเหตุจริง</p>' : ''}`;
+  }
+
+  function lineBars(){
+    const keys = Object.keys(LINES);
+    return `<div class="oee-lbars">
+      ${keys.map(k => { const [o, a, p, q] = LINES[k]; return `<div class="oee-lcol" title="เดินได้ ${a}% · ความเร็ว ${p}% · คุณภาพ ${q}%">
+        <b style="color:${tone(o)}">${o}%</b>
+        <span class="oee-lbar"><span style="height:${o}%;background:${tone(o)}"></span><i class="oee-ltick" style="bottom:${GOAL}%"></i></span>
+        <small>LINE ${k}</small>
+        <em>${a} · ${p} · ${q}</em>
+      </div>`; }).join('')}
+    </div>
+    <p class="text-[11px] text-slate-500 mt-2">เส้นประ = เป้า ${GOAL}% · ตัวเลขใต้แท่ง = เวลาเดินได้ · ความเร็ว · คุณภาพ (%)</p>`;
   }
 
   function render(){
     const root = el('oeeRoot');
     if (!root) return;
-    const m = range === 'month' ? MONTH : TODAY;
-    const total = REASONS.reduce((a, r) => a + r[2], 0);
-    const byBucket = { avail: 0, perf: 0, qual: 0 };
-    REASONS.forEach(r => { byBucket[r[1]] += r[2]; });
-    const untick = REASONS.find(r => r[0] === 'ไม่ได้ติ๊กหมายเหตุ')[2];
-    const sorted = REASONS.slice().sort((a, b) => b[2] - a[2]);
-    const max = sorted[0][2];
+    const d = DATA[range], p = parts(d);
     const y = v => Math.round(96 - (Math.max(45, Math.min(75, v)) - 45) / 30 * 90);
     const pts = TREND.map((v, i) => Math.round(i * 600 / (TREND.length - 1)) + ',' + y(v)).join(' ');
     root.innerHTML = `
@@ -3153,48 +3229,34 @@ const F1OEE = (function(){
 
       <div class="card soft p-5">
         <h2 class="text-lg font-bold text-slate-800">OEE แผนก Sewing · ${range === 'month' ? 'พฤศจิกายน 2026' : 'วันนี้'}</h2>
-        <p class="text-xs text-slate-500 mt-0.5">OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ · แยกจากหมายเหตุที่หน้างานติ๊กในฟอร์มกรอกยอด</p>
-        <div class="oee-gauges mt-4">
-          ${gauge(m.oee, 220, tone(m.oee), 'OEE', 'เป้า ' + GOAL + '%')}
-          ${gauge(m.a, 150, BUCKET.avail.color, 'เวลาเดินได้', 'เครื่อง · ของไม่มา · ขึ้นรุ่นใหม่')}
-          ${gauge(m.p, 150, BUCKET.perf.color, 'ความเร็ว', 'ติดขั้นตอน · ไม่ได้ติ๊ก')}
-          ${gauge(m.q, 150, BUCKET.qual.color, 'คุณภาพ', 'จากช่วงที่ติ๊ก งานซ่อม')}
+        <div class="oee-hero mt-4">
+          ${donut(p)}
+          <div class="oee-hero-r">${detail(p, d)}</div>
         </div>
       </div>
 
       <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
         <div class="card soft p-5">
           <h3 class="font-bold text-slate-800">OEE แยกไลน์</h3>
-          <div class="oee-line-gauges mt-3">${Object.keys(LINES).map(k => { const [o, a, p, q] = LINES[k]; return `<div class="oee-line-g">${gauge(o, 120, tone(o), 'LINE ' + k, 'เดิน ' + a + ' · เร็ว ' + p + ' · คุณ ' + q)}</div>`; }).join('')}</div>
+          ${lineBars()}
         </div>
         <div class="card soft p-5">
-          <div class="flex justify-between items-baseline gap-2"><h3 class="font-bold text-slate-800">เวลาที่เสียไปกับอะไร</h3><span class="text-[11px] text-slate-500">นาที-คน · ทั้งโรง</span></div>
-          <div class="eff-bar mt-3" style="height:14px">${['avail', 'perf', 'qual'].map(b => `<span style="width:${byBucket[b] / total * 100}%;background:${BUCKET[b].color}" title="${BUCKET[b].label}"></span>`).join('')}</div>
-          <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-slate-600">${['avail', 'perf', 'qual'].map(b => `<span class="inline-flex items-center gap-1.5"><i class="eff-dot" style="background:${BUCKET[b].color}"></i>${BUCKET[b].label} <b>${Math.round(byBucket[b] / total * 100)}%</b></span>`).join('')}</div>
-          <div class="flex flex-col gap-2 mt-4">${sorted.map(r => `<div class="oee-reason">
-            <span>${r[0]}</span>
-            <span class="oee-rbar"><span style="width:${r[2] / max * 100}%;background:${r[0] === 'ไม่ได้ติ๊กหมายเหตุ' ? '#CBD5E1' : BUCKET[r[1]].color}"></span></span>
-            <b>${r[2].toLocaleString()}</b>
-          </div>`).join('')}</div>
-          <p class="eff-note mt-3">ไม่ได้ติ๊กหมายเหตุ ${Math.round(untick / total * 100)}% ของเวลาที่เสีย · ยิ่งหน้างานติ๊กครบ ยิ่งรู้สาเหตุจริง</p>
+          <div class="flex flex-wrap justify-between items-baseline gap-2">
+            <h3 class="font-bold text-slate-800">OEE รายวัน · พฤศจิกายน 2026</h3>
+            <span class="text-[11px] text-slate-500">เส้นประ = เป้า ${GOAL}%</span>
+          </div>
+          <svg viewBox="0 0 600 100" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม OEE รายวัน">
+            <line x1="0" x2="600" y1="${y(GOAL)}" y2="${y(GOAL)}" class="oee-goal"/>
+            <polyline points="${pts}" fill="none" stroke="#6366F1" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          </svg>
         </div>
-      </div>
-
-      <div class="card soft p-5">
-        <div class="flex flex-wrap justify-between items-baseline gap-2">
-          <h3 class="font-bold text-slate-800">OEE รายวัน · พฤศจิกายน 2026</h3>
-          <span class="text-[11px] text-slate-500">เส้นประ = เป้า ${GOAL}%</span>
-        </div>
-        <svg viewBox="0 0 600 100" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม OEE รายวัน">
-          <line x1="0" x2="600" y1="${y(GOAL)}" y2="${y(GOAL)}" class="oee-goal"/>
-          <polyline points="${pts}" fill="none" stroke="#6366F1" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-        </svg>
       </div>`;
   }
   let entered = false;
   return {
     enter(){ render(); if (!entered && typeof F1Motion !== 'undefined'){ entered = true; F1Motion.enter(document.querySelector('.shell[data-view="oee"]')); } },
-    range(r){ range = r; render(); }
+    range(r){ range = r; render(); },
+    pick(k){ pick = (k === pick || k === 'good') ? '' : k; render(); }
   };
 })();
 
