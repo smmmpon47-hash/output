@@ -3135,14 +3135,41 @@ function refreshEffViews_(){
   if (document.documentElement.getAttribute('data-view') === 'oee') F1OEE.render();
 }
 // วันนี้เท่านั้น (ดูย้อนหลัง / หลายวัน = ไม่โชว์ในการ์ด)
-function effToday_(){ return oeeData && !currentDashboardIsRange && (el('datePicker') ? el('datePicker').value : '') === (oeeData.today || '') ? oeeData : null; }
+// วันที่เลือกในหน้า Sewing: วันนี้ใช้ oeeData · วันอื่นขอ ?date= แยก (เก็บไว้ต่อวัน · null = กำลังโหลด · false = ไม่มี/โหลดไม่ได้)
+const oeeByDate = {};
+const effPickDay_ = () => el('datePicker') ? el('datePicker').value : '';
+function loadOEEDay_(day){
+  if (oeeByDate[day] !== undefined) return;
+  oeeByDate[day] = null;
+  fetch(`${GAS_API_URL}?action=getOEE&date=${encodeURIComponent(day)}&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' })
+    .then(r => r.json())
+    .then(d => { oeeByDate[day] = d && d.status === 'ok' && d.today === day ? d : false; })
+    .catch(() => { oeeByDate[day] = false; })
+    .finally(refreshEffViews_);
+}
+function effToday_(){
+  if (!oeeData || currentDashboardIsRange) return null;
+  const day = effPickDay_();
+  if (!day || day === oeeData.today) return oeeData;
+  if (oeeByDate[day] === undefined) loadOEEDay_(day);
+  return oeeByDate[day] || null;
+}
+const effIsToday_ = () => !oeeData || !effPickDay_() || effPickDay_() === oeeData.today;
+// ข้อความตอนยังไม่มีตัวเลข
+function effEmptyText_(){
+  if (currentDashboardIsRange) return 'ดูได้ทีละวัน';
+  if (!oeeData) return oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…';
+  if (!effIsToday_() && oeeByDate[effPickDay_()] === null) return 'กำลังคิด…';
+  if (!effIsToday_() && oeeByDate[effPickDay_()] === false) return 'โหลดวันนั้นไม่ได้';
+  return effIsToday_() ? 'วันนี้ยังไม่มียอดให้คิด' : 'วันนั้นไม่มียอดที่รู้ SAM';
+}
 
 function effRowHtml_(line){
   if (currentDashboardIsRange) return '';
   const code = lineKey_(line);
   const d = effToday_();
   const e = d && d.lines && d.lines.today ? d.lines.today[code] : null;
-  if (!e) return `<div class="eff-row" data-line="${code}"><span>Efficiency <b class="text-slate-400">${oeeData ? '—' : '…'}</b></span><span class="text-[10.5px]">${oeeData ? 'ยังไม่มีข้อมูล SAM' : oeeFailed ? 'โหลดไม่ได้' : 'กำลังคิด'}</span></div>`;
+  if (!e) return `<div class="eff-row" data-line="${code}"><span>Efficiency <b class="text-slate-400">${/กำลังคิด/.test(effEmptyText_()) ? '…' : '—'}</b></span><span class="text-[10.5px]">${effEmptyText_()}</span></div>`;
   return `<div class="eff-row" data-line="${code}"><span>Efficiency <b class="eff-${effTone_(e.oee)}">${pct1_(e.oee)}</b></span><span>เสีย ${Number(e.lostMin || 0).toLocaleString()} นาที</span></div>`;
 }
 
@@ -3157,7 +3184,7 @@ function renderEffKpi_(lines){
   if (!p){
     box.textContent = '—';
     box.className = 'text-2xl font-extrabold text-slate-400';
-    el('kpiEffDelta').textContent = currentDashboardIsRange ? 'ดูได้เฉพาะวันนี้' : oeeData ? 'วันนี้ยังไม่มียอดให้คิด' : oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…';
+    el('kpiEffDelta').textContent = effEmptyText_();
     el('kpiEffDelta').className = 'text-[11px] font-semibold text-slate-400';
     ['kpiAvail', 'kpiPerf', 'kpiQual'].forEach(id => el(id).textContent = '—');
     return;
@@ -3189,8 +3216,9 @@ function renderEffDetail_(code){
   box.classList.toggle('hide', currentDashboardIsRange);
   if (currentDashboardIsRange) return;
   if (!e){
-    box.innerHTML = `<h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพวันนี้</h3>
-      <p class="text-xs text-slate-500 mt-2">${oeeData ? 'ยังคิดไม่ได้: ยังไม่มียอดของ LOT ที่รู้ SAM และจำนวนคน' : oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…'}</p>`;
+    const t = effEmptyText_();
+    box.innerHTML = `<h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพ${effIsToday_() ? 'วันนี้' : ''}</h3>
+      <p class="text-xs text-slate-500 mt-2">${/ไม่มียอด/.test(t) ? 'ยังคิดไม่ได้: ไม่มียอดของ LOT ที่รู้ SAM และจำนวนคน' : t}</p>`;
     return;
   }
   const tile = (label, value, cls) => `<div class="eff-tile"><span>${label}</span><b class="${cls}">${value}</b></div>`;
@@ -3199,7 +3227,7 @@ function renderEffDetail_(code){
   const cov = e.coverage || {};
   box.innerHTML = `
     <div class="flex justify-between items-baseline gap-2">
-      <h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพวันนี้</h3>
+      <h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพ${effIsToday_() ? 'วันนี้' : ''}</h3>
       <span class="text-[10px] text-slate-400">เป้า ${EFF_GOAL}%</span>
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
