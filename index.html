@@ -1330,10 +1330,10 @@
           <div id="kpiBar" class="bg-sky-500 h-2 rounded-full" style="width:0%"></div>
         </div>
       </div>
-      <!-- Efficiency ทั้งโรง (พรีวิว: ตัวเลขตัวอย่าง) -->
+      <!-- Efficiency ทั้งโรง (OEE.gs · ?action=getOEE) -->
       <a href="#oee" class="card soft kpi eff-kpi" title="ดู OEE ทั้งหมด" aria-label="Efficiency ทั้งโรง · กดดูหน้า OEE">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-[11px] text-slate-400 font-semibold">Efficiency ทั้งโรง <span class="eff-new">ตัวอย่าง</span></p>
+          <p class="text-[11px] text-slate-400 font-semibold">Efficiency ทั้งโรง (OEE)</p>
           <p class="text-[10px] text-slate-400">เป้า <span id="effGoal">65</span>%</p>
         </div>
         <div class="flex items-baseline gap-2 mt-1">
@@ -1341,8 +1341,8 @@
           <span id="kpiEffDelta" class="text-[11px] font-semibold"></span>
         </div>
         <div class="eff-sub mt-2 pt-2">
-          <span>OEE <b id="kpiOee">-</b></span>
           <span>เดินได้ <b id="kpiAvail">-</b></span>
+          <span>ความเร็ว <b id="kpiPerf">-</b></span>
           <span>คุณภาพ <b id="kpiQual">-</b></span>
         </div>
         <p class="eff-more">ดู OEE ทั้งหมด →</p>
@@ -3084,207 +3084,257 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
 }
 
 /* =======================================================
-   EFFICIENCY / OEE (พรีวิว) — ตัวเลขตัวอย่างต่อไลน์ ยังไม่ต่อข้อมูลจริง
-   ของจริงจะมาจาก Apps Script: Efficiency = ยอด × SAM ÷ (คน × นาที) · เวลาเดินได้จาก Loss_Log + แจ้งซ่อม
+   EFFICIENCY / OEE — ข้อมูลจาก ?action=getOEE (OEE.gs · อ่านอย่างเดียว)
+   OEE (= Efficiency) = ยอด × SAM ÷ (คน × นาที) · ส่วนที่หายแยกตามหมายเหตุที่หน้างานติ๊ก
+   นับเฉพาะช่วงที่มียอดและรู้ SAM ของ LOT นั้น (ไม่มี SAM = ไม่นับ)
    ======================================================= */
-const EFF_GOAL = 65;
-const EFF_PREVIEW = {
-  B: { eff: 61, avail: 89, lost: 380, loss: [['ของเข้าไม่ทัน', 120], ['เย็บ', 150], ['เครื่องจักร / Eton', 70], ['ไม่ได้ระบุ', 40]] },
-  C: { eff: 49, avail: 84, lost: 610, loss: [['ของเข้าไม่ทัน', 260], ['เย็บ', 180], ['เครื่องจักร / Eton', 100], ['ไม่ได้ระบุ', 70]] },
-  D: { eff: 66, avail: 91, lost: 320, loss: [['ของเข้าไม่ทัน', 60], ['เย็บ', 90], ['เครื่องจักร / Eton', 140], ['ไม่ได้ระบุ', 30]] },
-  E: { eff: 55, avail: 88, lost: 410, loss: [['ของเข้าไม่ทัน', 190], ['เย็บ', 120], ['เครื่องจักร / Eton', 60], ['ไม่ได้ระบุ', 40]] },
-  F: { eff: 71, avail: 95, lost: 220, loss: [['ของเข้าไม่ทัน', 40], ['เย็บ', 60], ['เครื่องจักร / Eton', 80], ['ไม่ได้ระบุ', 40]] }
+let EFF_GOAL = 65;
+let oeeData = null, oeeLoading = null, oeeLoadedAt = 0, oeeFailed = false;
+const OEE_BUCKETS = {
+  good:  { label:'ได้งานดี (OEE)', short:'งานดี', color:'#10B981' },
+  avail: { label:'เสียเวลาเดิน', short:'เวลาเดินได้', color:'#0EA5E9', note:'เครื่องจักร · ของไม่มา · ขึ้นรุ่นใหม่' },
+  perf:  { label:'เสียความเร็ว', short:'ความเร็ว', color:'#8B5CF6', note:'ติดขั้นตอน · อื่น ๆ · ไม่ได้ติ๊ก · ช้ากว่า SAM' },
+  qual:  { label:'เสียคุณภาพ', short:'คุณภาพ', color:'#F59E0B', note:'ช่วงที่ติ๊ก งานซ่อม' }
 };
-const EFF_LOSS_COLORS = { 'ของเข้าไม่ทัน': '#F59E0B', 'เย็บ': '#6366F1', 'เครื่องจักร / Eton': '#F43F5E', 'ไม่ได้ระบุ': '#CBD5E1' };
 const effTone_ = v => v >= EFF_GOAL ? 'ok' : v >= EFF_GOAL - 10 ? 'warn' : 'bad';
-function effOf_(line){ return EFF_PREVIEW[String(line || '').replace(/LINE/i, '').trim().toUpperCase()] || null; }
-function effRowHtml_(line){
-  const e = effOf_(line);
-  if (!e) return '';
-  return `<div class="eff-row"><span>Efficiency <b class="eff-${effTone_(e.eff)}">${e.eff}%</b></span><span>เสีย ${e.lost.toLocaleString()} นาที</span></div>`;
+const effColor_ = v => v >= EFF_GOAL ? '#10B981' : v >= EFF_GOAL - 10 ? '#F59E0B' : '#F43F5E';
+const pct1_ = v => (v === null || v === undefined) ? '—' : (Math.round(v * 10) / 10) + '%';
+const lineKey_ = line => String(line || '').replace(/LINE/i, '').trim().toUpperCase();
+
+// โหลดครั้งแรก + ทุก 5 นาที (Apps Script cache 5 นาทีอยู่แล้ว) · โหลดเสร็จวาดใหม่ทุกจุด
+function loadOEE_(force){
+  if (oeeLoading) return oeeLoading;
+  if (!force && oeeData && Date.now() - oeeLoadedAt < 5 * 60 * 1000) return Promise.resolve(oeeData);
+  oeeLoading = fetch(`${GAS_API_URL}?action=getOEE&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' })
+    .then(r => r.json())
+    .then(d => {
+      if (d && d.status === 'ok'){ oeeData = d; oeeLoadedAt = Date.now(); oeeFailed = false; if (d.goal) EFF_GOAL = Number(d.goal) || EFF_GOAL; }
+      else oeeFailed = true;
+      return oeeData;
+    })
+    .catch(() => { oeeFailed = true; return oeeData; })
+    .finally(() => { oeeLoading = null; refreshEffViews_(); });
+  return oeeLoading;
 }
-// การ์ด Efficiency ทั้งโรง (เฉลี่ยถ่วงตามเป้า) · เรียกหลังวาดการ์ด
+function refreshEffViews_(){
+  if (Array.isArray(globalLinesData) && globalLinesData.length) renderEffKpi_(globalLinesData);
+  document.querySelectorAll('.eff-row[data-line]').forEach(n => { n.outerHTML = effRowHtml_(n.dataset.line); });
+  const open = document.querySelector('#lineDetail:not(.hide)') && el('dtEff') && el('dtEff').dataset.line;
+  if (open) renderEffDetail_(open);
+  if (document.documentElement.getAttribute('data-view') === 'oee') F1OEE.render();
+}
+// วันนี้เท่านั้น (ดูย้อนหลัง / หลายวัน = ไม่โชว์ในการ์ด)
+function effToday_(){ return oeeData && !currentDashboardIsRange && (el('datePicker') ? el('datePicker').value : '') === (oeeData.today || '') ? oeeData : null; }
+
+function effRowHtml_(line){
+  if (currentDashboardIsRange) return '';
+  const code = lineKey_(line);
+  const d = effToday_();
+  const e = d && d.lines && d.lines.today ? d.lines.today[code] : null;
+  if (!e) return `<div class="eff-row" data-line="${code}"><span>Efficiency <b class="text-slate-400">${oeeData ? '—' : '…'}</b></span><span class="text-[10.5px]">${oeeData ? 'ยังไม่มีข้อมูล SAM' : oeeFailed ? 'โหลดไม่ได้' : 'กำลังคิด'}</span></div>`;
+  return `<div class="eff-row" data-line="${code}"><span>Efficiency <b class="eff-${effTone_(e.oee)}">${pct1_(e.oee)}</b></span><span>เสีย ${Number(e.lostMin || 0).toLocaleString()} นาที</span></div>`;
+}
+
+// การ์ด Efficiency ทั้งโรง (คอลัมน์ขวา)
 function renderEffKpi_(lines){
   const box = el('kpiEff');
   if (!box) return;
-  let w = 0, se = 0, sa = 0;
-  (lines || []).forEach(l => { const e = effOf_(l.line); const t = num(l.target) || sumLotField(l, 'target') || 1; if (e){ w += t; se += e.eff * t; sa += e.avail * t; } });
-  if (!w){ box.textContent = '-'; return; }
-  const eff = se / w, avail = sa / w;
-  box.textContent = eff.toFixed(1) + '%';
-  box.className = 'text-2xl font-extrabold eff-' + effTone_(eff);
-  el('kpiEffDelta').textContent = '▲ 3.1 จากเมื่อวาน';
-  el('kpiEffDelta').className = 'text-[11px] font-semibold text-emerald-600';
-  el('kpiOee').textContent = Math.round(eff) + '%';
-  el('kpiAvail').textContent = Math.round(avail) + '%';
-  el('kpiQual').textContent = '97%';
+  if (!oeeData && !oeeFailed) void loadOEE_();
+  const d = effToday_();
+  const p = d && d.plant ? d.plant.today : null;
+  el('effGoal').textContent = EFF_GOAL;
+  if (!p){
+    box.textContent = '—';
+    box.className = 'text-2xl font-extrabold text-slate-400';
+    el('kpiEffDelta').textContent = currentDashboardIsRange ? 'ดูได้เฉพาะวันนี้' : oeeData ? 'ยังไม่มียอดที่รู้ SAM' : oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…';
+    el('kpiEffDelta').className = 'text-[11px] font-semibold text-slate-400';
+    ['kpiAvail', 'kpiPerf', 'kpiQual'].forEach(id => el(id).textContent = '—');
+    return;
+  }
+  box.textContent = pct1_(p.oee);
+  box.className = 'text-2xl font-extrabold eff-' + effTone_(p.oee);
+  const prev = d.plant.lastDayOee;
+  if (prev !== null && prev !== undefined){
+    const diff = Math.round((p.oee - prev) * 10) / 10;
+    el('kpiEffDelta').textContent = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff) + ' จากวันทำงานก่อน';
+    el('kpiEffDelta').className = 'text-[11px] font-semibold ' + (diff >= 0 ? 'text-emerald-600' : 'text-rose-600');
+  } else {
+    el('kpiEffDelta').textContent = '';
+  }
+  el('kpiAvail').textContent = pct1_(p.a);
+  el('kpiPerf').textContent = pct1_(p.p);
+  el('kpiQual').textContent = pct1_(p.q);
 }
-/* ---------- หน้า OEE (พรีวิว: ตัวเลขตัวอย่าง) ----------
-   OEE = Efficiency (ยอด × SAM ÷ เวลาคน) · ส่วนที่หายแยก 3 กลุ่มตามหมายเหตุที่หน้างานติ๊ก
-   เวลาเดินได้ ← เครื่องจักร/Eton, ของเข้าไม่ทัน, ขึ้นงานรุ่นใหม่ · ความเร็ว ← งานติดขั้นตอน, อื่น ๆ, ไม่ได้ติ๊ก · คุณภาพ ← งานซ่อม */
-const F1OEE = (function(){
-  // ส่วนของเวลาทำงานตามแผน 100% = ได้งานดี (OEE) + เสียเวลาเดิน + เสียความเร็ว + เสียคุณภาพ
-  const SEGS = {
-    good:  { label:'ได้งานดี (OEE)', short:'งานดี', color:'#10B981' },
-    avail: { label:'เสียเวลาเดิน', short:'เวลาเดินได้', color:'#0EA5E9', note:'เครื่องจักร · ของไม่มา · ขึ้นรุ่นใหม่' },
-    perf:  { label:'เสียความเร็ว', short:'ความเร็ว', color:'#8B5CF6', note:'ติดขั้นตอน · อื่น ๆ · ไม่ได้ติ๊ก' },
-    qual:  { label:'เสียคุณภาพ', short:'คุณภาพ', color:'#F59E0B', note:'ช่วงที่ติ๊ก งานซ่อม' }
-  };
-  // นาที-คนที่เสีย แยกตามหัวข้อหมายเหตุ → กลุ่ม (ตัวอย่างทั้งเดือน)
-  const REASONS = [
-    ['ของเข้าไม่ทัน › อุปกรณ์', 'avail', 2860], ['เครื่องจักร/Eton', 'avail', 2140], ['ขึ้นงานรุ่นใหม่', 'avail', 1320],
-    ['ของเข้าไม่ทัน › กระเป๋าปัก/Screen', 'avail', 760], ['งานติดขั้นตอน', 'perf', 2480], ['อื่น ๆ', 'perf', 420],
-    ['ไม่ได้ติ๊กหมายเหตุ', 'perf', 3900], ['งานซ่อม', 'qual', 980]
-  ];
-  const LINES = { B: [64, 89, 75, 97], C: [52, 84, 64, 96], D: [68, 91, 77, 97], E: [60, 88, 70, 98], F: [74, 95, 79, 99] };
-  const DATA = { month: { a: 89, p: 71, q: 97 }, today: { a: 87, p: 69, q: 97 } };
-  const TREND = [55, 57, 53, 58, 58, 55, 60, 59, 57, 61, 58, 60, 59, 61, 62, 60, 63, 61, 64, 62, 63, 61, 64, 66, 63, 65];
-  const GOAL = 65;
-  let range = 'month', pick = '';
-  const tone = v => v >= GOAL ? '#10B981' : v >= GOAL - 10 ? '#F59E0B' : '#F43F5E';
-
-  // สัดส่วนเวลา 4 ชิ้นจาก A / P / Q (รวม 100)
-  function parts(d){
-    const A = d.a / 100, P = d.p / 100, Q = d.q / 100;
-    const good = A * P * Q * 100;
-    return { good, avail: (1 - A) * 100, perf: A * (1 - P) * 100, qual: A * P * (1 - Q) * 100, oee: Math.round(good) };
-  }
-
-  // โดนัทแยกชิ้น: แต่ละชิ้นกดได้ · ชิ้นที่เลือกหนาขึ้น
-  function donut(p){
-    const R = 70, C = 2 * Math.PI * R, GAP = 4;
-    let off = 0;
-    const order = ['good', 'avail', 'perf', 'qual'];
-    const segs = order.map(k => {
-      const len = Math.max(0, p[k] / 100 * C - GAP);
-      const s = `<circle cx="100" cy="100" r="${R}" class="oee-seg${pick === k ? ' on' : ''}${pick && pick !== k ? ' dim' : ''}" stroke="${SEGS[k].color}"
-        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"
-        tabindex="0" role="button" aria-label="${SEGS[k].label} ${p[k].toFixed(1)}%" onclick="F1OEE.pick('${k}')" onkeydown="if(event.key==='Enter')F1OEE.pick('${k}')"></circle>`;
-      off += p[k] / 100 * C;
-      return s;
-    }).join('');
-    const center = pick
-      ? `<b style="color:${SEGS[pick].color}">${p[pick].toFixed(1)}%</b><span>${SEGS[pick].label}</span>`
-      : `<b>${p.oee}%</b><span>OEE · เป้า ${GOAL}%</span>`;
-    return `<div class="oee-donut"><svg viewBox="0 0 200 200" role="img" aria-label="สัดส่วนเวลาทำงาน">${segs}</svg><div class="oee-donut-c">${center}</div></div>`;
-  }
-
-  function detail(p, d){
-    if (!pick || pick === 'good'){
-      const chip = (k, v) => `<button type="button" class="oee-chip${pick === k ? ' on' : ''}" onclick="F1OEE.pick('${k}')">
-        <span class="oee-chip-top"><i style="background:${SEGS[k].color}"></i>${SEGS[k].short}</span>
-        <b>${v}%</b>
-        <span class="oee-chip-bar"><span style="width:${v}%;background:${SEGS[k].color}"></span></span>
-        <small>${SEGS[k].note}</small>
-      </button>`;
-      return `<p class="text-xs text-slate-500">OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ · กดชิ้นในวงกลม หรือการ์ดด้านล่าง เพื่อดูว่าเสียไปกับอะไร</p>
-        <div class="oee-chips">${chip('avail', d.a)}${chip('perf', d.p)}${chip('qual', d.q)}</div>`;
-    }
-    const list = REASONS.filter(r => r[1] === pick).sort((a, b) => b[2] - a[2]);
-    const max = Math.max.apply(null, list.map(r => r[2]).concat([1]));
-    const sum = list.reduce((a, r) => a + r[2], 0);
-    return `<div class="flex items-center justify-between gap-2">
-        <p class="font-bold text-slate-800"><i class="eff-dot" style="background:${SEGS[pick].color}"></i> ${SEGS[pick].label} ${p[pick].toFixed(1)}% ของเวลา</p>
-        <button type="button" class="oee-back sm" onclick="F1OEE.pick('')">ดูทั้งหมด</button>
-      </div>
-      <p class="text-xs text-slate-500 mt-1">${sum.toLocaleString()} นาที-คน · มาจากหมายเหตุที่หน้างานติ๊ก</p>
-      <div class="flex flex-col gap-2 mt-3">${list.map(r => `<div class="oee-reason">
-        <span>${r[0]}</span>
-        <span class="oee-rbar"><span style="width:${r[2] / max * 100}%;background:${r[0] === 'ไม่ได้ติ๊กหมายเหตุ' ? '#94A3B8' : SEGS[pick].color}"></span></span>
-        <b>${r[2].toLocaleString()}</b>
-      </div>`).join('')}</div>
-      ${pick === 'perf' ? '<p class="eff-note mt-3">ส่วนใหญ่เป็น "ไม่ได้ติ๊กหมายเหตุ" · ยิ่งหน้างานติ๊กครบ ยิ่งรู้สาเหตุจริง</p>' : ''}`;
-  }
-
-  function lineBars(){
-    const keys = Object.keys(LINES);
-    return `<div class="oee-lbars">
-      ${keys.map(k => { const [o, a, p, q] = LINES[k]; return `<div class="oee-lcol" title="เดินได้ ${a}% · ความเร็ว ${p}% · คุณภาพ ${q}%">
-        <b style="color:${tone(o)}">${o}%</b>
-        <span class="oee-lbar"><span style="height:${o}%;background:${tone(o)}"></span><i class="oee-ltick" style="bottom:${GOAL}%"></i></span>
-        <small>LINE ${k}</small>
-        <em>${a} · ${p} · ${q}</em>
-      </div>`; }).join('')}
-    </div>
-    <p class="text-[11px] text-slate-500 mt-2">เส้นประ = เป้า ${GOAL}% · ตัวเลขใต้แท่ง = เวลาเดินได้ · ความเร็ว · คุณภาพ (%)</p>`;
-  }
-
-  function render(){
-    const root = el('oeeRoot');
-    if (!root) return;
-    const d = DATA[range], p = parts(d);
-    const y = v => Math.round(96 - (Math.max(45, Math.min(75, v)) - 45) / 30 * 90);
-    const pts = TREND.map((v, i) => Math.round(i * 600 / (TREND.length - 1)) + ',' + y(v)).join(' ');
-    root.innerHTML = `
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <a href="#sewing" class="oee-back">← กลับหน้า Sewing</a>
-        <div class="flex flex-wrap items-center gap-2">
-          <span class="eff-new" style="font-size:12px;padding:5px 10px">ตัวเลขตัวอย่าง</span>
-          <div class="oee-ranges">
-            <button type="button" class="${range === 'today' ? 'on' : ''}" onclick="F1OEE.range('today')">วันนี้</button>
-            <button type="button" class="${range === 'month' ? 'on' : ''}" onclick="F1OEE.range('month')">เดือนนี้</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="card soft p-5">
-        <h2 class="text-lg font-bold text-slate-800">OEE แผนก Sewing · ${range === 'month' ? 'พฤศจิกายน 2026' : 'วันนี้'}</h2>
-        <div class="oee-hero mt-4">
-          ${donut(p)}
-          <div class="oee-hero-r">${detail(p, d)}</div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
-        <div class="card soft p-5">
-          <h3 class="font-bold text-slate-800">OEE แยกไลน์</h3>
-          ${lineBars()}
-        </div>
-        <div class="card soft p-5">
-          <div class="flex flex-wrap justify-between items-baseline gap-2">
-            <h3 class="font-bold text-slate-800">OEE รายวัน · พฤศจิกายน 2026</h3>
-            <span class="text-[11px] text-slate-500">เส้นประ = เป้า ${GOAL}%</span>
-          </div>
-          <svg viewBox="0 0 600 100" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม OEE รายวัน">
-            <line x1="0" x2="600" y1="${y(GOAL)}" y2="${y(GOAL)}" class="oee-goal"/>
-            <polyline points="${pts}" fill="none" stroke="#6366F1" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
-          </svg>
-        </div>
-      </div>`;
-  }
-  let entered = false;
-  return {
-    enter(){ render(); if (!entered && typeof F1Motion !== 'undefined'){ entered = true; F1Motion.enter(document.querySelector('.shell[data-view="oee"]')); } },
-    range(r){ range = r; render(); },
-    pick(k){ pick = (k === pick || k === 'good') ? '' : k; render(); }
-  };
-})();
 
 // กล่อง "ประสิทธิภาพวันนี้" ในหน้ารายละเอียดไลน์
 function renderEffDetail_(code){
   const box = el('dtEff');
   if (!box) return;
-  const e = effOf_(code);
-  box.classList.toggle('hide', !e || currentDashboardIsRange);
-  if (!e) return;
-  const total = e.loss.reduce((a, x) => a + x[1], 0);
+  code = lineKey_(code);
+  box.dataset.line = code;
+  if (!oeeData && !oeeFailed) void loadOEE_();
+  const d = effToday_();
+  const e = d && d.lines && d.lines.today ? d.lines.today[code] : null;
+  box.classList.toggle('hide', currentDashboardIsRange);
+  if (currentDashboardIsRange) return;
+  if (!e){
+    box.innerHTML = `<h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพวันนี้</h3>
+      <p class="text-xs text-slate-500 mt-2">${oeeData ? 'ยังคิดไม่ได้: ยังไม่มียอดของ LOT ที่รู้ SAM และจำนวนคน' : oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…'}</p>`;
+    return;
+  }
   const tile = (label, value, cls) => `<div class="eff-tile"><span>${label}</span><b class="${cls}">${value}</b></div>`;
+  const loss = e.loss || {};
+  const total = (loss.avail || 0) + (loss.perf || 0) + (loss.qual || 0);
+  const cov = e.coverage || {};
   box.innerHTML = `
     <div class="flex justify-between items-baseline gap-2">
-      <h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพวันนี้ <span class="eff-new">ตัวอย่าง</span></h3>
-      <span class="text-[10px] text-slate-400">เป้า Efficiency ${EFF_GOAL}%</span>
+      <h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพวันนี้</h3>
+      <span class="text-[10px] text-slate-400">เป้า ${EFF_GOAL}%</span>
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
-      ${tile('Efficiency', e.eff + '%', 'eff-' + effTone_(e.eff))}
-      ${tile('OEE', Math.round(e.eff * 1.03) + '%', 'eff-violet')}
-      ${tile('เวลาเดินได้', e.avail + '%', 'text-slate-800')}
-      ${tile('คุณภาพ', 'ยังไม่วัด', 'text-amber-600 eff-small')}
+      ${tile('OEE / Efficiency', pct1_(e.oee), 'eff-' + effTone_(e.oee))}
+      ${tile('เวลาเดินได้', pct1_(e.a), 'text-slate-800')}
+      ${tile('ความเร็ว', pct1_(e.p), 'text-slate-800')}
+      ${tile('คุณภาพ', pct1_(e.q), 'text-slate-800')}
     </div>
-    <p class="text-xs font-semibold text-slate-700 mt-3">เวลาที่เสีย ${e.lost.toLocaleString()} นาที-คน ไปกับ</p>
-    <div class="eff-bar mt-2">${e.loss.map(x => `<span style="width:${x[1] / total * 100}%;background:${EFF_LOSS_COLORS[x[0]]}" title="${x[0]} ${x[1]} นาที"></span>`).join('')}</div>
-    <div class="flex flex-wrap gap-x-3 gap-y-1 mt-2 text-[11px] text-slate-600">${e.loss.map(x => `<span class="inline-flex items-center gap-1.5"><i class="eff-dot" style="background:${EFF_LOSS_COLORS[x[0]]}"></i>${x[0]} <b>${x[1]}</b></span>`).join('')}</div>
-    <p class="eff-note mt-3">นาทีที่เสีย = ยอดที่หาย ÷ ความเร็วของช่วงนั้น · เครื่องจักร Line B C ใช้นาทีจริงจากแจ้งซ่อม</p>`;
+    <p class="text-xs font-semibold text-slate-700 mt-3">เวลาที่เสีย ${Number(e.lostMin || 0).toLocaleString()} นาที-คน ไปกับ</p>
+    ${total > 0 ? `<div class="eff-bar mt-2">${['avail', 'perf', 'qual'].map(k => `<span style="width:${(loss[k] || 0) / total * 100}%;background:${OEE_BUCKETS[k].color}" title="${OEE_BUCKETS[k].label}"></span>`).join('')}</div>` : ''}
+    <div class="flex flex-col gap-1.5 mt-2">${(e.reasons || []).slice(0, 6).map(r => `<div class="oee-reason"><span>${esc(r.label)}</span><span class="oee-rbar"><span style="width:${r.min / Math.max.apply(null, e.reasons.map(x => x.min).concat([1])) * 100}%;background:${OEE_BUCKETS[r.bucket].color}"></span></span><b>${Number(r.min).toLocaleString()}</b></div>`).join('')}</div>
+    <p class="eff-note mt-3">นับ ${cov.samSlots || 0} จาก ${cov.slots || 0} ช่วงที่กรอกยอด (ช่วงที่ไม่รู้ SAM ไม่นับ) · ยอดไม่ถึงเป้า ${cov.lostSlots || 0} ช่วง ไม่ได้ติ๊กหมายเหตุ ${cov.untickedSlots || 0} ช่วง</p>`;
 }
+
+/* ---------- หน้า OEE (กดการ์ด Efficiency) ---------- */
+const F1OEE = (function(){
+  let range = 'month', pick = '';
+  const thMonth = ym => { const [y, m] = String(ym || '').split('-').map(Number); return y ? ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][m - 1] + ' ' + y : ''; };
+
+  function partsOf(m){
+    const A = m.a / 100, P = m.p / 100, Q = m.q / 100;
+    return { good: A * P * Q * 100, avail: (1 - A) * 100, perf: A * (1 - P) * 100, qual: A * P * (1 - Q) * 100 };
+  }
+  function donut(m, p){
+    const R = 70, C = 2 * Math.PI * R, GAP = 4;
+    let off = 0;
+    const segs = ['good', 'avail', 'perf', 'qual'].map(k => {
+      const len = Math.max(0, p[k] / 100 * C - GAP);
+      const s = `<circle cx="100" cy="100" r="${R}" class="oee-seg${pick === k ? ' on' : ''}${pick && pick !== k ? ' dim' : ''}" stroke="${OEE_BUCKETS[k].color}"
+        stroke-dasharray="${len} ${C - len}" stroke-dashoffset="${-off}" transform="rotate(-90 100 100)"
+        tabindex="0" role="button" aria-label="${OEE_BUCKETS[k].label} ${p[k].toFixed(1)}%" onclick="F1OEE.pick('${k}')" onkeydown="if(event.key==='Enter')F1OEE.pick('${k}')"></circle>`;
+      off += p[k] / 100 * C;
+      return s;
+    }).join('');
+    const center = pick
+      ? `<b style="color:${OEE_BUCKETS[pick].color}">${p[pick].toFixed(1)}%</b><span>${OEE_BUCKETS[pick].label}</span>`
+      : `<b>${pct1_(m.oee)}</b><span>OEE · เป้า ${EFF_GOAL}%</span>`;
+    return `<div class="oee-donut"><svg viewBox="0 0 200 200" role="img" aria-label="สัดส่วนเวลาทำงาน">${segs}</svg><div class="oee-donut-c">${center}</div></div>`;
+  }
+  function detail(m, p){
+    const cov = m.coverage || {};
+    const covText = `นับ ${cov.samSlots || 0} จาก ${cov.slots || 0} ช่วงที่กรอกยอด · ไม่ได้ติ๊กหมายเหตุ ${cov.untickedSlots || 0} จาก ${cov.lostSlots || 0} ช่วงที่ยอดไม่ถึงเป้า`;
+    if (!pick || pick === 'good'){
+      const chip = (k, v) => `<button type="button" class="oee-chip${pick === k ? ' on' : ''}" onclick="F1OEE.pick('${k}')">
+        <span class="oee-chip-top"><i style="background:${OEE_BUCKETS[k].color}"></i>${OEE_BUCKETS[k].short}</span>
+        <b>${pct1_(v)}</b>
+        <span class="oee-chip-bar"><span style="width:${v}%;background:${OEE_BUCKETS[k].color}"></span></span>
+        <small>${OEE_BUCKETS[k].note}</small>
+      </button>`;
+      return `<p class="text-xs text-slate-500">OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ · กดชิ้นในวงกลม หรือการ์ดด้านล่าง เพื่อดูว่าเสียไปกับอะไร</p>
+        <div class="oee-chips">${chip('avail', m.a)}${chip('perf', m.p)}${chip('qual', m.q)}</div>
+        <p class="text-[11px] text-slate-500 mt-3">${covText}</p>`;
+    }
+    const list = (m.reasons || []).filter(r => r.bucket === pick);
+    const max = Math.max.apply(null, list.map(r => r.min).concat([1]));
+    const sum = list.reduce((a, r) => a + r.min, 0);
+    return `<div class="flex items-center justify-between gap-2">
+        <p class="font-bold text-slate-800"><i class="eff-dot" style="background:${OEE_BUCKETS[pick].color}"></i> ${OEE_BUCKETS[pick].label} ${p[pick].toFixed(1)}% ของเวลา</p>
+        <button type="button" class="oee-back sm" onclick="F1OEE.pick('')">ดูทั้งหมด</button>
+      </div>
+      <p class="text-xs text-slate-500 mt-1">${sum.toLocaleString()} นาที-คน · มาจากหมายเหตุที่หน้างานติ๊ก</p>
+      <div class="flex flex-col gap-2 mt-3">${list.length ? list.map(r => `<div class="oee-reason">
+        <span>${esc(r.label)}</span>
+        <span class="oee-rbar"><span style="width:${r.min / max * 100}%;background:${/ไม่ได้ติ๊ก|ไม่มีหมายเหตุ/.test(r.label) ? '#94A3B8' : OEE_BUCKETS[pick].color}"></span></span>
+        <b>${r.min.toLocaleString()}</b>
+      </div>`).join('') : '<p class="text-xs text-slate-500">ยังไม่มีหมายเหตุในกลุ่มนี้</p>'}</div>
+      ${pick === 'perf' ? '<p class="eff-note mt-3">"ช้ากว่า SAM (ไม่มีหมายเหตุ)" = ส่วนที่เป้าตั้งต่ำกว่า SAM หรือเย็บช้ากว่า SAM โดยไม่มีหมายเหตุ · ยิ่งหน้างานติ๊กครบ ยิ่งรู้สาเหตุจริง</p>' : ''}`;
+  }
+  function lineBars(lines){
+    const keys = (typeof LINE_ORDER !== 'undefined' ? LINE_ORDER : ['B', 'C', 'D', 'E', 'F']).filter(k => lines[k]);
+    if (!keys.length) return '<p class="text-xs text-slate-500 mt-3">ยังไม่มีข้อมูล</p>';
+    return `<div class="oee-lbars">
+      ${keys.map(k => { const x = lines[k]; return `<div class="oee-lcol" title="เวลาเดินได้ ${pct1_(x.a)} · ความเร็ว ${pct1_(x.p)} · คุณภาพ ${pct1_(x.q)}">
+        <b style="color:${effColor_(x.oee)}">${pct1_(x.oee)}</b>
+        <span class="oee-lbar"><span style="height:${Math.min(100, x.oee)}%;background:${effColor_(x.oee)}"></span><i class="oee-ltick" style="bottom:${EFF_GOAL}%"></i></span>
+        <small>LINE ${k}</small>
+        <em>${Math.round(x.a)} · ${Math.round(x.p)} · ${Math.round(x.q)}</em>
+      </div>`; }).join('')}
+    </div>
+    <p class="text-[11px] text-slate-500 mt-2">เส้นประ = เป้า ${EFF_GOAL}% · ตัวเลขใต้แท่ง = เวลาเดินได้ · ความเร็ว · คุณภาพ (%)</p>`;
+  }
+  function render(){
+    const root = el('oeeRoot');
+    if (!root) return;
+    if (!oeeData){
+      root.innerHTML = `<a href="#sewing" class="oee-back">← กลับหน้า Sewing</a><div class="card soft p-6 text-center text-slate-400 font-semibold">${oeeFailed ? 'ยังโหลด OEE ไม่ได้ ลองรีเฟรชอีกครั้ง' : 'กำลังคิด OEE…'}</div>`;
+      if (!oeeFailed) void loadOEE_();
+      return;
+    }
+    const m = range === 'month' ? oeeData.plant.month : oeeData.plant.today;
+    const lines = range === 'month' ? oeeData.lines.month : oeeData.lines.today;
+    const title = range === 'month' ? thMonth(oeeData.month) : 'วันนี้';
+    const trend = (oeeData.trend || []).filter(t => t.oee !== null && t.oee !== undefined);
+    const lo = Math.min(40, Math.floor(Math.min.apply(null, trend.map(t => t.oee).concat([EFF_GOAL])) / 5) * 5);
+    const hi = Math.max(80, Math.ceil(Math.max.apply(null, trend.map(t => t.oee).concat([EFF_GOAL])) / 5) * 5);
+    const y = v => Math.round(96 - (v - lo) / (hi - lo) * 90);
+    const pts = trend.map((t, i) => Math.round(trend.length > 1 ? i * 600 / (trend.length - 1) : 300) + ',' + y(t.oee)).join(' ');
+    const head = `<div class="flex flex-wrap items-center justify-between gap-3">
+        <a href="#sewing" class="oee-back">← กลับหน้า Sewing</a>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-[11px] text-slate-500">คิดเมื่อ ${esc(oeeData.generatedAt || '')}</span>
+          <div class="oee-ranges">
+            <button type="button" class="${range === 'today' ? 'on' : ''}" onclick="F1OEE.range('today')">วันนี้</button>
+            <button type="button" class="${range === 'month' ? 'on' : ''}" onclick="F1OEE.range('month')">เดือนนี้</button>
+          </div>
+        </div>
+      </div>`;
+    if (!m){
+      root.innerHTML = head + `<div class="card soft p-6 text-center text-slate-500">ยังไม่มียอดที่คิด OEE ได้${range === 'today' ? 'ของวันนี้' : 'ในเดือนนี้'} (ต้องมียอดรายชั่วโมง + SAM + จำนวนคน)</div>`;
+      return;
+    }
+    const p = partsOf(m);
+    root.innerHTML = head + `
+      <div class="card soft p-5">
+        <h2 class="text-lg font-bold text-slate-800">OEE แผนก Sewing · ${title}</h2>
+        <div class="oee-hero mt-4">
+          ${donut(m, p)}
+          <div class="oee-hero-r">${detail(m, p)}</div>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
+        <div class="card soft p-5">
+          <h3 class="font-bold text-slate-800">OEE แยกไลน์ · ${title}</h3>
+          ${lineBars(lines || {})}
+        </div>
+        <div class="card soft p-5">
+          <div class="flex flex-wrap justify-between items-baseline gap-2">
+            <h3 class="font-bold text-slate-800">OEE รายวัน · ${thMonth(oeeData.month)}</h3>
+            <span class="text-[11px] text-slate-500">เส้นประ = เป้า ${EFF_GOAL}%</span>
+          </div>
+          ${trend.length ? `<svg viewBox="0 0 600 100" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม OEE รายวัน">
+            <line x1="0" x2="600" y1="${y(EFF_GOAL)}" y2="${y(EFF_GOAL)}" class="oee-goal"/>
+            <polyline points="${pts}" fill="none" stroke="#6366F1" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+          </svg>
+          <div class="flex justify-between text-[11px] text-slate-500"><span>${esc(trend[0].d)}</span><span>${esc(trend[trend.length - 1].d)}</span></div>` : '<p class="text-xs text-slate-500 mt-3">ยังไม่มีข้อมูล</p>'}
+        </div>
+      </div>`;
+  }
+  let entered = false;
+  return {
+    render,
+    enter(){ oeeFailed = false; render(); void loadOEE_(); if (!entered && typeof F1Motion !== 'undefined'){ entered = true; F1Motion.enter(document.querySelector('.shell[data-view="oee"]')); } },
+    range(r){ range = r; pick = ''; render(); },
+    pick(k){ pick = (k === pick || k === 'good') ? '' : k; render(); }
+  };
+})();
 
 /* =======================================================
    FLOOR PLAN
