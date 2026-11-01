@@ -1090,6 +1090,38 @@
   .eff-bar > span{ display:block; height:100%; }
   .eff-dot{ display:inline-block; width:9px; height:9px; border-radius:3px; }
   .eff-note{ font-size:11px; padding:8px 10px; border-radius:10px; background:#F5F3FF; color:#3730A3; }
+  a.eff-kpi{ display:block; color:inherit; text-decoration:none; cursor:pointer; transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+  a.eff-kpi:hover{ transform:translateY(-2px); border-color:#A5B4FC !important; }
+  html.dark a.eff-kpi:hover{ border-color:rgba(214,185,123,.55) !important; }
+  .eff-more{ margin-top:8px; font-size:11px; font-weight:600; color:#4F46E5; text-align:right; }
+  html.dark .eff-more{ color:#D6B97B; }
+  /* หน้า OEE */
+  .oee-back{ display:inline-flex; align-items:center; min-height:40px; padding:0 14px; border-radius:12px; font-size:13px; font-weight:600; color:#334155; background:#fff; border:1px solid #E2E8F0; text-decoration:none; }
+  html.dark .oee-back{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.12); color:#E2E8F0; }
+  .oee-ranges{ display:inline-flex; gap:4px; padding:4px; border-radius:12px; background:#F1F5F9; border:1px solid #E2E8F0; }
+  .oee-ranges button{ height:32px; padding:0 14px; border-radius:9px; font-size:12.5px; font-weight:600; color:#475569; }
+  .oee-ranges button.on{ background:#0F172A; color:#fff; }
+  html.dark .oee-ranges{ background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
+  html.dark .oee-ranges button{ color:#94A3B8; } html.dark .oee-ranges button.on{ background:linear-gradient(135deg,#E9D29A,#C9A55C); color:#1A1408; }
+  .oee-gauges{ display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-around; gap:18px; }
+  .oee-gauge{ width:var(--w); max-width:100%; display:flex; flex-direction:column; align-items:center; text-align:center; }
+  .oee-gauge svg{ width:100%; height:auto; display:block; }
+  .oee-g-track{ fill:none; stroke:#EEF1F6; stroke-width:10; stroke-linecap:round; }
+  html.dark .oee-g-track{ stroke:rgba(255,255,255,.08); }
+  .oee-gauge b{ margin-top:-18%; font-size:calc(var(--w) * .13); font-weight:800; color:#0F172A; line-height:1.1; }
+  html.dark .oee-gauge b{ color:#F8FAFC; }
+  .oee-gauge span{ margin-top:4px; font-size:13px; font-weight:700; color:#334155; }
+  html.dark .oee-gauge span{ color:#E2E8F0; }
+  .oee-gauge small{ font-size:10.5px; color:#64748B; margin-top:2px; }
+  .oee-line-gauges{ display:grid; grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:12px; justify-items:center; }
+  .oee-reason{ display:grid; grid-template-columns:minmax(120px, 1.2fr) minmax(0, 2fr) 54px; align-items:center; gap:8px; font-size:12px; color:#334155; }
+  .oee-reason b{ text-align:right; font-variant-numeric:tabular-nums; }
+  html.dark .oee-reason{ color:#CBD5E1; }
+  .oee-rbar{ display:block; height:10px; border-radius:4px; background:#EEF1F6; overflow:hidden; }
+  .oee-rbar > span{ display:block; height:100%; border-radius:inherit; }
+  html.dark .oee-rbar{ background:rgba(255,255,255,.07); }
+  .oee-trend{ width:100%; height:180px; display:block; margin-top:10px; }
+  .oee-goal{ stroke:#94A3B8; stroke-width:1.5; stroke-dasharray:6 5; vector-effect:non-scaling-stroke; }
   html.dark .eff-note{ background:rgba(214,185,123,.1); color:#F3E3BC; }
 </style>
 </head>
@@ -1271,7 +1303,7 @@
         </div>
       </div>
       <!-- Efficiency ทั้งโรง (พรีวิว: ตัวเลขตัวอย่าง) -->
-      <div class="card soft kpi eff-kpi">
+      <a href="#oee" class="card soft kpi eff-kpi" title="ดู OEE ทั้งหมด" aria-label="Efficiency ทั้งโรง · กดดูหน้า OEE">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[11px] text-slate-400 font-semibold">Efficiency ทั้งโรง <span class="eff-new">ตัวอย่าง</span></p>
           <p class="text-[10px] text-slate-400">เป้า <span id="effGoal">65</span>%</p>
@@ -1283,9 +1315,10 @@
         <div class="eff-sub mt-2 pt-2">
           <span>OEE <b id="kpiOee">-</b></span>
           <span>เดินได้ <b id="kpiAvail">-</b></span>
-          <span>คุณภาพ <b class="text-amber-600">ยังไม่วัด</b></span>
+          <span>คุณภาพ <b id="kpiQual">-</b></span>
         </div>
-      </div>
+        <p class="eff-more">ดู OEE ทั้งหมด →</p>
+      </a>
     </div>
   </section>
 
@@ -1680,6 +1713,10 @@
       <div id="mhProcList" class="flex flex-col gap-3"></div>
     </div>
   </div>
+</div>
+
+<div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="oee">
+  <div id="oeeRoot" class="flex flex-col gap-4"></div>
 </div>
 
 <div class="shell app-view hide px-3 md:px-6 pt-4 md:pt-6" data-view="plan">
@@ -3050,9 +3087,117 @@ function renderEffKpi_(lines){
   box.className = 'text-2xl font-extrabold eff-' + effTone_(eff);
   el('kpiEffDelta').textContent = '▲ 3.1 จากเมื่อวาน';
   el('kpiEffDelta').className = 'text-[11px] font-semibold text-emerald-600';
-  el('kpiOee').textContent = Math.round(eff / avail * avail) + '%';
+  el('kpiOee').textContent = Math.round(eff) + '%';
   el('kpiAvail').textContent = Math.round(avail) + '%';
+  el('kpiQual').textContent = '97%';
 }
+/* ---------- หน้า OEE (พรีวิว: ตัวเลขตัวอย่าง) ----------
+   OEE = Efficiency (ยอด × SAM ÷ เวลาคน) · ส่วนที่หายแยก 3 กลุ่มตามหมายเหตุที่หน้างานติ๊ก
+   เวลาเดินได้ ← เครื่องจักร/Eton, ของเข้าไม่ทัน, ขึ้นงานรุ่นใหม่ · ความเร็ว ← งานติดขั้นตอน, อื่น ๆ, ไม่ได้ติ๊ก · คุณภาพ ← งานซ่อม */
+const F1OEE = (function(){
+  const BUCKET = {
+    avail: { label:'เวลาเดินได้', color:'#0EA5E9' },
+    perf:  { label:'ความเร็ว', color:'#8B5CF6' },
+    qual:  { label:'คุณภาพ', color:'#F59E0B' }
+  };
+  // นาที-คนที่เสีย แยกตามหัวข้อหมายเหตุ → กลุ่ม OEE (ตัวอย่างทั้งเดือน)
+  const REASONS = [
+    ['ของเข้าไม่ทัน › อุปกรณ์', 'avail', 2860], ['เครื่องจักร/Eton', 'avail', 2140], ['ขึ้นงานรุ่นใหม่', 'avail', 1320],
+    ['ของเข้าไม่ทัน › กระเป๋าปัก/Screen', 'avail', 760], ['งานติดขั้นตอน', 'perf', 2480], ['อื่น ๆ', 'perf', 420],
+    ['ไม่ได้ติ๊กหมายเหตุ', 'perf', 3900], ['งานซ่อม', 'qual', 980]
+  ];
+  const LINES = { B: [64, 89, 75, 97], C: [52, 84, 64, 96], D: [68, 91, 77, 97], E: [60, 88, 70, 98], F: [74, 95, 79, 99] };
+  const MONTH = { oee: 61, a: 89, p: 71, q: 97, eff: 61 };
+  const TODAY = { oee: 58, a: 87, p: 69, q: 97, eff: 58 };
+  const TREND = [55, 57, 53, 58, 58, 55, 60, 59, 57, 61, 58, 60, 59, 61, 62, 60, 63, 61, 64, 62, 63, 61, 64, 66, 63, 65];
+  const GOAL = 65;
+  let range = 'month';
+  const tone = v => v >= GOAL ? '#10B981' : v >= GOAL - 10 ? '#F59E0B' : '#F43F5E';
+
+  // ครึ่งวงกลม: v 0–100 · size = ความกว้าง px
+  function gauge(v, size, color, label, sub){
+    const r = 40, c = Math.PI * r, len = c * Math.max(0, Math.min(100, v)) / 100;
+    return `<div class="oee-gauge" style="--w:${size}px">
+      <svg viewBox="0 0 100 58" role="img" aria-label="${label} ${v}%">
+        <path d="M10 50 A40 40 0 0 1 90 50" class="oee-g-track"/>
+        <path d="M10 50 A40 40 0 0 1 90 50" fill="none" stroke="${color}" stroke-width="10" stroke-linecap="round" stroke-dasharray="${len} ${c}"/>
+      </svg>
+      <b>${v}%</b>
+      <span>${label}</span>${sub ? `<small>${sub}</small>` : ''}
+    </div>`;
+  }
+
+  function render(){
+    const root = el('oeeRoot');
+    if (!root) return;
+    const m = range === 'month' ? MONTH : TODAY;
+    const total = REASONS.reduce((a, r) => a + r[2], 0);
+    const byBucket = { avail: 0, perf: 0, qual: 0 };
+    REASONS.forEach(r => { byBucket[r[1]] += r[2]; });
+    const untick = REASONS.find(r => r[0] === 'ไม่ได้ติ๊กหมายเหตุ')[2];
+    const sorted = REASONS.slice().sort((a, b) => b[2] - a[2]);
+    const max = sorted[0][2];
+    const y = v => Math.round(96 - (Math.max(45, Math.min(75, v)) - 45) / 30 * 90);
+    const pts = TREND.map((v, i) => Math.round(i * 600 / (TREND.length - 1)) + ',' + y(v)).join(' ');
+    root.innerHTML = `
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <a href="#sewing" class="oee-back">← กลับหน้า Sewing</a>
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="eff-new" style="font-size:12px;padding:5px 10px">ตัวเลขตัวอย่าง</span>
+          <div class="oee-ranges">
+            <button type="button" class="${range === 'today' ? 'on' : ''}" onclick="F1OEE.range('today')">วันนี้</button>
+            <button type="button" class="${range === 'month' ? 'on' : ''}" onclick="F1OEE.range('month')">เดือนนี้</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card soft p-5">
+        <h2 class="text-lg font-bold text-slate-800">OEE แผนก Sewing · ${range === 'month' ? 'พฤศจิกายน 2026' : 'วันนี้'}</h2>
+        <p class="text-xs text-slate-500 mt-0.5">OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ · แยกจากหมายเหตุที่หน้างานติ๊กในฟอร์มกรอกยอด</p>
+        <div class="oee-gauges mt-4">
+          ${gauge(m.oee, 220, tone(m.oee), 'OEE', 'เป้า ' + GOAL + '%')}
+          ${gauge(m.a, 150, BUCKET.avail.color, 'เวลาเดินได้', 'เครื่อง · ของไม่มา · ขึ้นรุ่นใหม่')}
+          ${gauge(m.p, 150, BUCKET.perf.color, 'ความเร็ว', 'ติดขั้นตอน · ไม่ได้ติ๊ก')}
+          ${gauge(m.q, 150, BUCKET.qual.color, 'คุณภาพ', 'จากช่วงที่ติ๊ก งานซ่อม')}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-4">
+        <div class="card soft p-5">
+          <h3 class="font-bold text-slate-800">OEE แยกไลน์</h3>
+          <div class="oee-line-gauges mt-3">${Object.keys(LINES).map(k => { const [o, a, p, q] = LINES[k]; return `<div class="oee-line-g">${gauge(o, 120, tone(o), 'LINE ' + k, 'เดิน ' + a + ' · เร็ว ' + p + ' · คุณ ' + q)}</div>`; }).join('')}</div>
+        </div>
+        <div class="card soft p-5">
+          <div class="flex justify-between items-baseline gap-2"><h3 class="font-bold text-slate-800">เวลาที่เสียไปกับอะไร</h3><span class="text-[11px] text-slate-500">นาที-คน · ทั้งโรง</span></div>
+          <div class="eff-bar mt-3" style="height:14px">${['avail', 'perf', 'qual'].map(b => `<span style="width:${byBucket[b] / total * 100}%;background:${BUCKET[b].color}" title="${BUCKET[b].label}"></span>`).join('')}</div>
+          <div class="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-slate-600">${['avail', 'perf', 'qual'].map(b => `<span class="inline-flex items-center gap-1.5"><i class="eff-dot" style="background:${BUCKET[b].color}"></i>${BUCKET[b].label} <b>${Math.round(byBucket[b] / total * 100)}%</b></span>`).join('')}</div>
+          <div class="flex flex-col gap-2 mt-4">${sorted.map(r => `<div class="oee-reason">
+            <span>${r[0]}</span>
+            <span class="oee-rbar"><span style="width:${r[2] / max * 100}%;background:${r[0] === 'ไม่ได้ติ๊กหมายเหตุ' ? '#CBD5E1' : BUCKET[r[1]].color}"></span></span>
+            <b>${r[2].toLocaleString()}</b>
+          </div>`).join('')}</div>
+          <p class="eff-note mt-3">ไม่ได้ติ๊กหมายเหตุ ${Math.round(untick / total * 100)}% ของเวลาที่เสีย · ยิ่งหน้างานติ๊กครบ ยิ่งรู้สาเหตุจริง</p>
+        </div>
+      </div>
+
+      <div class="card soft p-5">
+        <div class="flex flex-wrap justify-between items-baseline gap-2">
+          <h3 class="font-bold text-slate-800">OEE รายวัน · พฤศจิกายน 2026</h3>
+          <span class="text-[11px] text-slate-500">เส้นประ = เป้า ${GOAL}%</span>
+        </div>
+        <svg viewBox="0 0 600 100" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม OEE รายวัน">
+          <line x1="0" x2="600" y1="${y(GOAL)}" y2="${y(GOAL)}" class="oee-goal"/>
+          <polyline points="${pts}" fill="none" stroke="#6366F1" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+        </svg>
+      </div>`;
+  }
+  let entered = false;
+  return {
+    enter(){ render(); if (!entered && typeof F1Motion !== 'undefined'){ entered = true; F1Motion.enter(document.querySelector('.shell[data-view="oee"]')); } },
+    range(r){ range = r; render(); }
+  };
+})();
+
 // กล่อง "ประสิทธิภาพวันนี้" ในหน้ารายละเอียดไลน์
 function renderEffDetail_(code){
   const box = el('dtEff');
@@ -5599,8 +5744,8 @@ if (typeof renderDashboardPayload === 'function'){
    APP NAV — เมนูซ้าย + สลับหน้า (#sewing = Dashboard เดิม เป็นหน้าเริ่มต้น)
    ======================================================= */
 const F1Nav = (function(){
-  const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', washing:'Washing Dept', finishing:'Finishing Dept' };
-  const NAV_OF = { plan:'sewing' }; // ประวัติรุ่น & วางแผน = แท็บย่อยของ Sewing Dept
+  const VIEWS = { home:'หน้าหลัก', search:'ค้นหารุ่นงาน / LOT', plan:'Sewing Dept', oee:'Sewing Dept', cutting:'Cutting Dept', sewing:'Sewing Dept', washing:'Washing Dept', finishing:'Finishing Dept' };
+  const NAV_OF = { plan:'sewing', oee:'sewing' }; // ประวัติรุ่น & วางแผน / OEE = หน้าย่อยของ Sewing Dept
   // ประวัติรุ่น & วางแผน: ปุ่มไอคอนข้างแว่นขยายบนหัว Dashboard เดิม (สร้างด้วย JS ไม่แก้ markup เดิม)
   // หน้าประวัติรุ่นมีแท็บกลับไปภาพรวมวันนี้
   function sewTabsHtml(active){
@@ -5645,10 +5790,11 @@ const F1Nav = (function(){
     close();
     if (view === 'sewing') setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
     if (view === 'search' || view === 'plan') F1MH.enter(view, arg);
+    if (view === 'oee') F1OEE.enter();
     // motion ตอนสลับหน้า: หน้าค้นหา / แผน เล่นหลังข้อมูลขึ้น (ใน F1MH) · Dashboard เล่นเมื่อโหลดรอบแรกเสร็จแล้ว
     const node = document.querySelector('.shell[data-view="' + view + '"]');
     if (view === 'sewing'){ if (window.__f1DashReady) F1Motion.enter(node, { soft: true }); }
-    else if (view !== 'search' && view !== 'plan') F1Motion.enter(node);
+    else if (view !== 'search' && view !== 'plan' && view !== 'oee') F1Motion.enter(node);
     window.scrollTo(0, 0);
   }
   function toggleCollapse(){
