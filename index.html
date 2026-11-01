@@ -3105,8 +3105,19 @@ const lineKey_ = line => String(line || '').replace(/LINE/i, '').trim().toUpperC
 function loadOEE_(force){
   if (oeeLoading) return oeeLoading;
   if (!force && oeeData && Date.now() - oeeLoadedAt < 5 * 60 * 1000) return Promise.resolve(oeeData);
-  oeeLoading = fetch(`${GAS_API_URL}?action=getOEE&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' })
-    .then(r => r.json())
+  const get = q => fetch(`${GAS_API_URL}?action=getOEE${q}&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' }).then(r => r.json());
+  oeeLoading = get('')
+    // ต้นเดือนยังไม่มียอด → ภาพรวมเดือน / กราฟรายวัน ใช้เดือนก่อนแทน (ของวันนี้ยังเป็นของวันนี้)
+    .then(d => {
+      if (!d || d.status !== 'ok' || (d.plant && d.plant.month) || !/^\d{4}-\d{2}$/.test(d.month || '')) return d;
+      const [y, m] = d.month.split('-').map(Number);
+      const prev = m === 1 ? (y - 1) + '-12' : y + '-' + String(m - 1).padStart(2, '0');
+      return get('&month=' + prev).then(p => (!p || p.status !== 'ok' || !p.plant.month) ? d : Object.assign({}, d, {
+        month: p.month, trend: p.trend,
+        plant: Object.assign({}, d.plant, { month: p.plant.month, lastDay: d.plant.lastDay || p.plant.lastDay, lastDayOee: d.plant.lastDay ? d.plant.lastDayOee : p.plant.lastDayOee }),
+        lines: Object.assign({}, d.lines, { month: p.lines.month })
+      })).catch(() => d);
+    })
     .then(d => {
       if (d && d.status === 'ok'){ oeeData = d; oeeLoadedAt = Date.now(); oeeFailed = false; if (d.goal) EFF_GOAL = Number(d.goal) || EFF_GOAL; }
       else oeeFailed = true;
@@ -3146,7 +3157,7 @@ function renderEffKpi_(lines){
   if (!p){
     box.textContent = '—';
     box.className = 'text-2xl font-extrabold text-slate-400';
-    el('kpiEffDelta').textContent = currentDashboardIsRange ? 'ดูได้เฉพาะวันนี้' : oeeData ? 'ยังไม่มียอดที่รู้ SAM' : oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…';
+    el('kpiEffDelta').textContent = currentDashboardIsRange ? 'ดูได้เฉพาะวันนี้' : oeeData ? 'วันนี้ยังไม่มียอดให้คิด' : oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…';
     el('kpiEffDelta').className = 'text-[11px] font-semibold text-slate-400';
     ['kpiAvail', 'kpiPerf', 'kpiQual'].forEach(id => el(id).textContent = '—');
     return;
@@ -3292,7 +3303,7 @@ const F1OEE = (function(){
           <span class="text-[11px] text-slate-500">คิดเมื่อ ${esc(oeeData.generatedAt || '')}</span>
           <div class="oee-ranges">
             <button type="button" class="${range === 'today' ? 'on' : ''}" onclick="F1OEE.range('today')">วันนี้</button>
-            <button type="button" class="${range === 'month' ? 'on' : ''}" onclick="F1OEE.range('month')">เดือนนี้</button>
+            <button type="button" class="${range === 'month' ? 'on' : ''}" onclick="F1OEE.range('month')">${oeeData.month === (oeeData.today || '').slice(0, 7) ? 'เดือนนี้' : thMonth(oeeData.month).split(' ')[0]}</button>
           </div>
         </div>
       </div>`;
