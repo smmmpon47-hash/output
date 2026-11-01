@@ -3079,7 +3079,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
         </div>
         <span class="text-xs font-extrabold text-slate-700">${pct}%</span>
       </div>
-      ${currentDashboardIsRange ? '' : effRowHtml_(line)}
+      ${currentDashboardIsRange || (lotTag && lotTag.indexOf('LOT 1/') !== 0) ? '' : effRowHtml_(line)}
     </div>`;
 }
 
