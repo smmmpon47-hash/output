@@ -3317,9 +3317,23 @@ const F1OEE = (function(){
       if (!oeeFailed) void loadOEE_();
       return;
     }
-    const m = range === 'month' ? oeeData.plant.month : oeeData.plant.today;
-    const lines = range === 'month' ? oeeData.lines.month : oeeData.lines.today;
-    const title = range === 'month' ? thMonth(oeeData.month) : 'วันนี้';
+    // แท็บรายวัน: วันที่เลือกในหน้า Sewing · ถ้าวันนั้นไม่มียอด (เช่น วันอาทิตย์) → วันทำงานล่าสุด
+    const picked = effToday_();
+    let day = picked && picked.plant.today ? picked : null, dayLoading = false;
+    if (!day){
+      const last = (oeeData.trend || []).filter(t => t.oee !== null && t.oee !== undefined && t.d < (picked ? picked.today : oeeData.today)).map(t => t.d).pop();
+      if (last){
+        if (oeeByDate[last] === undefined) loadOEEDay_(last);
+        day = oeeByDate[last] || null;
+        dayLoading = oeeByDate[last] === null;
+      }
+    }
+    const dmy = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
+    const dayLabel = !day || day.today === oeeData.today ? 'วันนี้' : dmy(day.today);
+    const m = range === 'month' ? oeeData.plant.month : day && day.plant.today;
+    const lines = range === 'month' ? oeeData.lines.month : day && day.lines.today;
+    const title = range === 'month' ? thMonth(oeeData.month)
+      : dayLabel === 'วันนี้' ? 'วันนี้' : 'วันที่ ' + dmy(day.today) + '/' + day.today.slice(0, 4) + (picked && picked.today !== day.today ? ' (วันทำงานล่าสุด)' : '');
     const trend = (oeeData.trend || []).filter(t => t.oee !== null && t.oee !== undefined);
     const lo = Math.min(40, Math.floor(Math.min.apply(null, trend.map(t => t.oee).concat([EFF_GOAL])) / 5) * 5);
     const hi = Math.max(80, Math.ceil(Math.max.apply(null, trend.map(t => t.oee).concat([EFF_GOAL])) / 5) * 5);
@@ -3330,13 +3344,13 @@ const F1OEE = (function(){
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-[11px] text-slate-500">คิดเมื่อ ${esc(oeeData.generatedAt || '')}</span>
           <div class="oee-ranges">
-            <button type="button" class="${range === 'today' ? 'on' : ''}" onclick="F1OEE.range('today')">วันนี้</button>
+            <button type="button" class="${range === 'today' ? 'on' : ''}" onclick="F1OEE.range('today')">${dayLabel}</button>
             <button type="button" class="${range === 'month' ? 'on' : ''}" onclick="F1OEE.range('month')">${oeeData.month === (oeeData.today || '').slice(0, 7) ? 'เดือนนี้' : thMonth(oeeData.month).split(' ')[0]}</button>
           </div>
         </div>
       </div>`;
     if (!m){
-      root.innerHTML = head + `<div class="card soft p-6 text-center text-slate-500">ยังไม่มียอดที่คิด OEE ได้${range === 'today' ? 'ของวันนี้' : 'ในเดือนนี้'} (ต้องมียอดรายชั่วโมง + SAM + จำนวนคน)</div>`;
+      root.innerHTML = head + `<div class="card soft p-6 text-center text-slate-500">${range === 'today' && dayLoading ? 'กำลังคิด OEE วันทำงานล่าสุด…' : 'ยังไม่มียอดที่คิด OEE ได้' + (range === 'today' ? 'ของวันนี้' : 'ในเดือนนี้') + ' (ต้องมียอดรายชั่วโมง + SAM + จำนวนคน)'}</div>`;
       return;
     }
     const p = partsOf(m);
