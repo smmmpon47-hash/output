@@ -3397,7 +3397,10 @@ const F1OEE = (function(){
             <h3 class="font-bold text-slate-800">OEE รายวัน · ${thMonth(oeeData.month)}</h3>
             <span class="text-[11px] text-slate-500">เส้นประ = เป้า ${EFF_GOAL}%</span>
           </div>
-          ${trend.length ? `<svg viewBox="0 0 600 100" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม OEE รายวัน">
+          ${trend.length === 1 ? `<div class="oee-trend flex flex-col items-center justify-center gap-1 text-center">
+            <b class="text-3xl font-extrabold" style="color:${effColor_(trend[0].oee)}">${pct1_(trend[0].oee)}</b>
+            <span class="text-xs text-slate-500">วันที่ ${esc(trend[0].d.slice(8, 10) + '/' + trend[0].d.slice(5, 7))} · มีข้อมูลวันเดียว เส้นกราฟจะขึ้นเมื่อมีตั้งแต่ 2 วัน</span>
+          </div>` : trend.length ? `<svg viewBox="0 0 600 100" preserveAspectRatio="none" class="oee-trend" role="img" aria-label="แนวโน้ม OEE รายวัน">
             <line x1="0" x2="600" y1="${y(EFF_GOAL)}" y2="${y(EFF_GOAL)}" class="oee-goal"/>
             <polyline points="${pts}" fill="none" stroke="#6366F1" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
           </svg>
