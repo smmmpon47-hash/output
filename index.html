@@ -3112,9 +3112,10 @@ const pct1_ = v => (v === null || v === undefined) ? '—' : (Math.round(v * 10)
 const lineKey_ = line => String(line || '').replace(/LINE/i, '').trim().toUpperCase();
 
 // โหลดครั้งแรก + ทุก 5 นาที (Apps Script cache 5 นาทีอยู่แล้ว) · โหลดเสร็จวาดใหม่ทุกจุด
+const OEE_REFRESH_MS = 5 * 60 * 1000;
 function loadOEE_(force){
   if (oeeLoading) return oeeLoading;
-  if (!force && oeeData && Date.now() - oeeLoadedAt < 5 * 60 * 1000) return Promise.resolve(oeeData);
+  if (!force && (oeeData || oeeFailed) && Date.now() - oeeLoadedAt < OEE_REFRESH_MS) return Promise.resolve(oeeData);
   const get = q => fetch(`${GAS_API_URL}?action=getOEE${q}&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' }).then(r => r.json());
   oeeLoading = get('')
     // ต้นเดือนยังไม่มียอด → ภาพรวมเดือน / กราฟรายวัน ใช้เดือนก่อนแทน (ของวันนี้ยังเป็นของวันนี้)
@@ -3130,13 +3131,19 @@ function loadOEE_(force){
     })
     .then(d => {
       if (d && d.status === 'ok'){ oeeData = d; oeeLoadedAt = Date.now(); oeeFailed = false; if (d.goal) EFF_GOAL = Number(d.goal) || EFF_GOAL; }
-      else oeeFailed = true;
+      else { oeeFailed = true; oeeLoadedAt = Date.now(); }
       return oeeData;
     })
-    .catch(() => { oeeFailed = true; return oeeData; })
+    .catch(() => { oeeFailed = true; oeeLoadedAt = Date.now(); return oeeData; })
     .finally(() => { oeeLoading = null; refreshEffViews_(); });
   return oeeLoading;
 }
+setInterval(() => {
+  if (document.hidden || !oeeData) return;
+  const view = document.documentElement.getAttribute('data-view');
+  const onToday = !currentDashboardIsRange && (!effPickDay_() || effPickDay_() === oeeData.today);
+  if (view === 'oee' || (view === 'sewing' && onToday)) void loadOEE_();
+}, 60 * 1000);
 function refreshEffViews_(){
   if (Array.isArray(globalLinesData) && globalLinesData.length) renderEffKpi_(globalLinesData);
   document.querySelectorAll('.eff-row[data-line]').forEach(n => { n.outerHTML = effRowHtml_(n.dataset.line); });
@@ -3187,7 +3194,7 @@ function effRowHtml_(line){
 function renderEffKpi_(lines){
   const box = el('kpiEff');
   if (!box) return;
-  if (!oeeData && !oeeFailed) void loadOEE_();
+  void loadOEE_();
   const d = effToday_();
   const p = d && d.plant ? d.plant.today : null;
   el('effGoal').textContent = EFF_GOAL;
