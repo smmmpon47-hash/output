@@ -1089,6 +1089,16 @@
   .eff-bar{ display:flex; height:16px; border-radius:6px; overflow:hidden; }
   .eff-bar > span{ display:block; height:100%; }
   .eff-dot{ display:inline-block; width:9px; height:9px; border-radius:3px; }
+  .eff-link{ display:flex; align-items:center; justify-content:space-between; gap:8px; padding:12px 16px; border-radius:16px; font-size:13px; font-weight:700; color:#4338CA; background:#EEF2FF; border:1px solid #E0E7FF; }
+  .eff-link:hover{ background:#E0E7FF; } .eff-link.hide{ display:none; }
+  html.dark .eff-link{ color:#F3E3BC; background:rgba(214,185,123,.08); border-color:rgba(214,185,123,.2); }
+  .oee-lpick{ display:flex; flex-wrap:wrap; gap:6px; }
+  .oee-lpick button{ height:34px; padding:0 14px; border-radius:10px; font-size:12.5px; font-weight:700; color:#475569; background:#F1F5F9; border:1px solid #E2E8F0; display:inline-flex; align-items:center; gap:6px; }
+  .oee-lpick button i{ font-style:normal; font-weight:800; }
+  .oee-lpick button.on{ background:#0F172A; color:#fff; border-color:#0F172A; }
+  html.dark .oee-lpick button{ color:#CBD5E1; background:rgba(255,255,255,.04); border-color:rgba(255,255,255,.1); }
+  html.dark .oee-lpick button.on{ background:linear-gradient(135deg,#E9D29A,#C9A55C); color:#1A1408; border-color:transparent; }
+  .oee-lcol{ cursor:pointer; } .oee-lcol.on small{ text-decoration:underline; text-underline-offset:3px; }
   .eff-note{ font-size:11px; padding:8px 10px; border-radius:10px; background:#F5F3FF; color:#3730A3; }
   a.eff-kpi{ display:block; color:inherit; text-decoration:none; cursor:pointer; transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
   a.eff-kpi:hover{ transform:translateY(-2px); border-color:#A5B4FC !important; }
@@ -1500,7 +1510,7 @@
           <div class="h-60 relative"><canvas id="cumulativeChart"></canvas></div>
         </div>
 
-        <div id="dtEff" class="card soft p-4 hide"></div>
+        <a id="dtEff" href="#oee" class="eff-link hide"><span>ดู OEE / ประสิทธิภาพของไลน์นี้ <span id="dtEffVal"></span></span><span aria-hidden="true">→</span></a>
 
         <div class="bg-amber-50/70 border border-amber-100 rounded-2xl p-4">
           <h3 class="text-sm font-bold text-amber-800 mb-2">หมายเหตุจากหน้างาน</h3>
@@ -3204,47 +3214,43 @@ function renderEffKpi_(lines){
   el('kpiQual').textContent = pct1_(p.q);
 }
 
-// กล่อง "ประสิทธิภาพวันนี้" ในหน้ารายละเอียดไลน์
+// หน้ารายละเอียดไลน์: ลิงก์ไปหน้า OEE (เลือกไลน์นั้นไว้ให้) + ตัวเลข OEE ของวันที่เลือก
 function renderEffDetail_(code){
-  const box = el('dtEff');
-  if (!box) return;
+  const link = el('dtEff');
+  if (!link) return;
   code = lineKey_(code);
-  box.dataset.line = code;
+  link.dataset.line = code;
+  link.href = '#oee/' + code;
+  link.classList.toggle('hide', currentDashboardIsRange);
   if (!oeeData && !oeeFailed) void loadOEE_();
   const d = effToday_();
   const e = d && d.lines && d.lines.today ? d.lines.today[code] : null;
-  box.classList.toggle('hide', currentDashboardIsRange);
-  if (currentDashboardIsRange) return;
-  if (!e){
-    const t = effEmptyText_();
-    box.innerHTML = `<h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพ${effIsToday_() ? 'วันนี้' : ''}</h3>
-      <p class="text-xs text-slate-500 mt-2">${/ไม่มียอด/.test(t) ? 'ยังคิดไม่ได้: ไม่มียอดของ LOT ที่รู้ SAM และจำนวนคน' : t}</p>`;
-    return;
-  }
+  el('dtEffVal').textContent = e ? '· ' + pct1_(e.oee) : '';
+  el('dtEffVal').className = e ? 'eff-' + effTone_(e.oee) : '';
+}
+
+// รายละเอียดไลน์เดียว (หน้า OEE): OEE / A / P / Q + ยอดที่ขาดเป้าแยกตามหมายเหตุ
+function effLineHtml_(e){
   const tile = (label, value, cls) => `<div class="eff-tile"><span>${label}</span><b class="${cls}">${value}</b></div>`;
-  const loss = e.loss || {};
-  const total = (loss.avail || 0) + (loss.perf || 0) + (loss.qual || 0);
+  const reasons = e.reasons || [];
+  const max = Math.max.apply(null, reasons.map(x => x.min).concat([1]));
   const cov = e.coverage || {};
-  box.innerHTML = `
-    <div class="flex justify-between items-baseline gap-2">
-      <h3 class="text-sm font-bold text-slate-700">ประสิทธิภาพ${effIsToday_() ? 'วันนี้' : ''}</h3>
-      <span class="text-[10px] text-slate-400">เป้า ${EFF_GOAL}%</span>
-    </div>
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+  return `
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
       ${tile('OEE / Efficiency', pct1_(e.oee), 'eff-' + effTone_(e.oee))}
       ${tile('เวลาเดินได้', pct1_(e.a), 'text-slate-800')}
       ${tile('ความเร็ว', pct1_(e.p), 'text-slate-800')}
       ${tile('คุณภาพ', pct1_(e.q), 'text-slate-800')}
     </div>
-    <p class="text-xs font-semibold text-slate-700 mt-3">เวลาที่เสีย ${Number(e.lostMin || 0).toLocaleString()} นาที-คน ไปกับ</p>
-    ${total > 0 ? `<div class="eff-bar mt-2">${['avail', 'perf', 'qual'].map(k => `<span style="width:${(loss[k] || 0) / total * 100}%;background:${OEE_BUCKETS[k].color}" title="${OEE_BUCKETS[k].label}"></span>`).join('')}</div>` : ''}
-    <div class="flex flex-col gap-1.5 mt-2">${(e.reasons || []).slice(0, 6).map(r => `<div class="oee-reason"><span>${esc(r.label)}</span><span class="oee-rbar"><span style="width:${r.min / Math.max.apply(null, e.reasons.map(x => x.min).concat([1])) * 100}%;background:${OEE_BUCKETS[r.bucket].color}"></span></span><b>${Number(r.min).toLocaleString()}</b></div>`).join('')}</div>
+    <p class="text-xs text-slate-500 mt-3">เวลาคน ${Number(e.attended || 0).toLocaleString()} นาที · ได้เป็นงาน ${Number(e.earned || 0).toLocaleString()} นาที · ไม่ได้เป็นงาน ${Number(e.lostMin || 0).toLocaleString()} นาที</p>
+    <p class="text-xs font-semibold text-slate-700 mt-3">ยอดที่ขาดเป้า แยกตามหมายเหตุ (นาที-คน)</p>
+    <div class="flex flex-col gap-1.5 mt-2">${reasons.length ? reasons.slice(0, 8).map(r => `<div class="oee-reason"><span>${esc(r.label)}</span><span class="oee-rbar"><span style="width:${r.min / max * 100}%;background:${/ไม่ได้ติ๊ก|ไม่มีหมายเหตุ/.test(r.label) ? '#94A3B8' : OEE_BUCKETS[r.bucket].color}"></span></span><b>${Number(r.min).toLocaleString()}</b></div>`).join('') : '<p class="text-xs text-slate-500">ยอดถึงเป้าทุกช่วง</p>'}</div>
     <p class="eff-note mt-3">นับ ${cov.samSlots || 0} จาก ${cov.slots || 0} ช่วงที่กรอกยอด (ช่วงที่ไม่รู้ SAM ไม่นับ) · ยอดไม่ถึงเป้า ${cov.lostSlots || 0} ช่วง ไม่ได้ติ๊กหมายเหตุ ${cov.untickedSlots || 0} ช่วง</p>`;
 }
 
 /* ---------- หน้า OEE (กดการ์ด Efficiency) ---------- */
 const F1OEE = (function(){
-  let range = 'month', pick = '';
+  let range = 'month', pick = '', lineSel = '';
   const thMonth = ym => { const [y, m] = String(ym || '').split('-').map(Number); return y ? ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][m - 1] + ' ' + y : ''; };
 
   function partsOf(m){
@@ -3300,14 +3306,26 @@ const F1OEE = (function(){
     const keys = (typeof LINE_ORDER !== 'undefined' ? LINE_ORDER : ['B', 'C', 'D', 'E', 'F']).filter(k => lines[k]);
     if (!keys.length) return '<p class="text-xs text-slate-500 mt-3">ยังไม่มีข้อมูล</p>';
     return `<div class="oee-lbars">
-      ${keys.map(k => { const x = lines[k]; return `<div class="oee-lcol" title="เวลาเดินได้ ${pct1_(x.a)} · ความเร็ว ${pct1_(x.p)} · คุณภาพ ${pct1_(x.q)}">
+      ${keys.map(k => { const x = lines[k]; return `<div class="oee-lcol${lineSel === k ? ' on' : ''}" role="button" tabindex="0" onclick="F1OEE.line('${k}')" onkeydown="if(event.key==='Enter')F1OEE.line('${k}')" title="เวลาเดินได้ ${pct1_(x.a)} · ความเร็ว ${pct1_(x.p)} · คุณภาพ ${pct1_(x.q)}">
         <b style="color:${effColor_(x.oee)}">${pct1_(x.oee)}</b>
         <span class="oee-lbar"><span style="height:${Math.min(100, x.oee)}%;background:${effColor_(x.oee)}"></span><i class="oee-ltick" style="bottom:${EFF_GOAL}%"></i></span>
         <small>LINE ${k}</small>
         <em>${Math.round(x.a)} · ${Math.round(x.p)} · ${Math.round(x.q)}</em>
       </div>`; }).join('')}
     </div>
-    <p class="text-[11px] text-slate-500 mt-2">เส้นประ = เป้า ${EFF_GOAL}% · ตัวเลขใต้แท่ง = เวลาเดินได้ · ความเร็ว · คุณภาพ (%)</p>`;
+    <p class="text-[11px] text-slate-500 mt-2">เส้นประ = เป้า ${EFF_GOAL}% · ตัวเลขใต้แท่ง = เวลาเดินได้ · ความเร็ว · คุณภาพ (%) · กดแท่งเพื่อดูรายละเอียด</p>`;
+  }
+  function lineCard(lines, title){
+    const keys = (typeof LINE_ORDER !== 'undefined' ? LINE_ORDER : ['B', 'C', 'D', 'E', 'F']).filter(k => lines[k]);
+    if (!keys.length) return '';
+    const k = keys.indexOf(lineSel) >= 0 ? lineSel : keys[0];
+    return `<div class="card soft p-5" id="oeeLineCard">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <h3 class="font-bold text-slate-800">ประสิทธิภาพ LINE ${k} · ${title}</h3>
+        <div class="oee-lpick">${keys.map(c => `<button type="button" class="${c === k ? 'on' : ''}" onclick="F1OEE.line('${c}')">${c} <i style="color:${c === k ? 'inherit' : effColor_(lines[c].oee)}">${Math.round(lines[c].oee)}%</i></button>`).join('')}</div>
+      </div>
+      <div class="mt-4">${effLineHtml_(lines[k])}</div>
+    </div>`;
   }
   function render(){
     const root = el('oeeRoot');
@@ -3378,14 +3396,16 @@ const F1OEE = (function(){
           </svg>
           <div class="flex justify-between text-[11px] text-slate-500"><span>${esc(trend[0].d)}</span><span>${esc(trend[trend.length - 1].d)}</span></div>` : '<p class="text-xs text-slate-500 mt-3">ยังไม่มีข้อมูล</p>'}
         </div>
-      </div>`;
+      </div>
+      ${lineCard(lines || {}, title)}`;
   }
   let entered = false;
   return {
     render,
-    enter(){ oeeFailed = false; render(); void loadOEE_(); if (!entered && typeof F1Motion !== 'undefined'){ entered = true; F1Motion.enter(document.querySelector('.shell[data-view="oee"]')); } },
+    enter(arg){ const k = String(arg || '').toUpperCase(); if (k){ lineSel = k; range = 'today'; } oeeFailed = false; render(); void loadOEE_(); if (!entered && typeof F1Motion !== 'undefined'){ entered = true; F1Motion.enter(document.querySelector('.shell[data-view="oee"]')); } },
     range(r){ range = r; pick = ''; render(); },
-    pick(k){ pick = (k === pick || k === 'good') ? '' : k; render(); }
+    pick(k){ pick = (k === pick || k === 'good') ? '' : k; render(); },
+    line(k){ lineSel = k; render(); const c = el('oeeLineCard'); if (c && window.innerWidth < 1280) c.scrollIntoView({ behavior:'smooth', block:'start' }); }
   };
 })();
 
@@ -5955,7 +5975,7 @@ const F1Nav = (function(){
     close();
     if (view === 'sewing') setTimeout(() => window.dispatchEvent(new Event('resize')), 30);
     if (view === 'search' || view === 'plan') F1MH.enter(view, arg);
-    if (view === 'oee') F1OEE.enter();
+    if (view === 'oee') F1OEE.enter(arg);
     // motion ตอนสลับหน้า: หน้าค้นหา / แผน เล่นหลังข้อมูลขึ้น (ใน F1MH) · Dashboard เล่นเมื่อโหลดรอบแรกเสร็จแล้ว
     const node = document.querySelector('.shell[data-view="' + view + '"]');
     if (view === 'sewing'){ if (window.__f1DashReady) F1Motion.enter(node, { soft: true }); }
