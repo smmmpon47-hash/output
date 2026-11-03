@@ -1163,6 +1163,8 @@
   html.dark .oee-lbars{ border-color:rgba(255,255,255,.1); }
   .oee-lcol{ flex:1 1 0; min-width:0; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:4px; }
   .oee-lcol b{ font-size:15px; font-weight:800; }
+  .oee-lcol em.oee-tick{ font-weight:700; } .oee-lcol em.oee-tick.ok{ color:#059669; } .oee-lcol em.oee-tick.warn{ color:#D97706; } .oee-lcol em.oee-tick.bad{ color:#E11D48; }
+  html.dark .oee-lcol em.oee-tick.ok{ color:#34D399; } html.dark .oee-lcol em.oee-tick.warn{ color:#FBBF24; } html.dark .oee-lcol em.oee-tick.bad{ color:#FB7185; }
   .oee-ltick{ position:absolute; left:-4px; right:-4px; height:0; border-top:2px dashed #64748B; }
   html.dark .oee-ltick{ border-color:#CBD5E1; }
   .oee-lbar{ position:relative; overflow:visible !important; display:flex; align-items:flex-end; width:100%; max-width:56px; height:calc(100% - 84px); border-radius:10px 10px 0 0; background:#E2E8F0; overflow:hidden; }
@@ -3108,7 +3110,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
         </div>
         <span class="text-xs font-extrabold text-slate-700">${pct}%</span>
       </div>
-      ${currentDashboardIsRange || (lotTag && lotTag.indexOf('LOT 1/') !== 0) ? '' : effRowHtml_(line)}
+      ${lotTag && lotTag.indexOf('LOT 1/') !== 0 ? '' : effRowHtml_(line)}
     </div>`;
 }
 
@@ -3191,9 +3193,34 @@ function effToday_(){
   return oeeByDate[day] || null;
 }
 const effIsToday_ = () => !oeeData || !effPickDay_() || effPickDay_() === oeeData.today;
+// ช่วงหลายวัน (หน้า Sewing เลือก ถึง / แท็บสัปดาห์): ?from=&date= · เก็บต่อช่วง (null = กำลังโหลด · false = โหลดไม่ได้)
+const oeeByRange = {};
+const effRangeKey_ = () => currentDashboardIsRange && effPickDay_() && el('datePickerTo') && el('datePickerTo').value ? effPickDay_() + '|' + el('datePickerTo').value : '';
+function loadOEERange_(key){
+  if (oeeByRange[key] !== undefined) return;
+  oeeByRange[key] = null;
+  const [from, to] = key.split('|');
+  fetch(`${GAS_API_URL}?action=getOEE&from=${encodeURIComponent(from)}&date=${encodeURIComponent(to)}&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' })
+    .then(r => r.json())
+    .then(d => { oeeByRange[key] = d && d.status === 'ok' && d.from === from ? d : false; })
+    .catch(() => { oeeByRange[key] = false; })
+    .finally(refreshEffViews_);
+}
+// สิ่งที่การ์ดใช้: วันที่เลือก หรือ ทั้งช่วง → { plant, lines, prev, range }
+function effSel_(){
+  const rk = effRangeKey_();
+  if (rk){
+    if (oeeByRange[rk] === undefined) loadOEERange_(rk);
+    const d = oeeByRange[rk];
+    return d && d.plant.month ? { plant: d.plant.month, lines: d.lines.month || {}, prev: null, range: true } : null;
+  }
+  const d = effToday_();
+  return d && d.plant.today ? { plant: d.plant.today, lines: d.lines.today || {}, prev: d.plant.lastDayOee, range: false } : null;
+}
 // ข้อความตอนยังไม่มีตัวเลข
 function effEmptyText_(){
-  if (currentDashboardIsRange) return 'ดูได้ทีละวัน';
+  const rk = effRangeKey_();
+  if (rk) return oeeByRange[rk] === null || oeeByRange[rk] === undefined ? 'กำลังคิด…' : oeeByRange[rk] === false ? 'โหลดช่วงนั้นไม่ได้' : 'ช่วงนั้นไม่มียอดที่รู้ SAM';
   if (!oeeData) return oeeFailed ? 'ยังโหลด OEE ไม่ได้' : 'กำลังคิด…';
   if (!effIsToday_() && oeeByDate[effPickDay_()] === null) return 'กำลังคิด…';
   if (!effIsToday_() && oeeByDate[effPickDay_()] === false) return 'โหลดวันนั้นไม่ได้';
@@ -3201,10 +3228,9 @@ function effEmptyText_(){
 }
 
 function effRowHtml_(line){
-  if (currentDashboardIsRange) return '';
   const code = lineKey_(line);
-  const d = effToday_();
-  const e = d && d.lines && d.lines.today ? d.lines.today[code] : null;
+  const sel = effSel_();
+  const e = sel ? sel.lines[code] : null;
   if (!e) return `<div class="eff-row" data-line="${code}"><span>Efficiency <b class="text-slate-400">${/กำลังคิด/.test(effEmptyText_()) ? '…' : '—'}</b></span><span class="text-[10.5px]">${effEmptyText_()}</span></div>`;
   return `<div class="eff-row" data-line="${code}"><span>Efficiency <b class="eff-${effTone_(e.oee)}">${pct1_(e.oee)}</b></span><span>เสีย ${Number(e.lostMin || 0).toLocaleString()} นาที</span></div>`;
 }
@@ -3214,8 +3240,8 @@ function renderEffKpi_(lines){
   const box = el('kpiEff');
   if (!box) return;
   void loadOEE_();
-  const d = effToday_();
-  const p = d && d.plant ? d.plant.today : null;
+  const sel = effSel_();
+  const p = sel ? sel.plant : null;
   el('effGoal').textContent = EFF_GOAL;
   if (!p){
     box.textContent = '—';
@@ -3227,8 +3253,11 @@ function renderEffKpi_(lines){
   }
   box.textContent = pct1_(p.oee);
   box.className = 'text-2xl font-extrabold eff-' + effTone_(p.oee);
-  const prev = d.plant.lastDayOee;
-  if (prev !== null && prev !== undefined){
+  const prev = sel.prev;
+  if (sel.range){
+    el('kpiEffDelta').textContent = 'รวมทั้งช่วงที่เลือก';
+    el('kpiEffDelta').className = 'text-[11px] font-semibold text-slate-500';
+  } else if (prev !== null && prev !== undefined){
     const diff = Math.round((p.oee - prev) * 10) / 10;
     el('kpiEffDelta').textContent = (diff >= 0 ? '▲ ' : '▼ ') + Math.abs(diff) + ' จากวันทำงานก่อน';
     el('kpiEffDelta').className = 'text-[11px] font-semibold ' + (diff >= 0 ? 'text-emerald-600' : 'text-rose-600');
@@ -3249,8 +3278,8 @@ function renderEffDetail_(code){
   link.href = '#oee/' + code;
   link.classList.toggle('hide', currentDashboardIsRange);
   if (!oeeData && !oeeFailed) void loadOEE_();
-  const d = effToday_();
-  const e = d && d.lines && d.lines.today ? d.lines.today[code] : null;
+  const sel = effSel_();
+  const e = sel ? sel.lines[code] : null;
   el('dtEffVal').textContent = e ? '· ' + pct1_(e.oee) : '';
   el('dtEffVal').className = e ? 'eff-' + effTone_(e.oee) : '';
 }
@@ -3271,7 +3300,7 @@ function effLineHtml_(e){
     <p class="text-xs text-slate-500 mt-3">เวลาคน ${Number(e.attended || 0).toLocaleString()} นาที · ได้เป็นงาน ${Number(e.earned || 0).toLocaleString()} นาที · ไม่ได้เป็นงาน ${Number(e.lostMin || 0).toLocaleString()} นาที</p>
     <p class="text-xs font-semibold text-slate-700 mt-3">ยอดที่ขาดเป้า แยกตามหมายเหตุ (นาที-คน)</p>
     <div class="flex flex-col gap-1.5 mt-2">${reasons.length ? reasons.slice(0, 8).map(r => `<div class="oee-reason"><span>${esc(r.label)}</span><span class="oee-rbar"><span style="width:${r.min / max * 100}%;background:${/ไม่ได้ติ๊ก|ไม่มีหมายเหตุ/.test(r.label) ? '#94A3B8' : OEE_BUCKETS[r.bucket].color}"></span></span><b>${Number(r.min).toLocaleString()}</b></div>`).join('') : '<p class="text-xs text-slate-500">ยอดถึงเป้าทุกช่วง</p>'}</div>
-    <p class="eff-note mt-3">นับ ${cov.samSlots || 0} จาก ${cov.slots || 0} ช่วงที่กรอกยอด (ช่วงที่ไม่รู้ SAM ไม่นับ) · ยอดไม่ถึงเป้า ${cov.lostSlots || 0} ช่วง ไม่ได้ติ๊กหมายเหตุ ${cov.untickedSlots || 0} ช่วง</p>`;
+    <p class="eff-note mt-3">นับ ${cov.samSlots || 0} จาก ${cov.slots || 0} ช่วงที่กรอกยอด (ช่วงที่ไม่รู้ SAM ไม่นับ) · ยอดไม่ถึงเป้า ${cov.lostSlots || 0} ช่วง ไม่ได้ติ๊กหมายเหตุ ${cov.untickedSlots || 0} ช่วง${cov.lostSlots ? ' (ติ๊กแล้ว ' + Math.round((cov.lostSlots - cov.untickedSlots) / cov.lostSlots * 100) + '%)' : ''}${cov.mpTimedSlots ? ' · ' + cov.mpTimedSlots + ' ช่วงคิดคนตามเวลาที่แก้คนจริง' : ''}</p>`;
 }
 
 /* ---------- หน้า OEE (กดการ์ด Efficiency) ---------- */
@@ -3299,6 +3328,14 @@ const F1OEE = (function(){
       : `<b>${pct1_(m.oee)}</b><span>OEE · เป้า ${EFF_GOAL}%</span>`;
     return `<div class="oee-donut"><svg viewBox="0 0 200 200" role="img" aria-label="สัดส่วนเวลาทำงาน">${segs}</svg><div class="oee-donut-c">${center}</div></div>`;
   }
+  // ติ๊กหมายเหตุกี่ % ของช่วงที่ยอดไม่ถึงเป้า
+  function tickPct(m){ const c = (m && m.coverage) || {}; return c.lostSlots ? Math.round((c.lostSlots - c.untickedSlots) / c.lostSlots * 100) : null; }
+  function tickChip(m){
+    const t = tickPct(m);
+    if (t === null) return '';
+    const tone = t >= 80 ? 'bg-emerald-50 text-emerald-700' : t >= 50 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-600';
+    return `<p class="text-[12px] mt-3"><span class="px-2 py-1 rounded-lg font-semibold ${tone}">หน้างานติ๊กหมายเหตุ ${t}%</span> <span class="text-slate-500">ของช่วงที่ยอดไม่ถึงเป้า · ยิ่งติ๊กครบ ยิ่งรู้ว่าเสียไปกับอะไร</span></p>`;
+  }
   function detail(m, p){
     const cov = m.coverage || {};
     const covText = `นับ ${cov.samSlots || 0} จาก ${cov.slots || 0} ช่วงที่กรอกยอด · ไม่ได้ติ๊กหมายเหตุ ${cov.untickedSlots || 0} จาก ${cov.lostSlots || 0} ช่วงที่ยอดไม่ถึงเป้า`;
@@ -3311,6 +3348,7 @@ const F1OEE = (function(){
       </button>`;
       return `<p class="text-xs text-slate-500">OEE = เวลาเดินได้ × ความเร็ว × คุณภาพ · กดชิ้นในวงกลม หรือการ์ดด้านล่าง เพื่อดูว่าเสียไปกับอะไร</p>
         <div class="oee-chips">${chip('avail', m.a)}${chip('perf', m.p)}${chip('qual', m.q)}</div>
+        ${tickChip(m)}
         <p class="text-[11px] text-slate-500 mt-3">${covText}</p>`;
     }
     const list = (m.reasons || []).filter(r => r.bucket === pick);
@@ -3337,9 +3375,10 @@ const F1OEE = (function(){
         <span class="oee-lbar"><span style="height:${Math.min(100, x.oee)}%;background:${effColor_(x.oee)}"></span><i class="oee-ltick" style="bottom:${EFF_GOAL}%"></i></span>
         <small>LINE ${k}</small>
         <em>${Math.round(x.a)} · ${Math.round(x.p)} · ${Math.round(x.q)}</em>
+        ${tickPct(x) === null ? '' : `<em class="oee-tick ${tickPct(x) >= 80 ? 'ok' : tickPct(x) >= 50 ? 'warn' : 'bad'}">ติ๊ก ${tickPct(x)}%</em>`}
       </div>`; }).join('')}
     </div>
-    <p class="text-[11px] text-slate-500 mt-2">เส้นประ = เป้า ${EFF_GOAL}% · ตัวเลขใต้แท่ง = เวลาเดินได้ · ความเร็ว · คุณภาพ (%) · กดแท่งเพื่อดูรายละเอียด</p>`;
+    <p class="text-[11px] text-slate-500 mt-2">เส้นประ = เป้า ${EFF_GOAL}% · ตัวเลขใต้แท่ง = เวลาเดินได้ · ความเร็ว · คุณภาพ (%) · ติ๊ก = หน้างานติ๊กหมายเหตุกี่ % ของช่วงที่ยอดไม่ถึงเป้า · กดแท่งเพื่อดูรายละเอียด</p>`;
   }
   function lineCard(lines, title){
     const keys = (typeof LINE_ORDER !== 'undefined' ? LINE_ORDER : ['B', 'C', 'D', 'E', 'F']).filter(k => lines[k]);
@@ -3374,9 +3413,19 @@ const F1OEE = (function(){
     }
     const dmy = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
     const dayLabel = !day || day.today === oeeData.today ? 'วันนี้' : dmy(day.today);
-    const m = range === 'month' ? oeeData.plant.month : day && day.plant.today;
-    const lines = range === 'month' ? oeeData.lines.month : day && day.lines.today;
+    // สัปดาห์: จันทร์ → วันเดียวกับแท็บรายวัน
+    const wEnd = day ? day.today : oeeData.today;
+    const wd = new Date(wEnd + 'T12:00:00'); wd.setDate(wd.getDate() - (wd.getDay() + 6) % 7);
+    const wFrom = wd.getFullYear() + '-' + String(wd.getMonth() + 1).padStart(2, '0') + '-' + String(wd.getDate()).padStart(2, '0');
+    const wKey = wFrom + '|' + wEnd;
+    if (range === 'week' && oeeByRange[wKey] === undefined) loadOEERange_(wKey);
+    const week = oeeByRange[wKey] || null;
+    const weekLabel = wEnd === oeeData.today ? 'สัปดาห์นี้' : 'สัปดาห์ ' + dmy(wFrom);
+    const m = range === 'month' ? oeeData.plant.month : range === 'week' ? week && week.plant.month : day && day.plant.today;
+    const lines = range === 'month' ? oeeData.lines.month : range === 'week' ? week && week.lines.month : day && day.lines.today;
+    if (range === 'week') dayLoading = oeeByRange[wKey] === null || oeeByRange[wKey] === undefined;
     const title = range === 'month' ? thMonth(oeeData.month)
+      : range === 'week' ? 'สัปดาห์ ' + dmy(wFrom) + (wFrom === wEnd ? '' : ' – ' + dmy(wEnd))
       : dayLabel === 'วันนี้' ? 'วันนี้' : 'วันที่ ' + dmy(day.today) + '/' + day.today.slice(0, 4) + (picked && picked.today !== day.today ? ' (วันทำงานล่าสุด)' : '');
     const trend = (oeeData.trend || []).filter(t => t.oee !== null && t.oee !== undefined);
     const lo = Math.min(40, Math.floor(Math.min.apply(null, trend.map(t => t.oee).concat([EFF_GOAL])) / 5) * 5);
@@ -3389,12 +3438,13 @@ const F1OEE = (function(){
           <span class="text-[11px] text-slate-500">คิดเมื่อ ${esc(oeeData.generatedAt || '')}</span>
           <div class="oee-ranges">
             <button type="button" class="${range === 'today' ? 'on' : ''}" onclick="F1OEE.range('today')">${dayLabel}</button>
+            <button type="button" class="${range === 'week' ? 'on' : ''}" onclick="F1OEE.range('week')">${weekLabel}</button>
             <button type="button" class="${range === 'month' ? 'on' : ''}" onclick="F1OEE.range('month')">${oeeData.month === (oeeData.today || '').slice(0, 7) ? 'เดือนนี้' : thMonth(oeeData.month).split(' ')[0]}</button>
           </div>
         </div>
       </div>`;
     if (!m){
-      root.innerHTML = head + `<div class="card soft p-6 text-center text-slate-500">${range === 'today' && dayLoading ? 'กำลังคิด OEE วันทำงานล่าสุด…' : 'ยังไม่มียอดที่คิด OEE ได้' + (range === 'today' ? 'ของวันนี้' : 'ในเดือนนี้') + ' (ต้องมียอดรายชั่วโมง + SAM + จำนวนคน)'}</div>`;
+      root.innerHTML = head + `<div class="card soft p-6 text-center text-slate-500">${range !== 'month' && dayLoading ? (range === 'week' ? 'กำลังคิด OEE ทั้งสัปดาห์…' : 'กำลังคิด OEE วันทำงานล่าสุด…') : 'ยังไม่มียอดที่คิด OEE ได้' + (range === 'today' ? 'ของวันนี้' : range === 'week' ? 'ในสัปดาห์นี้' : 'ในเดือนนี้') + ' (ต้องมียอดรายชั่วโมง + SAM + จำนวนคน)'}</div>`;
       return;
     }
     const p = partsOf(m);
@@ -6043,7 +6093,7 @@ const F1MH = (function(){
   let plan = { style:'', qty:3000, mp:25, hours:10, start:'', due:'', line:'', lines:[], mpBy:{}, change:'new' };
   // Load = ไลน์ที่มีงานเข้าโหลด (B C D) · Lean = E F · SAM / ความเร็วรุ่นเดียวกันคนละประเภทไม่เท่ากัน
   const LINE_TYPE = c => ['B', 'C', 'D'].indexOf(c) >= 0 ? 'Load' : 'Lean';
-  let openRun = '', showAllRuns = false, ganttOpen = false, ganttAll = false;
+  let openRun = '', showAllRuns = false, ganttOpen = false, ganttAll = false, ganttQ = '';
 
   const esc = s => String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const fmt = n => Math.round(Number(n) || 0).toLocaleString('en-US');
@@ -6063,6 +6113,18 @@ const F1MH = (function(){
     return d;
   }
 
+  // เปิดหน้าค้างไว้: ทุก 10 นาทีโหลดใหม่ (ไม่รบกวนตอนกำลังพิมพ์ในช่องของหน้านี้)
+  let loadedAt = 0;
+  setInterval(async () => {
+    const view = document.documentElement.getAttribute('data-view');
+    if (document.hidden || !data || (view !== 'plan' && view !== 'search') || Date.now() - loadedAt < 10 * 60 * 1000) return;
+    const a = document.activeElement;
+    if (a && /INPUT|TEXTAREA|SELECT/.test(a.tagName) && a.closest('.shell[data-view="plan"], .shell[data-view="search"]')) return;
+    const old = data; data = null;
+    await load();
+    if (!data){ data = old; loadedAt = Date.now(); return; }
+    if (view === 'plan') renderPlan(); else renderSearch();
+  }, 60 * 1000);
   async function load(){
     if (data) return data;
     if (loading) return loading;
@@ -6071,7 +6133,7 @@ const F1MH = (function(){
         const res = await fetch(`${GAS_API_URL}?action=getModelHistory&_=${Date.now()}`, { method:'GET', redirect:'follow', cache:'no-store' });
         const j = await res.json();
         if (!j || j.status !== 'success' || !Array.isArray(j.styles)) throw new Error('not_deployed');
-        data = j; loadError = '';
+        data = j; loadError = ''; loadedAt = Date.now();
       }catch(err){
         loadError = err && err.message === 'not_deployed'
           ? 'ระบบหลังบ้านยังไม่มีข้อมูลประวัติรุ่น (รอ Deploy Apps Script เวอร์ชันที่มี ModelHistory)'
@@ -6424,9 +6486,15 @@ const F1MH = (function(){
     const all = backtest().items;
     if (!all.length) return '';
     const mine = styleKey ? all.filter(x => x.style === styleKey) : [];
-    const pool = mine.length ? mine : all;
-    const list = pool.slice(0, ganttAll ? 40 : 6);
+    const q = ganttQ.trim().toUpperCase().replace(/\s+/g, '');
+    const models = {};
+    (data.styles || []).forEach(st => st.runs.forEach(run => { models[run.lot] = String(run.model || ''); }));
+    const pool = q ? all.filter(x => (x.lot + ' ' + x.style + ' ' + (models[x.lot] || '') + ' LINE' + x.line).toUpperCase().replace(/\s+/g, '').indexOf(q) >= 0) : (mine.length ? mine : all);
+    const list = pool.slice(0, ganttAll || q ? 40 : 6);
     const on = all.filter(x => x.shift === 0).length, late = all.filter(x => x.shift > 0).length, early = all.filter(x => x.shift < 0).length;
+    const searchBox = `<div style="max-width:420px"><label for="mhGanttQ" class="text-[12px] text-slate-500">ค้นหา รุ่น หรือ เลข LOT (รวมทุกสีตามรหัสหน้าขีด) หรือ ไลน์</label>
+        <input id="mhGanttQ" class="mh-input mt-1" placeholder="พิมพ์ เช่น MFSZ292 หรือ 26121008 หรือ Line B" value="${esc(ganttQ)}" autocomplete="off" oninput="F1MH.searchGantt(this.value)"></div>`;
+    if (!list.length) return `<details id="mhGantt" class="card soft p-5 mh-fold" open ontoggle="F1MH.foldGantt(this.open)"><summary class="flex flex-wrap items-baseline justify-between gap-2"><span class="font-semibold text-slate-800 text-lg">แผน vs จริง</span><span class="text-[12px] text-slate-500 mh-fold-end"><span class="mh-fold-ico" aria-hidden="true">▾</span></span></summary><div class="flex flex-col gap-3 mt-3">${searchBox}<p class="text-sm text-slate-500">ไม่พบรอบที่ตรงกับ "${esc(ganttQ)}" (นับเฉพาะรอบที่เย็บจบแล้ว)</p></div></details>`;
     const from = list.reduce((a, x) => x.start < a ? x.start : a, list[0].start);
     const to = list.reduce((a, x) => { const e = x.end > x.planEnd ? x.end : x.planEnd; return e > a ? e : a; }, list[0].end);
     const span = daysBetween(from, to) + 1;
@@ -6436,12 +6504,13 @@ const F1MH = (function(){
     for (let i = 0; i < span; i++){ const d = parseYmd(from); d.setDate(d.getDate() + i); if (i === 0 || d.getDate() === 1 || d.getDay() === 1) ticks.push({ i: i, label: d.getDate() + '/' + (d.getMonth() + 1) }); }
     const tag = x => x.shift === 0 ? '<b class="text-emerald-600">ตรงวัน</b>' : x.shift > 0 ? `<b class="text-rose-600">ช้า ${x.shift} วัน</b>` : `<b class="text-sky-600">เร็ว ${-x.shift} วัน</b>`;
     // ย่อไว้เป็นค่าเริ่มต้น: เห็นแค่สรุป · กางแล้วโชว์ 6 รอบล่าสุด กด "ดูทั้งหมด" ได้
-    return `<details class="card soft p-5 mh-fold"${ganttOpen ? ' open' : ''} ontoggle="F1MH.foldGantt(this.open)">
+    return `<details id="mhGantt" class="card soft p-5 mh-fold"${ganttOpen ? ' open' : ''} ontoggle="F1MH.foldGantt(this.open)">
       <summary class="flex flex-wrap items-baseline justify-between gap-2">
         <span class="font-semibold text-slate-800 text-lg">แผน vs จริง</span>
         <span class="text-[12px] text-slate-500"><span class="whitespace-nowrap">ทั้งหมด ${all.length} รอบ (LOT × ไลน์)</span> · <b class="text-emerald-600 whitespace-nowrap">ตรงวัน ${on}</b> · <b class="text-rose-600 whitespace-nowrap">ช้า ${late}</b> · <b class="text-sky-600 whitespace-nowrap">เร็ว ${early}</b><span class="mh-fold-end"><span class="mh-fold-hint"> · กดเพื่อดูรายรอบ</span><span class="mh-fold-ico" aria-hidden="true">▾</span></span></span>
       </summary>
       <div class="flex flex-col gap-3 mt-3">
+      ${searchBox}
       <div class="flex flex-wrap gap-4 text-[12px] text-slate-500"><span class="inline-flex items-center gap-1.5"><i class="mh-gplan"></i>แผน (วันที่คาดไว้ตอนเริ่ม)</span><span class="inline-flex items-center gap-1.5"><i class="mh-gact"></i>จริง (วันแรก → วันสุดท้ายที่เย็บ)</span></div>
       <div style="overflow-x:auto"><div style="min-width:640px">
         <div class="mh-grow text-[11px] text-slate-400"><span></span><div class="mh-gtrack">${ticks.map(t => `<span class="mh-gtick" style="left:${t.i / span * 100}%">${t.label}</span>`).join('')}</div><span></span></div>
@@ -6454,8 +6523,8 @@ const F1MH = (function(){
           <span class="text-[12px] text-right">${tag(x)}</span>
         </div>`).join('')}
       </div></div>
-      ${pool.length > 6 ? `<button type="button" class="mh-seg self-start" onclick="F1MH.allGantt()">${ganttAll ? 'ย่อเหลือ 6 รอบ' : 'ดูทั้งหมด ' + Math.min(40, pool.length) + ' รอบ'}</button>` : ''}
-      <p class="text-[12px] text-slate-500">${mine.length ? 'รุ่นนี้ ' + mine.length + ' รอบ' : 'รอบล่าสุด'} · แผนตอนนี้ = วันจบที่หน้านี้คาดไว้ตอนเริ่ม LOT (ใช้ข้อมูลก่อนวันเริ่มเท่านั้น) · พอได้ไฟล์แผนการผลิตจริง จะเปลี่ยนแท่งแผนเป็นแผนของฝ่ายวางแผน</p>
+      ${pool.length > 6 && !q ? `<button type="button" class="mh-seg self-start" onclick="F1MH.allGantt()">${ganttAll ? 'ย่อเหลือ 6 รอบ' : 'ดูทั้งหมด ' + Math.min(40, pool.length) + ' รอบ'}</button>` : ''}
+      <p class="text-[12px] text-slate-500">${q ? 'พบ ' + pool.length + ' รอบ' : mine.length ? 'รุ่นนี้ ' + mine.length + ' รอบ' : 'รอบล่าสุด'} · แผนตอนนี้ = วันจบที่หน้านี้คาดไว้ตอนเริ่ม LOT (ใช้ข้อมูลก่อนวันเริ่มเท่านั้น) · พอได้ไฟล์แผนการผลิตจริง จะเปลี่ยนแท่งแผนเป็นแผนของฝ่ายวางแผน</p>
       </div>
     </details>`;
   }
@@ -6846,6 +6915,17 @@ const F1MH = (function(){
   function setChange(k){ plan.change = k; renderPlan(); }
   function foldGantt(open){ ganttOpen = !!open; }
   function allGantt(){ ganttAll = !ganttAll; renderPlan(); }
+  // พิมพ์ค้นหา → วาดเฉพาะการ์ดนี้ใหม่ (ช่องพิมพ์ไม่หลุดโฟกัส)
+  function searchGantt(v){
+    ganttQ = v; ganttOpen = true;
+    const box = el('mhGantt');
+    if (!box) return;
+    const pos = el('mhGanttQ') ? el('mhGanttQ').selectionStart : v.length;
+    const s = data.styles.find(x => x.style === plan.style) || null;
+    box.outerHTML = backtestCard(s ? s.style : '');
+    const inp = el('mhGanttQ');
+    if (inp){ inp.focus(); try { inp.setSelectionRange(pos, pos); } catch (e) {} }
+  }
   // เข้าหน้า: วาดแล้วค่อยเล่น motion (กดปุ่ม / พิมพ์ในหน้า วาดใหม่แต่ไม่เล่นซ้ำ)
   const viewNode = v => document.querySelector('.shell[data-view="' + v + '"]');
   function enter(view, arg){
@@ -6867,7 +6947,7 @@ const F1MH = (function(){
     return { lines, daily };
   }
 
-  return { lotHistory, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleLine, setMp, setChange, foldGantt, allGantt, toggleAllRuns, styleSuggest, styleKey };
+  return { lotHistory, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleLine, setMp, setChange, foldGantt, allGantt, searchGantt, toggleAllRuns, styleSuggest, styleKey };
 })();
 
 F1Nav.init();
