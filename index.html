@@ -1089,6 +1089,11 @@
   .eff-bar{ display:flex; height:16px; border-radius:6px; overflow:hidden; }
   .eff-bar > span{ display:block; height:100%; }
   .eff-dot{ display:inline-block; width:9px; height:9px; border-radius:3px; }
+  .mh-fold > summary{ cursor:pointer; list-style:none; }
+  .mh-fold > summary::-webkit-details-marker{ display:none; }
+  .mh-fold-ico{ display:inline-block; font-size:14px; color:#94A3B8; transition:transform .2s; }
+  .mh-fold[open] .mh-fold-ico{ transform:rotate(180deg); }
+  .mh-fold[open] .mh-fold-hint{ display:none; }
   .mh-rrow{ display:grid; grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) minmax(170px,1.2fr) minmax(150px,1fr) minmax(120px,.8fr); gap:12px; align-items:center; width:100%; text-align:left; padding:10px 8px; border-radius:12px; }
   .mh-rbar{ display:block; height:6px; border-radius:4px; background:rgba(148,163,184,.25); overflow:hidden; margin:4px 0 2px; }
   .mh-rbar > span{ display:block; height:100%; border-radius:inherit; background:#10B981; }
@@ -6036,7 +6041,7 @@ const F1MH = (function(){
   let plan = { style:'', qty:3000, mp:25, hours:10, start:'', due:'', line:'', lines:[], mpBy:{}, change:'new' };
   // Load = ไลน์ที่มีงานเข้าโหลด (B C D) · Lean = E F · SAM / ความเร็วรุ่นเดียวกันคนละประเภทไม่เท่ากัน
   const LINE_TYPE = c => ['B', 'C', 'D'].indexOf(c) >= 0 ? 'Load' : 'Lean';
-  let openRun = '', showAllRuns = false;
+  let openRun = '', showAllRuns = false, ganttOpen = false, ganttAll = false;
 
   const esc = s => String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
   const fmt = n => Math.round(Number(n) || 0).toLocaleString('en-US');
@@ -6417,7 +6422,8 @@ const F1MH = (function(){
     const all = backtest().items;
     if (!all.length) return '';
     const mine = styleKey ? all.filter(x => x.style === styleKey) : [];
-    const list = (mine.length ? mine : all).slice(0, 12);
+    const pool = mine.length ? mine : all;
+    const list = pool.slice(0, ganttAll ? 40 : 6);
     const on = all.filter(x => x.shift === 0).length, late = all.filter(x => x.shift > 0).length, early = all.filter(x => x.shift < 0).length;
     const from = list.reduce((a, x) => x.start < a ? x.start : a, list[0].start);
     const to = list.reduce((a, x) => { const e = x.end > x.planEnd ? x.end : x.planEnd; return e > a ? e : a; }, list[0].end);
@@ -6427,11 +6433,13 @@ const F1MH = (function(){
     const ticks = [];
     for (let i = 0; i < span; i++){ const d = parseYmd(from); d.setDate(d.getDate() + i); if (i === 0 || d.getDate() === 1 || d.getDay() === 1) ticks.push({ i: i, label: d.getDate() + '/' + (d.getMonth() + 1) }); }
     const tag = x => x.shift === 0 ? '<b class="text-emerald-600">ตรงวัน</b>' : x.shift > 0 ? `<b class="text-rose-600">ช้า ${x.shift} วัน</b>` : `<b class="text-sky-600">เร็ว ${-x.shift} วัน</b>`;
-    return `<div class="card soft p-5 flex flex-col gap-3">
-      <div class="flex flex-wrap items-baseline justify-between gap-2">
-        <p class="font-semibold text-slate-800 text-lg">แผน vs จริง</p>
-        <p class="text-[12px] text-slate-500">ทั้งหมด ${all.length} รอบ (LOT × ไลน์) · <b class="text-emerald-600">ตรงวัน ${on}</b> · <b class="text-rose-600">ช้า ${late}</b> · <b class="text-sky-600">เร็ว ${early}</b></p>
-      </div>
+    // ย่อไว้เป็นค่าเริ่มต้น: เห็นแค่สรุป · กางแล้วโชว์ 6 รอบล่าสุด กด "ดูทั้งหมด" ได้
+    return `<details class="card soft p-5 mh-fold"${ganttOpen ? ' open' : ''} ontoggle="F1MH.foldGantt(this.open)">
+      <summary class="flex flex-wrap items-baseline justify-between gap-2">
+        <span class="font-semibold text-slate-800 text-lg">แผน vs จริง <span class="mh-fold-ico" aria-hidden="true">▾</span></span>
+        <span class="text-[12px] text-slate-500">ทั้งหมด ${all.length} รอบ (LOT × ไลน์) · <b class="text-emerald-600">ตรงวัน ${on}</b> · <b class="text-rose-600">ช้า ${late}</b> · <b class="text-sky-600">เร็ว ${early}</b><span class="mh-fold-hint"> · กดเพื่อดูรายรอบ</span></span>
+      </summary>
+      <div class="flex flex-col gap-3 mt-3">
       <div class="flex flex-wrap gap-4 text-[12px] text-slate-500"><span class="inline-flex items-center gap-1.5"><i class="mh-gplan"></i>แผน (วันที่คาดไว้ตอนเริ่ม)</span><span class="inline-flex items-center gap-1.5"><i class="mh-gact"></i>จริง (วันแรก → วันสุดท้ายที่เย็บ)</span></div>
       <div style="overflow-x:auto"><div style="min-width:640px">
         <div class="mh-grow text-[11px] text-slate-400"><span></span><div class="mh-gtrack">${ticks.map(t => `<span class="mh-gtick" style="left:${t.i / span * 100}%">${t.label}</span>`).join('')}</div><span></span></div>
@@ -6444,8 +6452,10 @@ const F1MH = (function(){
           <span class="text-[12px] text-right">${tag(x)}</span>
         </div>`).join('')}
       </div></div>
-      <p class="text-[12px] text-slate-500">${mine.length ? 'รุ่นนี้ ' + mine.length + ' รอบ' : 'รอบล่าสุด ' + list.length + ' รอบ'} · แผนตอนนี้ = วันจบที่หน้านี้คาดไว้ตอนเริ่ม LOT (ใช้ข้อมูลก่อนวันเริ่มเท่านั้น) · พอได้ไฟล์แผนการผลิตจริง จะเปลี่ยนแท่งแผนเป็นแผนของฝ่ายวางแผน</p>
-    </div>`;
+      ${pool.length > 6 ? `<button type="button" class="mh-seg self-start" onclick="F1MH.allGantt()">${ganttAll ? 'ย่อเหลือ 6 รอบ' : 'ดูทั้งหมด ' + Math.min(40, pool.length) + ' รอบ'}</button>` : ''}
+      <p class="text-[12px] text-slate-500">${mine.length ? 'รุ่นนี้ ' + mine.length + ' รอบ' : 'รอบล่าสุด'} · แผนตอนนี้ = วันจบที่หน้านี้คาดไว้ตอนเริ่ม LOT (ใช้ข้อมูลก่อนวันเริ่มเท่านั้น) · พอได้ไฟล์แผนการผลิตจริง จะเปลี่ยนแท่งแผนเป็นแผนของฝ่ายวางแผน</p>
+      </div>
+    </details>`;
   }
 
   function firstDayFactor(s){
@@ -6832,6 +6842,8 @@ const F1MH = (function(){
   }
   function setMp(code, value){ plan.mpBy[code] = value; renderPlanResults(); }
   function setChange(k){ plan.change = k; renderPlan(); }
+  function foldGantt(open){ ganttOpen = !!open; }
+  function allGantt(){ ganttAll = !ganttAll; renderPlan(); }
   // เข้าหน้า: วาดแล้วค่อยเล่น motion (กดปุ่ม / พิมพ์ในหน้า วาดใหม่แต่ไม่เล่นซ้ำ)
   const viewNode = v => document.querySelector('.shell[data-view="' + v + '"]');
   function enter(view, arg){
@@ -6853,7 +6865,7 @@ const F1MH = (function(){
     return { lines, daily };
   }
 
-  return { lotHistory, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleLine, setMp, setChange, toggleAllRuns, styleSuggest, styleKey };
+  return { lotHistory, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleLine, setMp, setChange, foldGantt, allGantt, toggleAllRuns, styleSuggest, styleKey };
 })();
 
 F1Nav.init();
