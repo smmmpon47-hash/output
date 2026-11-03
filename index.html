@@ -1089,6 +1089,9 @@
   .eff-bar{ display:flex; height:16px; border-radius:6px; overflow:hidden; }
   .eff-bar > span{ display:block; height:100%; }
   .eff-dot{ display:inline-block; width:9px; height:9px; border-radius:3px; }
+  .mh-rrow{ display:grid; grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) minmax(170px,1.2fr) minmax(150px,1fr) minmax(120px,.8fr); gap:12px; align-items:center; width:100%; text-align:left; padding:10px 8px; border-radius:12px; }
+  .mh-rbar{ display:block; height:6px; border-radius:4px; background:rgba(148,163,184,.25); overflow:hidden; margin:4px 0 2px; }
+  .mh-rbar > span{ display:block; height:100%; border-radius:inherit; background:#10B981; }
   .mh-grow{ display:grid; grid-template-columns:200px minmax(0,1fr) 84px; align-items:center; gap:10px; padding:5px 0; }
   .mh-gtrack{ position:relative; height:22px; border-radius:6px; background:rgba(148,163,184,.12); }
   .mh-gtick{ position:absolute; top:3px; transform:translateX(-2px); white-space:nowrap; }
@@ -6320,48 +6323,53 @@ const F1MH = (function(){
   }
 
   /* ---------- LOT ที่กำลังเย็บ: ถ้าเย็บต่อด้วยความเร็วจริงแบบนี้ + วันซ่อมหนักบ่อยเท่าที่ผ่านมา จะจบวันไหน ---------- */
-  function runningCard(s){
-    if (!s) return '';
+  function forecastLot(l){
     const today = ymd(new Date());
-    const active = (data.lots || []).filter(l => l.style === s.style && l.active && l.stage === 'sewing' && l.poQty && l.sew);
-    if (!active.length) return '';
-    return active.map(l => {
-      const rows = dayRows().filter(x => x.lot === l.lot);
-      if (!rows.length) return '';
-      const lastD = rows.reduce((a, x) => x.d > a ? x.d : a, '');
-      const lines = rows.filter(x => x.d === lastD).map(x => x.line).filter((x, i, a) => a.indexOf(x) === i).sort();
-      const parts = lines.map(line => {
-        const last = rows.filter(x => x.line === line).reduce((a, x) => x.d > a.d ? x : a);
-        const hrs = last.dayHours || last.hours || plan.hours;
-        const cap = lineCap(s.style, line, lineMp(line), hrs, '');
-        const rf = repairFactor(line);
-        return { line: line, type: LINE_TYPE(line), cap: cap, rf: rf, day: cap.day * rf.factor, todayQty: rows.filter(x => x.line === line && x.d === today).reduce((a, x) => a + x.qty, 0) };
-      });
-      const perDay = parts.reduce((a, p) => a + p.day, 0);
-      if (!perDay) return '';
-      const left = Math.max(0, l.poQty - l.sew.total);
-      const sewingToday = lastD === today;
-      const restToday = sewingToday ? parts.reduce((a, p) => a + Math.max(0, p.day - p.todayQty), 0) : 0;
-      const after = Math.max(0, left - restToday);
-      const daysLeft = after / perDay;
-      const finish = after <= 0 ? today : workdays(ymd(nextWorkday(new Date())), Math.max(1, Math.ceil(daysLeft - 0.05))).pop();
-      const ship = l.delivery || '';
-      const late = ship && finish > ship;
-      const pct = Math.round(l.sew.total / l.poQty * 100);
-      return `<div class="card soft p-5 flex flex-col gap-3">
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <p class="font-semibold text-slate-800 text-lg">LOT ${esc(l.lot)} กำลังเย็บ · จะจบเมื่อไหร่</p>
-          <p class="text-[12px] text-slate-500">คิดจากความเร็วจริงของรุ่นนี้ + วันซ่อมหนักของไลน์ที่ผ่านมา · คนล่าสุดของไลน์</p>
-        </div>
-        <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr))">
-          <div class="bg-slate-50 rounded-2xl p-4"><p class="text-[12px] text-slate-500">เย็บแล้ว</p><p class="text-2xl font-bold text-slate-800 mt-1">${fmt(l.sew.total)} / ${fmt(l.poQty)}</p><p class="text-[12px] text-slate-500 mt-1">${pct}% · เหลือ ${fmt(left)} ตัว</p></div>
-          <div class="bg-slate-50 rounded-2xl p-4"><p class="text-[12px] text-slate-500">คาดว่าเย็บเสร็จ</p><p class="text-2xl font-bold ${late ? 'text-rose-600' : 'text-slate-800'} mt-1">${after <= 0 ? 'วันนี้' : thDate(finish, true)}</p><p class="text-[12px] text-slate-500 mt-1">${after <= 0 ? 'ยอดวันนี้น่าจะครบ' : 'อีก ~' + daysLeft.toFixed(1) + ' วันทำงาน หลังวันนี้'}${ship ? ' · Ship ' + thDate(ship, true) + (late ? ' ไม่ทัน' : ' ทัน') : ''}</p></div>
-          <div class="bg-slate-50 rounded-2xl p-4"><p class="text-[12px] text-slate-500">ยอดต่อวันที่ใช้คิด</p><p class="text-2xl font-bold text-slate-800 mt-1">≈ ${fmt(perDay)} ตัว</p><p class="text-[12px] text-slate-500 mt-1">รวม ${parts.length} ไลน์ · หักวันซ่อมหนักแล้ว</p></div>
-        </div>
-        <div class="flex flex-col gap-1.5">${parts.map(p => `<p class="text-[13px] text-slate-700"><b>Line ${esc(p.line)}</b> <span class="text-[12px] ${p.type === 'Load' ? 'text-sky-600' : 'text-violet-600'}">${p.type}</span> ≈ ${fmt(p.day)} ตัว/วัน
-          <span class="text-[12px] text-slate-500">· วันปกติ ${fmt(p.cap.day)} (${esc(p.cap.unit)}) · วันซ่อมหนัก ${p.rf.heavy} ใน ${p.rf.days} วันล่าสุด วันนั้นได้ ~${Math.round(p.rf.ratio * 100)}% → เฉลี่ย ×${p.rf.factor.toFixed(2)}</span></p>`).join('')}</div>
-      </div>`;
-    }).join('');
+    const rows = dayRows().filter(x => x.lot === l.lot);
+    if (!rows.length) return null;
+    const lastD = rows.reduce((a, x) => x.d > a ? x.d : a, '');
+    const lines = rows.filter(x => x.d === lastD).map(x => x.line).filter((x, i, a) => a.indexOf(x) === i).sort();
+    const parts = lines.map(line => {
+      const last = rows.filter(x => x.line === line).reduce((a, x) => x.d > a.d ? x : a);
+      const hrs = last.dayHours || last.hours || plan.hours;
+      const cap = lineCap(l.style, line, lineMp(line), hrs, '');
+      const rf = repairFactor(line);
+      return { line: line, type: LINE_TYPE(line), cap: cap, rf: rf, day: cap.day * rf.factor, todayQty: rows.filter(x => x.line === line && x.d === today).reduce((a, x) => a + x.qty, 0) };
+    });
+    const perDay = parts.reduce((a, p) => a + p.day, 0);
+    if (!perDay) return null;
+    const left = Math.max(0, l.poQty - l.sew.total);
+    const restToday = lastD === today ? parts.reduce((a, p) => a + Math.max(0, p.day - p.todayQty), 0) : 0;
+    const after = Math.max(0, left - restToday);
+    const daysLeft = after / perDay;
+    const finish = after <= 0 ? today : workdays(ymd(nextWorkday(new Date())), Math.max(1, Math.ceil(daysLeft - 0.05))).pop();
+    const ship = l.delivery || '';
+    return { l: l, parts: parts, perDay: perDay, left: left, after: after, daysLeft: daysLeft, finish: finish, ship: ship, late: !!(ship && finish > ship), pct: Math.round(l.sew.total / l.poQty * 100) };
+  }
+  // บนสุดของหน้า: งานที่กำลังผลิตตอนนี้ทุก LOT ทุกไลน์ · กดแถว = เปิดรุ่นนั้น
+  function runningNowCard(sel){
+    const list = (data.lots || []).filter(l => l.active && l.stage === 'sewing' && l.poQty && l.sew).map(forecastLot).filter(Boolean)
+      .sort((a, b) => a.finish < b.finish ? -1 : a.finish > b.finish ? 1 : 0);
+    if (!list.length) return msgCard('ตอนนี้ไม่มี LOT ที่กำลังเย็บ');
+    const today = ymd(new Date());
+    return `<div class="card soft p-5 flex flex-col gap-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <p class="font-semibold text-slate-800 text-lg">กำลังผลิตตอนนี้ · คาดว่าจะจบเมื่อไหร่</p>
+        <p class="text-[12px] text-slate-500">${list.length} LOT · คิดจากความเร็วจริงของรุ่น + วันซ่อมหนักของไลน์ · คนล่าสุดของไลน์ · กดแถวเพื่อดูรุ่นนั้น</p>
+      </div>
+      <div style="overflow-x:auto"><div style="min-width:760px">
+        <div class="mh-rrow text-[12px] text-slate-400"><span>LOT / รุ่น</span><span>ไลน์</span><span>เย็บแล้ว</span><span>คาดว่าเย็บเสร็จ</span><span>Ship</span></div>
+        ${list.map(x => `<div class="border-t border-slate-100"><button type="button" class="mh-click mh-rrow hover:bg-slate-100${sel && x.l.style === sel ? ' bg-slate-100' : ''}" onclick="F1MH.openStyle('${esc(x.l.style)}')">
+          <span><b class="text-slate-800">${esc(x.l.lot)}</b><br><span class="text-[12px] text-slate-500">${esc(x.l.model)}</span></span>
+          <span class="flex flex-col gap-0.5">${x.parts.map(p => `<span class="text-[12px] text-slate-600"><b>${esc(p.line)}</b> <span class="${p.type === 'Load' ? 'text-sky-600' : 'text-violet-600'}">${p.type}</span> ≈${fmt(p.day)}/วัน</span>`).join('')}</span>
+          <span><span class="text-slate-800 font-semibold">${fmt(x.l.sew.total)} / ${fmt(x.l.poQty)}</span> <span class="text-[12px] text-slate-500">${x.pct}%</span>
+            <span class="mh-rbar"><span style="width:${Math.min(100, x.pct)}%"></span></span><span class="text-[12px] text-slate-500">เหลือ ${fmt(x.left)} ตัว</span></span>
+          <span><b class="${x.late ? 'text-rose-600' : 'text-slate-800'}">${x.after <= 0 ? 'วันนี้' : thDate(x.finish, true)}</b><br><span class="text-[12px] text-slate-500">${x.after <= 0 ? 'ยอดวันนี้น่าจะครบ' : 'อีก ~' + x.daysLeft.toFixed(1) + ' วันทำงานหลังวันนี้'}</span></span>
+          <span>${x.ship ? `<span class="text-[12px] px-2 py-0.5 rounded-full ${x.late ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}">${x.late ? 'ไม่ทัน' : 'ทัน'}</span><br><span class="text-[12px] text-slate-500">${thDate(x.ship, true)}${x.ship >= today ? ' · อีก ' + daysBetween(today, x.ship) + ' วัน' : ''}</span>` : '<span class="text-[12px] text-slate-400">ไม่มีวันส่ง</span>'}</span>
+        </button></div>`).join('')}
+      </div></div>
+      <p class="text-[12px] text-slate-500">ยอดต่อวัน = วันปกติของรุ่นนี้ (Load ต่อชั่วโมงไลน์ · Lean ต่อคน × คน) × โอกาสเจอวันซ่อมหนักของไลน์ใน 20 วันล่าสุด · ยังไม่รู้ว่าไลน์อื่นจะมาช่วยหรือย้ายไปตอนไหน</p>
+    </div>`;
   }
 
   /* ---------- แผน vs จริง (ย้อนหลัง): แผน = วันจบที่หน้านี้คาดไว้ตอนเริ่ม LOT (ข้อมูลก่อนวันเริ่มเท่านั้น) ---------- */
@@ -6712,8 +6720,10 @@ const F1MH = (function(){
         </button></div>`).join('')}
       </div></div></div>` : '';
     rootEl.innerHTML = `
-      <div class="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 class="pg-title">ประวัติรุ่น &amp; วางแผน</h1><p class="text-sm text-slate-500 mt-1">เลือกรุ่น กรอกแผน แล้วระบบประมาณการจากประวัติจริง · ข้อมูลถึง ${esc(data.generatedAt)}</p></div>
+      <div><h1 class="pg-title">ประวัติรุ่น &amp; วางแผน</h1><p class="text-sm text-slate-500 mt-1">งานที่กำลังผลิตอยู่ด้านบน · ดูประวัติรุ่นและลองวางแผนด้านล่าง · ข้อมูลถึง ${esc(data.generatedAt)}</p></div>
+      ${runningNowCard(s ? s.style : '')}
+      <div class="flex flex-wrap items-end justify-between gap-3 mt-2">
+        <div><p class="font-semibold text-slate-800 text-lg">ดูประวัติรุ่น &amp; ลองวางแผน</p><p class="text-sm text-slate-500 mt-1">เลือกรุ่น กรอกแผน แล้วระบบประมาณการจากประวัติจริง</p></div>
         <div style="min-width:300px;flex:0 1 420px;position:relative"><label for="mhStyleInput" class="text-[12px] text-slate-500">ค้นหารุ่น หรือ เลข LOT (รวมทุกสีตามรหัสหน้าขีด)</label>
           <input id="mhStyleInput" class="mh-input mt-1" placeholder="พิมพ์ เช่น MFIZ284 หรือ 26121008" value="${esc(plan.style)}" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="mhStyleSug"
             oninput="F1MH.styleSuggest(this.value)" onfocus="this.select();F1MH.styleSuggest(this.value)" onkeydown="F1MH.styleKey(event)">
@@ -6725,8 +6735,7 @@ const F1MH = (function(){
         ${tile('ความยาก (SAM ล่าสุด)', s.sam ? s.sam + ' <span class="text-sm font-normal text-slate-500">นาที/ตัว</span>' : '-', s.sam ? (s.samMax - s.samMin >= 0.1 ? 'เคยอยู่ ' + s.samMin + ' – ' + s.samMax + ' · ' : '') + (s.eff ? 'ทำได้ ~' + Math.round(s.eff * 100) + '% ของ SAM' : 'ยังคิด % ไม่ได้') : 'ยังไม่มีค่า SAM ของรุ่นนี้')}
         ${tile('ไลน์ที่ทำได้ดีสุด', best ? 'Line ' + esc(best.key) + ' <span class="text-sm font-normal text-slate-500">' + best.type + '</span>' : '-', best ? f2(best.rate) + ' ตัว/คน/ชม.' + (ratedLines.length > 1 ? '' : ' · มีข้อมูลไลน์เดียว') : 'ข้อมูลยังไม่พอ')}
       </div>
-      ${lineTable}
-      ${runningCard(s)}` : msgCard('ยังไม่ได้เลือกรุ่น ตัวคำนวณจะใช้ค่ากลางทั้งโรง (' + f2(data.plant.medianRate) + ' ตัว/คน/ชม.) — เลือกรุ่นด้านบน หรือไปที่ "ค้นหารุ่นงาน / LOT"')}
+      ${lineTable}` : msgCard('ยังไม่ได้เลือกรุ่น ตัวคำนวณจะใช้ค่ากลางทั้งโรง (' + f2(data.plant.medianRate) + ' ตัว/คน/ชม.) — เลือกรุ่นด้านบน หรือไปที่ "ค้นหารุ่นงาน / LOT"')}
       <div class="card soft p-5 flex flex-col gap-5">
         <p class="font-semibold text-slate-800 text-lg">ประมาณการ: ต้องใช้กี่วัน</p>
         <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
