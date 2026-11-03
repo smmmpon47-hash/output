@@ -3098,7 +3098,7 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
    OEE (= Efficiency) = ยอด × SAM ÷ (คน × นาที) · ส่วนที่หายแยกตามหมายเหตุที่หน้างานติ๊ก
    นับเฉพาะช่วงที่มียอดและรู้ SAM ของ LOT นั้น (ไม่มี SAM = ไม่นับ)
    ======================================================= */
-let EFF_GOAL = 65;
+let EFF_GOAL = 80;
 let oeeData = null, oeeLoading = null, oeeLoadedAt = 0, oeeFailed = false;
 const OEE_BUCKETS = {
   good:  { label:'ได้งานดี (OEE)', short:'งานดี', color:'#10B981' },
@@ -6021,7 +6021,7 @@ const F1MH = (function(){
   const TH_DAY = ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'];
   const TH_MON = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
   let data = null, loading = null, loadError = '';
-  let plan = { style:'', qty:3000, mp:25, hours:10, start:'', due:'', line:'' };
+  let plan = { style:'', qty:3000, mp:25, hours:10, start:'', due:'', line:'', lines:[], mpBy:{} };
   // Load = ไลน์ที่มีงานเข้าโหลด (B C D) · Lean = E F · SAM / ความเร็วรุ่นเดียวกันคนละประเภทไม่เท่ากัน
   const LINE_TYPE = c => ['B', 'C', 'D'].indexOf(c) >= 0 ? 'Load' : 'Lean';
   let openRun = '', showAllRuns = false;
@@ -6192,6 +6192,143 @@ const F1MH = (function(){
     const r = pt.medianRate || p.medianRate || 2.2;
     return { rate: r, lo: r * 0.8, hi: r * 1.2, source: 'ยังไม่มีประวัติจริง · ใช้ค่ากลาง' + (type ? 'ไลน์ ' + type : 'ทั้งโรง') };
   }
+  /* ---------- Load / Lean · วันปกติ ----------
+     Load (B C D สายพาน): คอขวดคุมยอด → ยอดต่อชั่วโมงของไลน์ × ชั่วโมง (ไม่คูณคน)
+     Lean (E F): ยอดต่อคนต่อชั่วโมง × คน × ชั่วโมง
+     วันปกติ = ทั้งวันเป็น LOT นี้ · ไม่ใช่วันแรกของ LOT ในไลน์นั้น · ซ่อมไม่เกิน 10% ของเวลาทำงาน → ใช้ค่ากลาง (median) */
+  const REPAIR_HEAVY = 0.10;
+  const median = a => { if (!a.length) return null; const x = a.slice().sort((p, q) => p - q), m = x.length >> 1; return x.length % 2 ? x[m] : (x[m - 1] + x[m]) / 2; };
+  const quant = (a, q) => { const x = a.slice().sort((p, c) => p - c); return x[Math.min(x.length - 1, Math.max(0, Math.round((x.length - 1) * q)))]; };
+  let dayRowsCache = null;
+  // ทุกวัน × ไลน์ × LOT ของทุกรุ่น พร้อมธงวันปกติ
+  function dayRows(){
+    if (dayRowsCache && dayRowsCache.data === data) return dayRowsCache.rows;
+    const rows = [];
+    (data.styles || []).forEach(st => st.runs.forEach(run => {
+      const first = {};
+      (run.daily || []).forEach(x => { if (!first[x.line] || x.d < first[x.line]) first[x.line] = x.d; });
+      (run.daily || []).forEach(x => {
+        const why = x.lots > 1 ? 'switch' : x.d === first[x.line] ? 'first' : (x.rep !== null && x.rep !== undefined && x.dayHours && x.rep > REPAIR_HEAVY * x.dayHours * 60) ? 'repair' : (!x.hours || !x.qty) ? 'nodata' : '';
+        rows.push(Object.assign({}, x, { lot: run.lot, style: st.style, from: run.from, type: LINE_TYPE(x.line), normal: !why, why: why }));
+      });
+    }));
+    dayRowsCache = { data: data, rows: rows };
+    return rows;
+  }
+  // ค่ากลางของกลุ่มวันปกติ: ยอด/ชม.ไลน์ · ยอด/คน/ชม. · % SAM
+  function normStats(list){
+    const n = list.filter(x => x.normal);
+    const ph = n.map(x => x.qty / x.hours);
+    const pr = n.filter(x => x.mp).map(x => x.qty / (x.mp * x.hours));
+    const ef = n.filter(x => x.mp && x.sam).map(x => x.qty * x.sam / (x.mp * x.hours * 60));
+    const ex = { first: 0, switch: 0, repair: 0 };
+    list.forEach(x => { if (ex[x.why] !== undefined) ex[x.why]++; });
+    return { n: n.length, perHour: median(ph), perHourLo: ph.length >= 4 ? quant(ph, 0.25) : null, perHourHi: ph.length >= 4 ? quant(ph, 0.75) : null,
+      rate: median(pr), rateLo: pr.length >= 4 ? quant(pr, 0.25) : null, rateHi: pr.length >= 4 ? quant(pr, 0.75) : null, eff: median(ef), nRate: pr.length, ex: ex };
+  }
+  // กำลังผลิตต่อวันของ 1 ไลน์ (before = ใช้เฉพาะข้อมูลก่อนวันนั้น · ใช้ตอนย้อนทดสอบ)
+  function lineCap(styleKey, line, mp, hours, before, samHint){
+    const all = dayRows().filter(x => !before || x.d < before);
+    const type = LINE_TYPE(line), load = type === 'Load';
+    const mine = all.filter(x => x.style === styleKey);
+    const desc = (st, label) => `${label} · วันปกติ ${st.n} วัน${st.ex.first + st.ex.switch + st.ex.repair ? ' (ตัดวันแรก ' + st.ex.first + ' · สลับ LOT ' + st.ex.switch + ' · ซ่อมเยอะ ' + st.ex.repair + ')' : ''}`;
+    const fromStats = (st, label, spread) => {
+      if (load && st.perHour) {
+        const lo = st.perHourLo !== null ? st.perHourLo : st.perHour * (1 - spread), hi = st.perHourHi !== null ? st.perHourHi : st.perHour * (1 + spread);
+        return { day: st.perHour * hours, lo: lo * hours, hi: hi * hours, unit: `${f2(st.perHour)} ตัว/ชม.ไลน์`, source: desc(st, label) };
+      }
+      if (!load && st.rate && mp) {
+        const lo = st.rateLo !== null ? st.rateLo : st.rate * (1 - spread), hi = st.rateHi !== null ? st.rateHi : st.rate * (1 + spread);
+        return { day: st.rate * mp * hours, lo: lo * mp * hours, hi: hi * mp * hours, unit: `${f2(st.rate)} ตัว/คน/ชม.`, source: desc(st, label) };
+      }
+      return null;
+    };
+    let out = fromStats(normStats(mine.filter(x => x.line === line)), `รุ่นนี้ที่ Line ${line}`, 0.10);
+    if (out) return out;
+    out = fromStats(normStats(mine.filter(x => x.type === type && x.line !== line)), `Line ${line} ยังไม่เคยเย็บรุ่นนี้ · ใช้ไลน์ ${type} อื่น`, 0.15);
+    if (out) return Object.assign(out, { warn: true });
+    // SAM × % SAM ของประเภทไลน์นี้ (ทั้งโรง วันปกติ)
+    const sam = samHint || samFor(data.styles.find(x => x.style === styleKey), line);
+    const eff = normStats(all.filter(x => x.type === type)).eff;
+    if (sam && eff && mp) {
+      const day = 60 / sam * eff * mp * hours;
+      return { day: day, lo: day * 0.85, hi: day * 1.15, unit: `SAM ${sam} × ${Math.round(eff * 100)}%`, source: `ยังไม่มีประวัติรุ่นนี้ในไลน์ ${type} · คิดจาก SAM × ประสิทธิภาพกลางของไลน์ ${type}`, warn: true };
+    }
+    // ประวัติไลน์อีกประเภท (คิดแบบต่อคน) → ค่ากลางทั้งโรงของประเภทนี้
+    const other = normStats(mine);
+    if (other.rate && mp) return { day: other.rate * mp * hours, lo: other.rate * 0.8 * mp * hours, hi: other.rate * 1.2 * mp * hours, unit: `${f2(other.rate)} ตัว/คน/ชม.`, source: `ยังไม่เคยเย็บรุ่นนี้ในไลน์ ${type} · ใช้ประวัติไลน์อีกประเภท (±20%) ควรเผื่อเวลา`, warn: true };
+    const plant = normStats(all.filter(x => x.type === type));
+    if (load && plant.perHour) return { day: plant.perHour * hours, lo: plant.perHour * 0.8 * hours, hi: plant.perHour * 1.2 * hours, unit: `${f2(plant.perHour)} ตัว/ชม.ไลน์`, source: `รุ่นใหม่ · ใช้ค่ากลางไลน์ Load ทั้งโรง (±20%)`, warn: true };
+    const rate = plant.rate || (data.plant && data.plant.medianRate) || 2.2;
+    return { day: rate * (mp || 0) * hours, lo: rate * 0.8 * (mp || 0) * hours, hi: rate * 1.2 * (mp || 0) * hours, unit: `${f2(rate)} ตัว/คน/ชม.`, source: `รุ่นใหม่ · ใช้ค่ากลางไลน์ ${type} ทั้งโรง (±20%)`, warn: true };
+  }
+  function lineMp(line){ const v = Number(plan.mpBy[line]); return v > 0 ? v : ((data.lineNow && data.lineNow[line] && data.lineNow[line].mp) || plan.mp); }
+
+  /* ---------- ย้อนทดสอบ: ทำนายจำนวนวันของ LOT × ไลน์ ที่เย็บจบแล้ว ด้วยข้อมูลก่อนวันเริ่มเท่านั้น ---------- */
+  let backtestCache = null;
+  function backtest(){
+    if (backtestCache && backtestCache.data === data) return backtestCache.out;
+    const today = ymd(new Date());
+    const rows = dayRows();
+    const items = [];
+    (data.styles || []).forEach(st => st.runs.forEach(run => {
+      const done = (run.poQty && run.qty >= run.poQty * 0.98) || daysBetween(run.to, today) > 3;
+      if (!done) return;
+      const byLine = {};
+      rows.filter(x => x.lot === run.lot).forEach(x => (byLine[x.line] = byLine[x.line] || []).push(x));
+      Object.keys(byLine).forEach(line => {
+        const list = byLine[line].sort((a, b) => a.d < b.d ? -1 : 1);
+        const qty = list.reduce((a, x) => a + x.qty, 0);
+        const actual = list.reduce((a, x) => a + (x.dayHours ? Math.min(1, x.hours / x.dayHours) : 1), 0);
+        const rated = list.filter(x => x.mp && x.hours);
+        if (!rated.length || qty < 50) return;
+        const mp = rated.reduce((a, x) => a + x.mp, 0) / rated.length;
+        const hrs = list.reduce((a, x) => a + (x.dayHours || x.hours), 0) / list.length;
+        const before = list[0].d;
+        const f1 = (data.plant && data.plant.firstDayRatio) || 0.8;
+        const cap = lineCap(st.style, line, mp, hrs, before, list[0].sam);
+        // สูตรเดิม: ความเร็วต่อคนของรุ่นนี้ (ทุกวัน ทุกไลน์) ก่อนวันเริ่ม × คน × ชม. → ไม่มีก็ค่ากลางทั้งโรง
+        const prev = rows.filter(x => x.style === st.style && x.d < before && x.mp && x.hours);
+        const ph = prev.reduce((a, x) => a + x.mp * x.hours, 0);
+        const oldRate = ph ? prev.reduce((a, x) => a + x.qty, 0) / ph : ((data.plant && data.plant.medianRate) || 2.2);
+        const pNew = cap.day > 0 ? simulate(qty, 1, 1, cap.day, f1).exact : null;
+        const pOld = simulate(qty, mp, hrs, oldRate, f1).exact;
+        if (pNew === null) return;
+        items.push({ lot: run.lot, style: st.style, line: line, type: LINE_TYPE(line), from: before, qty: qty, actual: actual, pNew: pNew, pOld: pOld, hist: !!prev.length });
+      });
+    }));
+    const err = k => items.map(x => Math.abs(x[k] - x.actual));
+    const within = k => items.length ? items.filter(x => Math.abs(x[k] - x.actual) <= 1).length / items.length : 0;
+    const out = { items: items.sort((a, b) => a.from < b.from ? 1 : -1), maeNew: median(err('pNew')), maeOld: median(err('pOld')), inNew: within('pNew'), inOld: within('pOld'),
+      byType: ['Load', 'Lean'].map(t => { const it = items.filter(x => x.type === t); return { type: t, n: it.length, maeNew: median(it.map(x => Math.abs(x.pNew - x.actual))), maeOld: median(it.map(x => Math.abs(x.pOld - x.actual))) }; }) };
+    backtestCache = { data: data, out: out };
+    return out;
+  }
+  function backtestCard(styleKey){
+    const b = backtest();
+    if (!b.items.length) return '';
+    const d1 = v => v === null ? '-' : (Math.round(v * 10) / 10).toFixed(1);
+    const pct = v => Math.round(v * 100) + '%';
+    const mine = styleKey ? b.items.filter(x => x.style === styleKey) : [];
+    const list = (mine.length ? mine : b.items).slice(0, 12);
+    return `<div class="card soft p-5 flex flex-col gap-3">
+      <div class="flex flex-wrap items-baseline justify-between gap-2">
+        <p class="font-semibold text-slate-800 text-lg">ความแม่นของการคาดการณ์ (ย้อนทดสอบ)</p>
+        <p class="text-[12px] text-slate-500">ทำนาย LOT ที่เย็บจบแล้ว ด้วยข้อมูลก่อนวันเริ่ม LOT เท่านั้น · เทียบกับวันที่ใช้จริง</p>
+      </div>
+      <div class="grid gap-3" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
+        <div class="bg-slate-50 rounded-2xl p-4"><p class="text-[12px] text-slate-500">สูตรใหม่ (Load/Lean · วันปกติ)</p><p class="text-2xl font-bold text-slate-800 mt-1">คลาด ~${d1(b.maeNew)} วัน</p><p class="text-[12px] text-slate-500 mt-1">ตรงภายใน ±1 วัน ${pct(b.inNew)} ของ ${b.items.length} ครั้ง</p></div>
+        <div class="bg-slate-50 rounded-2xl p-4"><p class="text-[12px] text-slate-500">สูตรเดิม (ต่อคน ทุกวัน ทุกไลน์)</p><p class="text-2xl font-bold text-slate-500 mt-1">คลาด ~${d1(b.maeOld)} วัน</p><p class="text-[12px] text-slate-500 mt-1">ตรงภายใน ±1 วัน ${pct(b.inOld)}</p></div>
+        ${b.byType.filter(t => t.n).map(t => `<div class="bg-slate-50 rounded-2xl p-4"><p class="text-[12px] text-slate-500">ไลน์ ${t.type} (${t.n} ครั้ง)</p><p class="text-lg font-bold text-slate-800 mt-1">ใหม่ ${d1(t.maeNew)} · เดิม ${d1(t.maeOld)} วัน</p><p class="text-[12px] text-slate-500 mt-1">ค่ากลางของความคลาด (วัน)</p></div>`).join('')}
+      </div>
+      <div style="overflow-x:auto"><table class="w-full text-sm" style="min-width:620px">
+        <thead><tr class="text-[12px] text-slate-400 text-left"><th class="py-2">LOT${mine.length ? ' (รุ่นนี้)' : ' ล่าสุด'}</th><th>ไลน์</th><th class="text-right">จำนวน</th><th class="text-right">ใช้จริง</th><th class="text-right">สูตรใหม่</th><th class="text-right">สูตรเดิม</th></tr></thead>
+        <tbody>${list.map(x => { const e = x.pNew - x.actual; return `<tr class="border-t border-slate-100"><td class="py-2">${esc(x.lot)} <span class="text-[12px] text-slate-400">${esc(x.style)}${x.hist ? '' : ' · รุ่นใหม่'}</span></td><td>Line ${esc(x.line)} <span class="text-[12px] text-slate-400">${x.type}</span></td><td class="text-right">${fmt(x.qty)}</td><td class="text-right font-semibold">${d1(x.actual)} วัน</td><td class="text-right ${Math.abs(e) <= 1 ? 'text-emerald-600' : 'text-rose-600'}">${d1(x.pNew)} (${e >= 0 ? '+' : ''}${d1(e)})</td><td class="text-right text-slate-500">${d1(x.pOld)}</td></tr>`; }).join('')}</tbody>
+      </table></div>
+      <p class="text-[12px] text-slate-500">"ใช้จริง" นับวันที่ไลน์เย็บ LOT นั้น (วันที่สลับ LOT นับตามสัดส่วนชั่วโมง) · ทำนายด้วยจำนวนคนและชั่วโมงจริงของรอบนั้น · วัดความแม่นของสูตร ไม่ใช่ของแผนการผลิต</p>
+    </div>`;
+  }
+
   function firstDayFactor(s){
     const ratios = (s ? s.runs : []).filter(r => r.rate && r.firstRate && r.days >= 2).map(r => r.firstRate / r.rate);
     if (ratios.length) return { f: Math.min(1, ratios.reduce((a, b) => a + b, 0) / ratios.length), own: true };
@@ -6255,13 +6392,20 @@ const F1MH = (function(){
     const s = data.styles.find(x => x.style === plan.style) || null;
     const ri = rateInfo(s, plan.line), fd = firstDayFactor(s);
     const qty = Math.max(0, Number(plan.qty) || 0), mp = Math.max(0, Number(plan.mp) || 0), hours = plan.hours;
-    if (!qty || !mp){ box.innerHTML = msgCard('กรอกจำนวนที่ต้องเย็บ และจำนวนคน', 'warn'); return; }
-    const mid = simulate(qty, mp, hours, ri.rate, fd.f), lo = simulate(qty, mp, hours, ri.lo, fd.f), hi = simulate(qty, mp, hours, ri.hi, fd.f);
+    const multi = plan.lines.length > 0;
+    if (!qty || (!multi && !mp)){ box.innerHTML = msgCard('กรอกจำนวนที่ต้องเย็บ และจำนวนคน', 'warn'); return; }
+    // เลือกไลน์: แต่ละไลน์คิดตามประเภทของตัวเอง แล้วรวมยอดต่อวัน
+    const caps = multi ? plan.lines.map(line => Object.assign({ line: line, type: LINE_TYPE(line), mp: lineMp(line) }, lineCap(plan.style, line, lineMp(line), hours, ''))) : [];
+    const sumDay = k => caps.reduce((a, c) => a + c[k], 0);
+    const mid = multi ? simulate(qty, 1, 1, sumDay('day'), fd.f) : simulate(qty, mp, hours, ri.rate, fd.f);
+    const lo = multi ? simulate(qty, 1, 1, sumDay('lo'), fd.f) : simulate(qty, mp, hours, ri.lo, fd.f);
+    const hi = multi ? simulate(qty, 1, 1, sumDay('hi'), fd.f) : simulate(qty, mp, hours, ri.hi, fd.f);
+    if (!mid.full){ box.innerHTML = msgCard('คิดกำลังผลิตไม่ได้ ใส่จำนวนคนของไลน์ที่เลือก', 'warn'); return; }
     const dates = workdays(plan.start, mid.days.length);
     const end = dates[dates.length - 1];
     const lastPart = mid.days.length ? mid.days[mid.days.length - 1].part : 1;
-    const sam = samFor(s, plan.line);
-    const samDay = sam ? PAID[hours] * mp / sam : 0;
+    const sam = multi ? null : samFor(s, plan.line);
+    const samDay = multi ? caps.reduce((a, c) => { const sm = samFor(s, c.line); return a + (sm ? PAID[hours] * c.mp / sm : 0); }, 0) : (sam ? PAID[hours] * mp / sam : 0);
     let dueHtml = '';
     if (plan.due){
       const late = end > plan.due;
@@ -6298,11 +6442,13 @@ const F1MH = (function(){
           <p class="text-[11px] text-slate-400 mt-2">ข้ามวันอาทิตย์ · ยังไม่หักวันหยุดพิเศษ</p>
         </div>
         <div class="bg-slate-50 rounded-2xl p-5 flex flex-col gap-2 text-sm">
-          <div class="flex justify-between gap-3"><span class="text-slate-500">ความเร็วที่ใช้คิด</span><b class="text-slate-800">${f2(ri.rate)} ตัว/คน/ชม.</b></div>
-          <div class="flex justify-between gap-3"><span class="text-slate-500">ยอดต่อวัน (เมื่อเข้าที่)</span><b class="text-slate-800">${fmt(mid.full)} ตัว</b></div>
-          <div class="flex justify-between gap-3"><span class="text-slate-500">เป้าตามสูตร SAM (TG)</span><b class="text-slate-800">${sam ? fmt(samDay) + ' ตัว/วัน (SAM ' + sam + ')' : (plan.line ? 'ยังไม่มี SAM ไลน์ ' + LINE_TYPE(plan.line) : 'ไม่มีค่า SAM')}</b></div>
-          ${sam ? `<div class="flex justify-between gap-3"><span class="text-slate-500">ถ้าทำได้ตาม SAM 100%</span><b class="text-slate-800">≈ ${(qty / samDay).toFixed(1)} วัน</b></div>` : ''}
-          <p class="text-[12px] text-slate-500 border-t border-slate-200 pt-2 mt-1">${esc(ri.source)} · เผื่อช่วงเริ่มรุ่น วันแรก ~${Math.round(fd.f * 100)}% วันที่ 2 ~${Math.round((1 + fd.f) / 2 * 100)}%</p>
+          ${multi ? caps.map(c => `<div class="flex flex-col gap-0.5">
+            <div class="flex justify-between gap-3"><span class="text-slate-700 font-semibold">Line ${esc(c.line)} <span class="text-[12px] font-normal ${c.type === 'Load' ? 'text-sky-600' : 'text-violet-600'}">${c.type}${c.type === 'Lean' ? ' · ' + c.mp + ' คน' : ''}</span></span><b class="text-slate-800">≈ ${fmt(c.day)} ตัว/วัน</b></div>
+            <span class="text-[12px] ${c.warn ? 'text-amber-600' : 'text-slate-500'}">${esc(c.unit)} · ${esc(c.source)}</span></div>`).join('') : `<div class="flex justify-between gap-3"><span class="text-slate-500">ความเร็วที่ใช้คิด</span><b class="text-slate-800">${f2(ri.rate)} ตัว/คน/ชม.</b></div>`}
+          <div class="flex justify-between gap-3${multi ? ' border-t border-slate-200 pt-2' : ''}"><span class="text-slate-500">ยอดต่อวัน${multi && caps.length > 1 ? ' รวม ' + caps.length + ' ไลน์' : ''} (เมื่อเข้าที่)</span><b class="text-slate-800">${fmt(mid.full)} ตัว</b></div>
+          <div class="flex justify-between gap-3"><span class="text-slate-500">เป้าตามสูตร SAM (TG)</span><b class="text-slate-800">${samDay ? fmt(samDay) + ' ตัว/วัน' + (sam ? ' (SAM ' + sam + ')' : '') : (plan.line ? 'ยังไม่มี SAM ไลน์ ' + LINE_TYPE(plan.line) : 'ไม่มีค่า SAM')}</b></div>
+          ${samDay ? `<div class="flex justify-between gap-3"><span class="text-slate-500">ถ้าทำได้ตาม SAM 100%</span><b class="text-slate-800">≈ ${(qty / samDay).toFixed(1)} วัน</b></div>` : ''}
+          <p class="text-[12px] text-slate-500 border-t border-slate-200 pt-2 mt-1">${multi ? 'Load = ยอดต่อชั่วโมงของไลน์ (คอขวดคุม ไม่คูณคน) · Lean = ต่อคน × คน · ใช้เฉพาะวันปกติ' : esc(ri.source)} · เผื่อช่วงเริ่มรุ่น วันแรก ~${Math.round(fd.f * 100)}% วันที่ 2 ~${Math.round((1 + fd.f) / 2 * 100)}%</p>
         </div>
       </div>
       <div>
@@ -6430,7 +6576,8 @@ const F1MH = (function(){
     const best = ratedLines[0];
     const tile = (label, value, sub) => `<div class="card soft p-4"><p class="text-[12px] text-slate-500">${label}</p><p class="text-2xl font-bold text-slate-800 mt-1">${value}</p><p class="text-[12px] text-slate-500 mt-1">${sub}</p></div>`;
     const hourBtns = [8, 9, 10, 11].map(h => `<button type="button" class="mh-seg ${h === plan.hours ? 'on' : ''}" data-k="hours" data-v="${h}" onclick="F1MH.setPlan('hours',${h})">${h} ชม.</button>`).join('');
-    const lineBtns = ['', 'B', 'C', 'D', 'E', 'F'].map(c => `<button type="button" class="mh-seg ${c === plan.line ? 'on' : ''}" data-k="line" data-v="${c}" onclick="F1MH.setPlan('line','${c}')" title="${c ? 'Line ' + c + ' · ' + LINE_TYPE(c) : 'ยังไม่ระบุไลน์'}">${c || 'ไม่ระบุ'}</button>`).join('');
+    const lineBtns = ['', 'B', 'C', 'D', 'E', 'F'].map(c => `<button type="button" class="mh-seg ${(c ? plan.lines.indexOf(c) >= 0 : !plan.lines.length) ? 'on' : ''}" aria-pressed="${c ? plan.lines.indexOf(c) >= 0 : !plan.lines.length}" onclick="F1MH.toggleLine('${c}')" title="${c ? 'Line ' + c + ' · ' + LINE_TYPE(c) + ' (เลือกได้หลายไลน์)' : 'ยังไม่ระบุไลน์'}">${c || 'ไม่ระบุ'}</button>`).join('');
+    const mpInputs = plan.lines.length ? `<div style="grid-column:1/-1" class="flex flex-wrap gap-3">${plan.lines.map(c => `<label class="text-[12px] text-slate-500 flex flex-col">Line ${c} · ${LINE_TYPE(c)} คน<input type="number" inputmode="numeric" min="1" step="1" class="mh-input mt-1" style="width:120px" value="${lineMp(c)}" oninput="F1MH.setMp('${c}',this.value)"></label>`).join('')}<p class="text-[12px] text-slate-500 self-end">Load ใช้จำนวนคนเฉพาะตอนไม่มีประวัติ (คิดจาก SAM) · ค่าตั้งต้น = คนล่าสุดของไลน์</p></div>` : '';
     // แยกตามไลน์: รอบก่อน ๆ เย็บรุ่นนี้ที่ไลน์ไหน กี่วัน คนเท่าไหร่ เร็วแค่ไหน SAM เท่าไหร่
     const lineTable = s && (s.byLine || []).length ? `<div class="card soft overflow-hidden">
       <div class="px-5 py-4 flex flex-wrap items-baseline justify-between gap-2"><p class="font-semibold text-slate-800">แยกตามไลน์</p><p class="text-[12px] text-slate-400">กดแถวเพื่อวางแผนด้วยไลน์นั้น · B C D = Load · E F = Lean</p></div>
@@ -6466,17 +6613,19 @@ const F1MH = (function(){
         <p class="font-semibold text-slate-800 text-lg">ประมาณการ: ต้องใช้กี่วัน</p>
         <div class="grid gap-4" style="grid-template-columns:repeat(auto-fit,minmax(200px,1fr))">
           <div><label for="mhQty" class="text-[12px] text-slate-500">จำนวนที่ต้องเย็บ (ตัว)</label><input id="mhQty" type="number" inputmode="numeric" min="1" step="100" class="mh-input mt-1" value="${plan.qty}" oninput="F1MH.setPlan('qty',this.value)"></div>
-          <div><label for="mhMp" class="text-[12px] text-slate-500">จำนวนคน (Manpower)</label><input id="mhMp" type="number" inputmode="numeric" min="1" step="1" class="mh-input mt-1" value="${plan.mp}" oninput="F1MH.setPlan('mp',this.value)"></div>
+          ${plan.lines.length ? '' : `<div><label for="mhMp" class="text-[12px] text-slate-500">จำนวนคน (Manpower)</label><input id="mhMp" type="number" inputmode="numeric" min="1" step="1" class="mh-input mt-1" value="${plan.mp}" oninput="F1MH.setPlan('mp',this.value)"></div>`}
           <div style="grid-column:1/-1;display:flex;flex-wrap:wrap;gap:16px 28px">
-            <div><span class="text-[12px] text-slate-500">ไลน์ที่จะเย็บ (B C D = Load · E F = Lean)</span><div class="flex flex-wrap gap-2 mt-1" role="group" aria-label="ไลน์ที่จะเย็บ">${lineBtns}</div></div>
+            <div><span class="text-[12px] text-slate-500">ไลน์ที่จะเย็บ (เลือกได้หลายไลน์ · B C D = Load · E F = Lean)</span><div class="flex flex-wrap gap-2 mt-1" role="group" aria-label="ไลน์ที่จะเย็บ">${lineBtns}</div></div>
             <div><span class="text-[12px] text-slate-500">ชั่วโมงทำงาน / วัน</span><div class="flex flex-wrap gap-2 mt-1" role="group" aria-label="ชั่วโมงต่อวัน">${hourBtns}</div></div>
           </div>
+          ${mpInputs}
           <div><label for="mhStart" class="text-[12px] text-slate-500">วันเริ่ม</label><input id="mhStart" type="date" class="mh-input mt-1" value="${plan.start}" oninput="F1MH.setPlan('start',this.value)"></div>
           <div><label for="mhDue" class="text-[12px] text-slate-500">กำหนดส่ง (ถ้ามี)</label><input id="mhDue" type="date" class="mh-input mt-1" value="${plan.due}" oninput="F1MH.setPlan('due',this.value)"></div>
         </div>
         <div id="mhPlanResults" class="flex flex-col gap-5"></div>
       </div>
       ${historyTable(s)}
+      ${backtestCard(s ? s.style : '')}
       ${data.lotsNotInMaster && data.lotsNotInMaster.length ? `<p class="text-[12px] text-slate-400">LOT ที่ไม่อยู่ใน Master_LOT จึงไม่ถูกนับในประวัติ: ${esc(data.lotsNotInMaster.join(', '))} (แก้ได้ด้วยปุ่ม "แก้เลข LOT" ในหน้าแอดมิน)</p>` : ''}`;
     renderPlanResults();
   }
@@ -6546,7 +6695,14 @@ const F1MH = (function(){
     const box = el('mhStyleSug');
     if (box && !box.contains(e.target) && e.target.id !== 'mhStyleInput') box.classList.add('hide');
   });
-  function pickLine(code){ plan.line = plan.line === code ? '' : code; renderPlan(); }
+  function pickLine(code){ plan.lines = plan.lines.length === 1 && plan.lines[0] === code ? [] : [code]; plan.line = plan.lines[0] || ''; renderPlan(); }
+  function toggleLine(code){
+    if (!code) plan.lines = [];
+    else plan.lines = plan.lines.indexOf(code) >= 0 ? plan.lines.filter(x => x !== code) : plan.lines.concat([code]).sort();
+    plan.line = plan.lines.length === 1 ? plan.lines[0] : '';
+    renderPlan();
+  }
+  function setMp(code, value){ plan.mpBy[code] = value; renderPlanResults(); }
   // เข้าหน้า: วาดแล้วค่อยเล่น motion (กดปุ่ม / พิมพ์ในหน้า วาดใหม่แต่ไม่เล่นซ้ำ)
   const viewNode = v => document.querySelector('.shell[data-view="' + v + '"]');
   function enter(view, arg){
@@ -6568,7 +6724,7 @@ const F1MH = (function(){
     return { lines, daily };
   }
 
-  return { lotHistory, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleAllRuns, styleSuggest, styleKey };
+  return { lotHistory, enter, onSearchInput, searchLotNow, openStyle, setPlan, toggleRun, pickLine, toggleLine, setMp, toggleAllRuns, styleSuggest, styleKey };
 })();
 
 F1Nav.init();
