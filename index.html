@@ -6195,7 +6195,8 @@ const F1MH = (function(){
   /* ---------- Load / Lean · วันปกติ ----------
      Load (B C D สายพาน): คอขวดคุมยอด → ยอดต่อชั่วโมงของไลน์ × ชั่วโมง (ไม่คูณคน)
      Lean (E F): ยอดต่อคนต่อชั่วโมง × คน × ชั่วโมง
-     วันปกติ = ทั้งวันเป็น LOT นี้ · ไม่ใช่วันแรกของ LOT ในไลน์นั้น · ซ่อมไม่เกิน 10% ของเวลาทำงาน → ใช้ค่ากลาง (median) */
+     วันปกติ = ทั้งวันเป็น LOT นี้ · ไม่ใช่วันแรกของ LOT ในไลน์นั้น · ซ่อมไม่เกิน 10% ของเวลาทำงาน · ไม่ใช่วันนี้ (ยังไม่จบวัน) → ใช้ค่ากลาง (median)
+     ใช้ข้อมูลระดับไลน์ / ประเภทไลน์ เมื่อมีวันปกติอย่างน้อย 2 วัน ไม่งั้นลงไปชั้นถัดไป */
   const REPAIR_HEAVY = 0.10;
   const median = a => { if (!a.length) return null; const x = a.slice().sort((p, q) => p - q), m = x.length >> 1; return x.length % 2 ? x[m] : (x[m - 1] + x[m]) / 2; };
   const quant = (a, q) => { const x = a.slice().sort((p, c) => p - c); return x[Math.min(x.length - 1, Math.max(0, Math.round((x.length - 1) * q)))]; };
@@ -6203,12 +6204,12 @@ const F1MH = (function(){
   // ทุกวัน × ไลน์ × LOT ของทุกรุ่น พร้อมธงวันปกติ
   function dayRows(){
     if (dayRowsCache && dayRowsCache.data === data) return dayRowsCache.rows;
-    const rows = [];
+    const rows = [], today = ymd(new Date());
     (data.styles || []).forEach(st => st.runs.forEach(run => {
       const first = {};
       (run.daily || []).forEach(x => { if (!first[x.line] || x.d < first[x.line]) first[x.line] = x.d; });
       (run.daily || []).forEach(x => {
-        const why = x.lots > 1 ? 'switch' : x.d === first[x.line] ? 'first' : (x.rep !== null && x.rep !== undefined && x.dayHours && x.rep > REPAIR_HEAVY * x.dayHours * 60) ? 'repair' : (!x.hours || !x.qty) ? 'nodata' : '';
+        const why = x.d >= today ? 'today' : x.lots > 1 ? 'switch' : x.d === first[x.line] ? 'first' : (x.rep !== null && x.rep !== undefined && x.dayHours && x.rep > REPAIR_HEAVY * x.dayHours * 60) ? 'repair' : (!x.hours || !x.qty) ? 'nodata' : '';
         rows.push(Object.assign({}, x, { lot: run.lot, style: st.style, from: run.from, type: LINE_TYPE(x.line), normal: !why, why: why }));
       });
     }));
@@ -6233,11 +6234,11 @@ const F1MH = (function(){
     const mine = all.filter(x => x.style === styleKey);
     const desc = (st, label) => `${label} · วันปกติ ${st.n} วัน${st.ex.first + st.ex.switch + st.ex.repair ? ' (ตัดวันแรก ' + st.ex.first + ' · สลับ LOT ' + st.ex.switch + ' · ซ่อมเยอะ ' + st.ex.repair + ')' : ''}`;
     const fromStats = (st, label, spread) => {
-      if (load && st.perHour) {
+      if (load && st.perHour && st.n >= 2) {
         const lo = st.perHourLo !== null ? st.perHourLo : st.perHour * (1 - spread), hi = st.perHourHi !== null ? st.perHourHi : st.perHour * (1 + spread);
         return { day: st.perHour * hours, lo: lo * hours, hi: hi * hours, unit: `${f2(st.perHour)} ตัว/ชม.ไลน์`, source: desc(st, label) };
       }
-      if (!load && st.rate && mp) {
+      if (!load && st.rate && st.nRate >= 2 && mp) {
         const lo = st.rateLo !== null ? st.rateLo : st.rate * (1 - spread), hi = st.rateHi !== null ? st.rateHi : st.rate * (1 + spread);
         return { day: st.rate * mp * hours, lo: lo * mp * hours, hi: hi * mp * hours, unit: `${f2(st.rate)} ตัว/คน/ชม.`, source: desc(st, label) };
       }
