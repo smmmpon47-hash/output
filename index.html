@@ -1091,9 +1091,11 @@
   .eff-dot{ display:inline-block; width:9px; height:9px; border-radius:3px; }
   .mh-fold > summary{ cursor:pointer; list-style:none; }
   .mh-fold > summary::-webkit-details-marker{ display:none; }
-  .mh-fold-ico{ display:inline-block; font-size:14px; color:#94A3B8; transition:transform .2s; }
+  .mh-fold-ico{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; margin-left:8px; border-radius:9px; font-size:18px; line-height:1; color:#475569; background:rgba(148,163,184,.18); vertical-align:middle; transition:transform .2s; }
+  html.dark .mh-fold-ico{ color:#E2E8F0; background:rgba(255,255,255,.08); }
   .mh-fold[open] .mh-fold-ico{ transform:rotate(180deg); }
   .mh-fold[open] .mh-fold-hint{ display:none; }
+  .mh-fold-end{ white-space:nowrap; }
   .mh-rrow{ display:grid; grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) minmax(170px,1.2fr) minmax(150px,1fr) minmax(120px,.8fr); gap:12px; align-items:center; width:100%; text-align:left; padding:10px 8px; border-radius:12px; }
   .mh-rbar{ display:block; height:6px; border-radius:4px; background:rgba(148,163,184,.25); overflow:hidden; margin:4px 0 2px; }
   .mh-rbar > span{ display:block; height:100%; border-radius:inherit; background:#10B981; }
@@ -6436,8 +6438,8 @@ const F1MH = (function(){
     // ย่อไว้เป็นค่าเริ่มต้น: เห็นแค่สรุป · กางแล้วโชว์ 6 รอบล่าสุด กด "ดูทั้งหมด" ได้
     return `<details class="card soft p-5 mh-fold"${ganttOpen ? ' open' : ''} ontoggle="F1MH.foldGantt(this.open)">
       <summary class="flex flex-wrap items-baseline justify-between gap-2">
-        <span class="font-semibold text-slate-800 text-lg">แผน vs จริง <span class="mh-fold-ico" aria-hidden="true">▾</span></span>
-        <span class="text-[12px] text-slate-500">ทั้งหมด ${all.length} รอบ (LOT × ไลน์) · <b class="text-emerald-600">ตรงวัน ${on}</b> · <b class="text-rose-600">ช้า ${late}</b> · <b class="text-sky-600">เร็ว ${early}</b><span class="mh-fold-hint"> · กดเพื่อดูรายรอบ</span></span>
+        <span class="font-semibold text-slate-800 text-lg">แผน vs จริง</span>
+        <span class="text-[12px] text-slate-500"><span class="whitespace-nowrap">ทั้งหมด ${all.length} รอบ (LOT × ไลน์)</span> · <b class="text-emerald-600 whitespace-nowrap">ตรงวัน ${on}</b> · <b class="text-rose-600 whitespace-nowrap">ช้า ${late}</b> · <b class="text-sky-600 whitespace-nowrap">เร็ว ${early}</b><span class="mh-fold-end"><span class="mh-fold-hint"> · กดเพื่อดูรายรอบ</span><span class="mh-fold-ico" aria-hidden="true">▾</span></span></span>
       </summary>
       <div class="flex flex-col gap-3 mt-3">
       <div class="flex flex-wrap gap-4 text-[12px] text-slate-500"><span class="inline-flex items-center gap-1.5"><i class="mh-gplan"></i>แผน (วันที่คาดไว้ตอนเริ่ม)</span><span class="inline-flex items-center gap-1.5"><i class="mh-gact"></i>จริง (วันแรก → วันสุดท้ายที่เย็บ)</span></div>
