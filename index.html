@@ -6497,7 +6497,7 @@ const F1MH = (function(){
         <p class="text-[12px] text-slate-500">${list.length} LOT · คิดจากความเร็วจริงของรุ่น + วันซ่อมหนักของไลน์ · คนล่าสุดของไลน์ · กดแถวเพื่อดูรุ่นนั้น</p>
       </div>
       <div style="overflow-x:auto"><div style="min-width:900px">
-        <div class="mh-rrow text-[12px] text-slate-400"><span>LOT / รุ่น</span><span>ไลน์</span><span>เย็บแล้ว</span><span>แผนตั้งต้น (ล็อก)</span><span>คาดล่าสุด</span><span>Ship</span></div>
+        <div class="mh-rrow text-[12px] text-slate-400"><span>LOT / รุ่น</span><span>ไลน์</span><span>เย็บแล้ว</span><span>แผน (ล็อกตอนเริ่ม LOT)</span><span>คาดล่าสุด (ตามยอดจริง)</span><span>Ship</span></div>
         ${list.map(x => `<div class="border-t border-slate-100"><button type="button" class="mh-click mh-rrow hover:bg-slate-100${sel && x.l.style === sel ? ' bg-slate-100' : ''}" onclick="F1MH.openStyle('${esc(x.l.style)}')">
           <span><b class="text-slate-800">${esc(x.l.lot)}</b><br><span class="text-[12px] text-slate-500">${esc(x.l.model)}</span></span>
           <span class="flex flex-col gap-0.5">${x.parts.map(p => `<span class="text-[12px] text-slate-600"><b>${esc(p.line)}</b> <span class="${p.type === 'Load' ? 'text-sky-600' : 'text-violet-600'}">${p.type}</span> ≈${fmt(p.perMin * 60)}/ชม.</span>`).join('')}${x.movedAway.length ? `<span class="text-[11px] text-amber-600">Line ${x.movedAway.join(' ')} ย้ายไป LOT อื่นวันนี้</span>` : ''}</span>
@@ -6509,7 +6509,7 @@ const F1MH = (function(){
           <span>${x.ship ? `<span class="text-[12px] px-2 py-0.5 rounded-full ${x.late ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}">${x.late ? 'ไม่ทัน' : 'ทัน'}</span><br><span class="text-[12px] text-slate-500">${thDate(x.ship, true)}${x.ship >= today ? ' · อีก ' + daysBetween(today, x.ship) + ' วัน' : ''}</span>` : '<span class="text-[12px] text-slate-400">ไม่มีวันส่ง</span>'}</span>
         </button></div>`).join('')}
       </div></div>
-      <p class="text-[12px] text-slate-500">แผนตั้งต้น = วันจบที่คาดไว้ตอน LOT เริ่มเย็บวันแรก (ข้อมูลก่อนวันนั้นเท่านั้น · ไลน์/คน/ชั่วโมงของวันแรก) ล็อกไว้ไม่ขยับ · คาดล่าสุด = คิดใหม่ตามยอดจริง · ไลน์ที่เย็บ = ตามแผนวันนี้ (หน้า Sewing) · ยอดต่อชั่วโมง = วันปกติของรุ่นนี้ (Load ต่อชั่วโมงไลน์ · Lean ต่อคน × คน) × โอกาสเจอวันซ่อมหนัก · วันนี้ไล่ตามช่องที่ยังไม่กรอกยอด → ครบกี่โมง${todayPlan() ? '' : ' · (ยังไม่มีแผนวันนี้ของหน้า Sewing ใช้ไลน์ล่าสุดและนับจากตอนนี้)'}</p>
+      <p class="text-[12px] text-slate-500">แผน = คิดครั้งเดียวตอน LOT เริ่มเย็บ จากข้อมูลในอดีตก่อนวันนั้น (ความเร็วรุ่น Load/Lean · คน/ชั่วโมงของไลน์ที่ลง · โอกาสวันซ่อมหนัก) ล็อกไว้จนจบ LOT · คาดล่าสุด = คิดใหม่ทุกครั้งตามยอดจริง · ไลน์ที่เย็บ = ตามแผนวันนี้ (หน้า Sewing) · ยอดต่อชั่วโมง = วันปกติของรุ่นนี้ (Load ต่อชั่วโมงไลน์ · Lean ต่อคน × คน) × โอกาสเจอวันซ่อมหนัก · วันนี้ไล่ตามช่องที่ยังไม่กรอกยอด → ครบกี่โมง${todayPlan() ? '' : ' · (ยังไม่มีแผนวันนี้ของหน้า Sewing ใช้ไลน์ล่าสุดและนับจากตอนนี้)'}</p>
     </div>`;
   }
 
