@@ -1096,7 +1096,7 @@
   .mh-fold[open] .mh-fold-ico{ transform:rotate(180deg); }
   .mh-fold[open] .mh-fold-hint{ display:none; }
   .mh-fold-end{ white-space:nowrap; }
-  .mh-rrow{ display:grid; grid-template-columns:minmax(150px,1.2fr) minmax(140px,1fr) minmax(170px,1.2fr) minmax(150px,1fr) minmax(120px,.8fr); gap:12px; align-items:center; width:100%; text-align:left; padding:10px 8px; border-radius:12px; }
+  .mh-rrow{ display:grid; grid-template-columns:minmax(140px,1.1fr) minmax(140px,1fr) minmax(160px,1.1fr) minmax(140px,.9fr) minmax(150px,1fr) minmax(110px,.8fr); gap:12px; align-items:center; width:100%; text-align:left; padding:10px 8px; border-radius:12px; }
   .mh-rbar{ display:block; height:6px; border-radius:4px; background:rgba(148,163,184,.25); overflow:hidden; margin:4px 0 2px; }
   .mh-rbar > span{ display:block; height:100%; border-radius:inherit; background:#10B981; }
   .mh-grow{ display:grid; grid-template-columns:200px minmax(0,1fr) 84px; align-items:center; gap:10px; padding:5px 0; }
@@ -6378,9 +6378,9 @@ const F1MH = (function(){
   }
 
   /* ---------- วันซ่อมหนักของไลน์ (20 วันทำงานล่าสุด): เกิดบ่อยแค่ไหน และวันนั้นได้กี่ % ของวันปกติ ---------- */
-  function repairFactor(line){
+  function repairFactor(line, before){
     const groups = lotLineGroups();
-    const rows = dayRows().filter(x => x.line === line && x.why !== 'today' && x.rep !== null && x.rep !== undefined);
+    const rows = dayRows().filter(x => x.line === line && x.why !== 'today' && x.rep !== null && x.rep !== undefined && (!before || x.d < before));
     const days = rows.map(x => x.d).filter((d, i, a) => a.indexOf(d) === i).sort().slice(-20);
     const recent = rows.filter(x => days.indexOf(x.d) >= 0);
     const heavyDays = recent.filter(x => x.why === 'repair').map(x => x.d).filter((d, i, a) => a.indexOf(d) === i);
@@ -6466,9 +6466,28 @@ const F1MH = (function(){
       today: finish === today, pastDue: finishMin !== null && finishMin <= nowMin, done: done, movedAway: movedAway, planToday: !!todayLines,
       ship: ship, late: !!(ship && finish > ship), pct: Math.round(l.sew.total / l.poQty * 100) };
   }
+  function baselineLot(l){
+    const rows = dayRows().filter(x => x.lot === l.lot).sort((a, b) => a.d < b.d ? -1 : 1);
+    if (!rows.length || !l.poQty) return null;
+    const start = rows[0].d;
+    const first = rows.filter(x => x.d === start);
+    const rs = rampStats();
+    let perDay = 0, frac0 = 1;
+    first.forEach(x => {
+      const hrs = x.dayHours || x.hours || plan.hours;
+      const cap = lineCap(l.style, x.line, x.mp || lineMp(x.line), hrs, start, x.sam);
+      perDay += cap.day * repairFactor(x.line, start).factor;
+      if (x.dayHours) frac0 = Math.min(frac0, Math.min(1, x.hours / x.dayHours));
+    });
+    if (!(perDay > 0)) return null;
+    let left = l.poQty, n = 0;
+    while (left > 0.5 && n < 200){ left -= Math.min(left, perDay * (n === 0 ? rs.d1 * frac0 : n === 1 ? rs.d2 : 1)); n++; }
+    return { start: start, end: workdays(start, Math.max(1, n)).pop(), lines: first.map(x => x.line).join(' + ') };
+  }
   // บนสุดของหน้า: งานที่กำลังผลิตตอนนี้ทุก LOT ทุกไลน์ · กดแถว = เปิดรุ่นนั้น
   function runningNowCard(sel){
     const list = (data.lots || []).filter(l => l.active && l.stage === 'sewing' && l.poQty && l.sew).map(forecastLot).filter(Boolean)
+      .map(x => { const b = baselineLot(x.l); if (b) { x.base = b; x.shift = workdayShift(b.end, x.finish); } return x; })
       .sort((a, b) => a.finish < b.finish ? -1 : a.finish > b.finish ? 1 : 0);
     if (!list.length) return msgCard('ตอนนี้ไม่มี LOT ที่กำลังเย็บ');
     const today = ymd(new Date());
@@ -6477,18 +6496,20 @@ const F1MH = (function(){
         <p class="font-semibold text-slate-800 text-lg">กำลังผลิตตอนนี้ · คาดว่าจะจบเมื่อไหร่</p>
         <p class="text-[12px] text-slate-500">${list.length} LOT · คิดจากความเร็วจริงของรุ่น + วันซ่อมหนักของไลน์ · คนล่าสุดของไลน์ · กดแถวเพื่อดูรุ่นนั้น</p>
       </div>
-      <div style="overflow-x:auto"><div style="min-width:760px">
-        <div class="mh-rrow text-[12px] text-slate-400"><span>LOT / รุ่น</span><span>ไลน์</span><span>เย็บแล้ว</span><span>คาดว่าเย็บเสร็จ</span><span>Ship</span></div>
+      <div style="overflow-x:auto"><div style="min-width:900px">
+        <div class="mh-rrow text-[12px] text-slate-400"><span>LOT / รุ่น</span><span>ไลน์</span><span>เย็บแล้ว</span><span>แผนตั้งต้น (ล็อก)</span><span>คาดล่าสุด</span><span>Ship</span></div>
         ${list.map(x => `<div class="border-t border-slate-100"><button type="button" class="mh-click mh-rrow hover:bg-slate-100${sel && x.l.style === sel ? ' bg-slate-100' : ''}" onclick="F1MH.openStyle('${esc(x.l.style)}')">
           <span><b class="text-slate-800">${esc(x.l.lot)}</b><br><span class="text-[12px] text-slate-500">${esc(x.l.model)}</span></span>
           <span class="flex flex-col gap-0.5">${x.parts.map(p => `<span class="text-[12px] text-slate-600"><b>${esc(p.line)}</b> <span class="${p.type === 'Load' ? 'text-sky-600' : 'text-violet-600'}">${p.type}</span> ≈${fmt(p.perMin * 60)}/ชม.</span>`).join('')}${x.movedAway.length ? `<span class="text-[11px] text-amber-600">Line ${x.movedAway.join(' ')} ย้ายไป LOT อื่นวันนี้</span>` : ''}</span>
           <span><span class="text-slate-800 font-semibold">${fmt(x.l.sew.total)} / ${fmt(x.l.poQty)}</span> <span class="text-[12px] text-slate-500">${x.pct}%</span>
             <span class="mh-rbar"><span style="width:${Math.min(100, x.pct)}%"></span></span><span class="text-[12px] text-slate-500">เหลือ ${fmt(x.left)} ตัว</span></span>
-          <span><b class="${x.late ? 'text-rose-600' : 'text-slate-800'}">${x.done ? 'ครบแล้ว' : x.today ? (x.pastDue ? 'น่าจะครบแล้ว' : 'วันนี้ ~' + x.finishClock + ' น.') : thDate(x.finish, true) + ' (' + x.finishClock + ')'}</b><br><span class="text-[12px] text-slate-500">${x.done ? 'ยอดครบ PO' : x.today ? (x.pastDue ? 'รอกรอกยอดช่วงที่ผ่านมา' : 'อีก ~' + x.hoursLeft.toFixed(1) + ' ชม.ทำงาน') : 'อีก ~' + x.hoursLeft.toFixed(1) + ' ชม.ทำงาน (~' + (x.hoursLeft * x.perHour / x.perDay).toFixed(1) + ' วัน)'}</span></span>
+          <span>${x.base ? `<b class="text-slate-700">${thDate(x.base.end, true)}</b><br><span class="text-[12px] text-slate-500">เริ่ม ${thDate(x.base.start)} · Line ${esc(x.base.lines)}</span>` : '<span class="text-[12px] text-slate-400">คิดไม่ได้</span>'}</span>
+          <span><b class="${x.late ? 'text-rose-600' : 'text-slate-800'}">${x.done ? 'ครบแล้ว' : x.today ? (x.pastDue ? 'น่าจะครบแล้ว' : 'วันนี้ ~' + x.finishClock + ' น.') : thDate(x.finish, true) + ' (' + x.finishClock + ')'}</b><br><span class="text-[12px] text-slate-500">${x.done ? 'ยอดครบ PO' : x.today ? (x.pastDue ? 'รอกรอกยอดช่วงที่ผ่านมา' : 'อีก ~' + x.hoursLeft.toFixed(1) + ' ชม.ทำงาน') : 'อีก ~' + x.hoursLeft.toFixed(1) + ' ชม.ทำงาน (~' + (x.hoursLeft * x.perHour / x.perDay).toFixed(1) + ' วัน)'}</span>
+            ${x.base ? `<br><span class="text-[11px] font-semibold px-1.5 py-0.5 rounded-md ${x.shift === 0 ? 'bg-emerald-50 text-emerald-700' : x.shift > 0 ? 'bg-rose-50 text-rose-600' : 'bg-sky-50 text-sky-700'}">${x.shift === 0 ? 'ตรงแผน' : x.shift > 0 ? 'เลื่อน +' + x.shift + ' วัน' : 'เร็วกว่าแผน ' + (-x.shift) + ' วัน'}</span>` : ''}</span>
           <span>${x.ship ? `<span class="text-[12px] px-2 py-0.5 rounded-full ${x.late ? 'bg-rose-50 text-rose-600' : 'bg-emerald-50 text-emerald-700'}">${x.late ? 'ไม่ทัน' : 'ทัน'}</span><br><span class="text-[12px] text-slate-500">${thDate(x.ship, true)}${x.ship >= today ? ' · อีก ' + daysBetween(today, x.ship) + ' วัน' : ''}</span>` : '<span class="text-[12px] text-slate-400">ไม่มีวันส่ง</span>'}</span>
         </button></div>`).join('')}
       </div></div>
-      <p class="text-[12px] text-slate-500">ไลน์ที่เย็บ = ตามแผนวันนี้ (หน้า Sewing) · ยอดต่อชั่วโมง = วันปกติของรุ่นนี้ (Load ต่อชั่วโมงไลน์ · Lean ต่อคน × คน) × โอกาสเจอวันซ่อมหนัก · วันนี้ไล่ตามช่องที่ยังไม่กรอกยอด → ครบกี่โมง${todayPlan() ? '' : ' · (ยังไม่มีแผนวันนี้ของหน้า Sewing ใช้ไลน์ล่าสุดและนับจากตอนนี้)'}</p>
+      <p class="text-[12px] text-slate-500">แผนตั้งต้น = วันจบที่คาดไว้ตอน LOT เริ่มเย็บวันแรก (ข้อมูลก่อนวันนั้นเท่านั้น · ไลน์/คน/ชั่วโมงของวันแรก) ล็อกไว้ไม่ขยับ · คาดล่าสุด = คิดใหม่ตามยอดจริง · ไลน์ที่เย็บ = ตามแผนวันนี้ (หน้า Sewing) · ยอดต่อชั่วโมง = วันปกติของรุ่นนี้ (Load ต่อชั่วโมงไลน์ · Lean ต่อคน × คน) × โอกาสเจอวันซ่อมหนัก · วันนี้ไล่ตามช่องที่ยังไม่กรอกยอด → ครบกี่โมง${todayPlan() ? '' : ' · (ยังไม่มีแผนวันนี้ของหน้า Sewing ใช้ไลน์ล่าสุดและนับจากตอนนี้)'}</p>
     </div>`;
   }
 
