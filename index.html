@@ -5417,6 +5417,7 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
     ? Math.max(...reportedWorkingIndexes)
     : -1;
 
+  const missing = new Set();
   const cumulativeActual = timeSlots.map((slot, idx) => {
     if (slot === breakSlot){
       const hasReportedBefore = reportedWorkingIndexes.some(i => i < idx);
@@ -5428,7 +5429,9 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
       return hasReportedBefore && hasReportedAfter ? ac : null;
     }
 
-    if (hourlyReported[slot] !== true || idx > lastReportedWorkingIndex) return null;
+    if (idx > lastReportedWorkingIndex) return null;
+    // ลืมกรอกช่องกลางวัน (ช่องหลังกรอกแล้ว) → ต่อเส้นไว้ นับช่องนี้เป็น 0 ชั่วคราว แล้วทำเป็นเส้นประสีส้ม
+    if (hourlyReported[slot] !== true){ missing.add(idx); return ac; }
 
     ac += num(hourlyActuals[idx]);
     return ac;
@@ -5442,7 +5445,12 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
       { label:'เป้าสะสม', data:cumulativeTarget, borderColor:'#6366F1', borderWidth:2, borderDash:[6,5],
         pointRadius:2, tension:.25, fill:false, datalabels:{display:false} },
       { label:'ผลิตสะสม', data:cumulativeActual, spanGaps:false, borderColor:'#10B981',
-        backgroundColor:'rgba(16,185,129,0.10)', borderWidth:3, pointRadius:3, tension:.25, fill:true, datalabels:{display:false} }
+        backgroundColor:'rgba(16,185,129,0.10)', borderWidth:3, tension:.25, fill:true, datalabels:{display:false},
+        pointRadius:timeSlots.map((s, i) => missing.has(i) ? 5 : 3),
+        pointBackgroundColor:timeSlots.map((s, i) => missing.has(i) ? '#F59E0B' : '#10B981'),
+        pointBorderColor:timeSlots.map((s, i) => missing.has(i) ? '#F59E0B' : '#10B981'),
+        segment:{ borderColor:c => missing.has(c.p1DataIndex) || missing.has(c.p0DataIndex) ? '#F59E0B' : undefined,
+                  borderDash:c => missing.has(c.p1DataIndex) || missing.has(c.p0DataIndex) ? [5, 4] : undefined } }
     ]},
     options:{
       responsive:true, maintainAspectRatio:false,
@@ -5454,6 +5462,7 @@ function renderCumulativeChart(timeSlots, hourlyActuals, targetLine, hourlyRepor
             if (!items || !items.length) return '';
             const i = items[0].dataIndex;
             if (cumulativeActual[i] === null || cumulativeActual[i] === undefined) return '';
+            if (missing.has(i)) return 'ช่องนี้ยังไม่กรอกยอด (นับเป็น 0 ชั่วคราว)';
             const gap = cumulativeActual[i] - cumulativeTarget[i];
             return `ส่วนต่างรอบนี้ ${gap>=0?'+':''}${gap.toLocaleString()} ชิ้น`;
           } } }
