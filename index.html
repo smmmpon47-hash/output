@@ -4241,8 +4241,14 @@ function getRepairHourlyLineContext(lineCode){
   return repairHourlyContextCache[getRepairHourlyCacheKey(selectedDate, lineCode)] || null;
 }
 
+// จุดที่ไม่ใช่ไลน์ผลิตในระบบแจ้งซ่อม (ชื่อตามคอลัมน์ไลน์ในชีทแจ้งซ่อม) → แถวเพิ่มใต้ LINE F ในสรุปงานซ่อม
+const REPAIR_EXTRA_AREAS = ['อะไหล่ชั้น 3', 'อะไหล่ชั้น 4'];
+const repairAreaKey_ = name => String(name || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+const repairExtraArea_ = key => REPAIR_EXTRA_AREAS.find(n => repairAreaKey_(n) === repairAreaKey_(key)) || '';
+
 async function fetchRepairContextForLine(lineCode){
-  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  const code = repairAreaKey_(lineCode);
+  const apiLine = repairExtraArea_(code) || code;   // จุดอะไหล่ส่งชื่อเต็มตามชีทแจ้งซ่อม
   const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
   if (!code || !selectedDate || currentDashboardIsRange) return null;
 
@@ -4258,7 +4264,7 @@ async function fetchRepairContextForLine(lineCode){
   }
 
   const request = (async () => {
-    const url = `${REPAIR_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(code)}`;
+    const url = `${REPAIR_API_URL}?action=getRepairHourlyContext&date=${encodeURIComponent(selectedDate)}&line=${encodeURIComponent(apiLine)}`;
     const rawText = await fetchTextWithRetry(url, {
       attempts:2,
       timeoutMs:15000
@@ -4273,8 +4279,8 @@ async function fetchRepairContextForLine(lineCode){
     }
 
     const lineData =
-      (data.lines && data.lines[code]) ||
-      (String(data.line || '').toUpperCase() === code
+      (data.lines && (data.lines[code] || data.lines[apiLine])) ||
+      (repairAreaKey_(data.line) === code
         ? {
             line:code,
             slots:data.slots || {},
@@ -4365,6 +4371,8 @@ function repairOverviewDateText(dateStr){
   return m ? `${m[3]}/${m[2]}/${m[1]}` : String(dateStr || '-');
 }
 
+function repairAreaLabel_(code){ return repairExtraArea_(code) || `LINE ${code}`; }
+
 function renderRepairOverviewRows(results){
   const list = el('repairOverviewList');
   if (!list) return;
@@ -4373,7 +4381,7 @@ function renderRepairOverviewRows(results){
     const code = result.code;
     if (result.error){
       return `<div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5">
-        <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+        <span class="text-[11px] font-extrabold text-slate-700">${esc(repairAreaLabel_(code))}</span>
         <span class="text-[10px] text-slate-400">โหลดไม่สำเร็จ</span>
       </div>`;
     }
@@ -4381,7 +4389,7 @@ function renderRepairOverviewRows(results){
     const summary = result.summary;
     if (!summary || summary.jobCount <= 0){
       return `<div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5">
-        <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+        <span class="text-[11px] font-extrabold text-slate-700">${esc(repairAreaLabel_(code))}</span>
         <span class="text-[10px] text-slate-400">ไม่มีงานซ่อม</span>
       </div>`;
     }
@@ -4393,7 +4401,7 @@ function renderRepairOverviewRows(results){
 
     return `<button type="button" onclick="openRepairOverviewDetail('${esc(code)}')"
               class="w-full flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5 text-left hover:border-sky-200 hover:bg-sky-50/40 transition">
-      <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+      <span class="text-[11px] font-extrabold text-slate-700">${esc(repairAreaLabel_(code))}</span>
       <span class="ml-auto text-[10px] font-semibold text-slate-600">${summary.jobCount} งาน · ${esc(duration)}${liveText}</span>
       <span class="text-slate-300 text-base leading-none">›</span>
     </button>`;
@@ -4414,12 +4422,12 @@ async function loadRepairOverview(){
     return;
   }
 
-  const codes = Object.keys(LINE_FLOOR).sort();
+  const codes = Object.keys(LINE_FLOOR).sort().concat(REPAIR_EXTRA_AREAS.map(repairAreaKey_));
   const seq = ++repairOverviewLoadSeq;
 
   list.innerHTML = codes.map(code => `
     <div class="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-white px-3 py-2.5">
-      <span class="text-[11px] font-extrabold text-slate-700">LINE ${esc(code)}</span>
+      <span class="text-[11px] font-extrabold text-slate-700">${esc(repairAreaLabel_(code))}</span>
       <span class="text-[10px] text-slate-400">กำลังโหลด...</span>
     </div>`).join('');
 
@@ -4444,7 +4452,7 @@ function closeRepairOverviewDetail(){
 }
 
 async function openRepairOverviewDetail(lineCode){
-  const code = String(lineCode || '').replace(/LINE/i,'').replace(/\s+/g,'').toUpperCase();
+  const code = repairAreaKey_(lineCode);
   if (!code) return;
 
   const modal = el('repairOverviewModal');
@@ -4460,7 +4468,7 @@ async function openRepairOverviewDetail(lineCode){
   const seq = ++repairOverviewDetailSeq;
   const selectedDate = el('datePicker') ? String(el('datePicker').value || '').trim() : '';
 
-  title.innerText = `LINE ${code} — งานซ่อม`;
+  title.innerText = `${repairAreaLabel_(code)} — งานซ่อม`;
   meta.innerText = `${summary.jobCount} งาน · ซ่อมจริงรวม ${repairFormatDurationShort(summary.totalSeconds)}`;
   list.innerHTML = '<p class="text-[11px] text-slate-400 py-6 text-center">กำลังโหลดรายละเอียด...</p>';
   modal.classList.remove('hide');
