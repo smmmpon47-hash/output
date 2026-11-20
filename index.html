@@ -3018,7 +3018,7 @@ function renderCards(lines, isRange){
         getLoadInForLot_(item, lotInfo.lot),
         getLoadOutForLot_(item, lotInfo.lot),
         lotPlans.length > 1 ? `LOT ${idx + 1}/${lotPlans.length}` : '',
-        getSamForLot_(item, lotInfo)
+        getSamForLot_(item, lotInfo) || deriveSamForLot_(item, lotInfo)
       );
     });
   });
@@ -3033,6 +3033,25 @@ function renderCards(lines, isRange){
 
 // SAM ของ LOT บนการ์ด: item.sams = { ลำดับ: { lot, sam } } จาก Apps Script (SAM_Log ของวันนั้น)
 // ไม่มี SAM (ตั้งเป้าแบบกรอก TG เอง / Apps Script รุ่นเก่า) = ไม่แสดง
+// ไม่มี SAM ที่ตั้งไว้ (กรอก TG เอง) → คิดย้อนจากสูตรเดียวกับ Apps Script: เป้าวัน (TG) = นาทีค่าแรง × คน ÷ SAM
+// เป้า LOT = TG ÷ ชม.รวม × ชม.ของ LOT → TG = เป้า LOT × ชม.รวม ÷ ชม.ของ LOT → SAM = นาทีค่าแรง × คน ÷ TG
+const SAM_PAID_MINUTES_ = { 8:450, 9:550, 10:600, 11:650 };
+function samPaidMinutes_(totalHours){
+  const h = Math.floor(num(totalHours));
+  if (SAM_PAID_MINUTES_[h]) return SAM_PAID_MINUTES_[h];
+  return h > 0 && h < 8 ? Math.round(450 * h / 8) : 0;
+}
+function deriveSamForLot_(item, lotInfo){
+  if (!item || !lotInfo || !lotInfo.lot) return null;
+  const totalHours = num(item.total_working_hours);
+  const lotHours = num(lotInfo.hours);
+  const mp = num(item.manpower), target = num(lotInfo.target), paid = samPaidMinutes_(totalHours);
+  if (!(totalHours > 0) || !(lotHours > 0) || !(mp > 0) || !(target > 0) || !(paid > 0)) return null;
+  const tgDay = target * totalHours / lotHours;
+  const sam = Math.round(paid * mp / tgDay * 100) / 100;
+  return sam > 0 && sam < 1000 ? { value: sam, derived: true } : null;
+}
+
 function getSamForLot_(item, lotInfo){
   const sams = item && item.sams;
   if (!sams || typeof sams !== 'object' || !lotInfo || !lotInfo.lot) return null;
@@ -3092,7 +3111,9 @@ function createCardHtml(line, modelName, lotName, target, actual, remarks, live,
               ? `<span class="hidden text-[11px] font-semibold text-slate-600" data-lot-model-fallback="${esc(lotName)}"></span>`
               : '')}
         ${lotName ? `<span class="text-[11px] font-semibold text-indigo-600">LOT ${lotName}</span>` : ''}
-        ${sam ? `<span class="text-[11px] font-semibold text-slate-500">SAM <b class="text-slate-800">${sam}</b></span>` : ''}
+        ${sam ? (sam.derived
+          ? `<span class="text-[11px] font-semibold text-slate-400" title="กรอกเป้า TG เอง · SAM คิดย้อนจาก นาทีค่าแรง × คน ÷ เป้า">SAM ≈ <b class="text-slate-600">${sam.value.toFixed(2)}</b></span>`
+          : `<span class="text-[11px] font-semibold text-slate-500">SAM <b class="text-slate-800">${sam}</b></span>`) : ''}
       </div>
 
       <div class="border-t border-slate-100 pt-3 mt-2 space-y-2">
